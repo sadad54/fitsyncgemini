@@ -84,13 +84,16 @@ const List<QuizQuestion> quizQuestions = [
 ];
 
 // Sample data for demonstration
-const List<ClothingItem> sampleCloset = [
+List<ClothingItem> sampleCloset = [
   ClothingItem(
     id: '1',
     name: 'White T-Shirt',
     category: 'Tops',
     image: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=400',
     colors: ['White'],
+    subCategory: '',
+    createdAt: DateTime(2024, 1, 1),
+    updatedAt: DateTime(2024, 1, 2),
   ),
   ClothingItem(
     id: '2',
@@ -98,6 +101,9 @@ const List<ClothingItem> sampleCloset = [
     category: 'Bottoms',
     image: 'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
     colors: ['Blue'],
+    subCategory: '',
+    createdAt: DateTime(2024, 1, 3),
+    updatedAt: DateTime(2024, 1, 4),
   ),
   ClothingItem(
     id: '3',
@@ -105,6 +111,9 @@ const List<ClothingItem> sampleCloset = [
     category: 'Outerwear',
     image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400',
     colors: ['Black'],
+    subCategory: '',
+    createdAt: DateTime(2024, 1, 5),
+    updatedAt: DateTime(2024, 1, 6),
   ),
   ClothingItem(
     id: '4',
@@ -112,6 +121,9 @@ const List<ClothingItem> sampleCloset = [
     category: 'Dresses',
     image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400',
     colors: ['Pink', 'Green', 'White'],
+    subCategory: '',
+    createdAt: DateTime(2024, 1, 7),
+    updatedAt: DateTime(2024, 1, 8),
   ),
   ClothingItem(
     id: '5',
@@ -119,6 +131,9 @@ const List<ClothingItem> sampleCloset = [
     category: 'Shoes',
     image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
     colors: ['White'],
+    subCategory: '',
+    createdAt: DateTime(2024, 1, 9),
+    updatedAt: DateTime(2024, 1, 10),
   ),
   ClothingItem(
     id: '6',
@@ -126,6 +141,9 @@ const List<ClothingItem> sampleCloset = [
     category: 'Outerwear',
     image: 'https://images.unsplash.com/photo-1572455024142-2d12aa5f5104?w=400',
     colors: ['Beige'],
+    subCategory: '',
+    createdAt: DateTime(2024, 1, 11),
+    updatedAt: DateTime(2024, 1, 12),
   ),
 ];
 
@@ -134,12 +152,16 @@ final List<Outfit> sampleOutfits = [
     id: 'outfit1',
     name: 'Casual Weekend',
     occasion: 'a casual day out',
-    items: [sampleCloset[0], sampleCloset[1], sampleCloset[4]],
+    itemIds: ['1', '2', '5'],
+    createdAt: DateTime(2024, 2, 1),
+    updatedAt: DateTime(2024, 2, 2),
   ),
   Outfit(
     id: 'outfit2',
     name: 'Edgy Night Out',
     occasion: 'a night out',
-    items: [sampleCloset[2], sampleCloset[1], sampleCloset[4]],
+    itemIds: ['3', '2', '5'],
+    createdAt: DateTime(2024, 2, 3),
+    updatedAt: DateTime(2024, 2, 4),
   ),
 ];

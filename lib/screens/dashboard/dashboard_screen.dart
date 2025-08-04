@@ -986,20 +986,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               'icon': LucideIcons.plus,
               'text': 'Added Blue Denim Jacket',
               'time': '2h ago',
+              'color': Colors.green, // Green for "Added"
             },
             {
               'icon': LucideIcons.heart,
               'text': 'Liked Summer Vibes outfit',
               'time': '4h ago',
+              'color': AppColors.pink, // Pink for "Liked"
             },
             {
               'icon': LucideIcons.share2,
               'text': 'Shared Casual Look',
               'time': '1d ago',
+              'color': AppColors.blue, // Blue for "Shared"
             },
           ];
           final activity = activities[index];
-
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
@@ -1008,13 +1010,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: AppColors.pink.withOpacity(0.1),
+                    color: (activity['color'] as Color).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     activity['icon'] as IconData,
                     size: 16,
-                    color: AppColors.pink,
+                    color: activity['color'] as Color,
                   ),
                 ),
                 const SizedBox(width: 12),

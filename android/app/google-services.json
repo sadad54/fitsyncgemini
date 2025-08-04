@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "263579544076",
+    "project_id": "fitsync-76aaf",
+    "storage_bucket": "fitsync-76aaf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:263579544076:android:d10712324f110f0aa31c29",
+        "android_client_info": {
+          "package_name": "com.example.fitsyncgemini"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCWWOnqF11RU9aFZIybmKx0ERabmhdLI4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

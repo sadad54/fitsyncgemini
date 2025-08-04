@@ -90,4 +90,8 @@ class AppConstants {
   static const String uploadErrorMessage = 'Upload failed. Please try again.';
   static const String genericErrorMessage =
       'Something went wrong. Please try again.';
+
+  static const double paddingSmall = 8.0;
+  static const double paddingMedium = 16.0;
+  static const double paddingLarge = 24.0;
 }

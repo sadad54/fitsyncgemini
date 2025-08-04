@@ -48,6 +48,8 @@ dependencies:
   # Utilities
   google_fonts: ^6.2.1
   provider: ^6.1.2 
+  firebase_core: ^4.0.0
+  firebase_auth: ^6.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,5 +1,7 @@
 // lib/screens/quiz/quiz_screen.dart
+import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/constants/app_data.dart';
@@ -224,96 +226,111 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Widget _buildResultCard() {
-    return Center(
-      child: Card(
-        color: Colors.white.withOpacity(0.1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.2)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('✨', style: TextStyle(fontSize: 48)),
-              const SizedBox(height: 16),
-              Text(
-                'Your Style Archetype',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Minimalist',
-                      style: TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
+    return Consumer(
+      builder: (context, ref, child) {
+        return Center(
+          child: Card(
+            color: Colors.white.withOpacity(0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('✨', style: TextStyle(fontSize: 48)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Your Style Archetype',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'You appreciate clean lines, neutral colors, and timeless pieces that never go out of style.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 15,
-                      ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
-                      children:
-                          ['Timeless', 'Clean', 'Neutral']
-                              .map(
-                                (trait) => Chip(
-                                  label: Text(
-                                    trait,
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                  backgroundColor: Colors.transparent,
-                                  shape: StadiumBorder(
-                                    side: BorderSide(
-                                      color: Colors.white.withOpacity(0.5),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Minimalist',
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You appreciate clean lines, neutral colors, and timeless pieces that never go out of style.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children:
+                              ['Timeless', 'Clean', 'Neutral']
+                                  .map(
+                                    (trait) => Chip(
+                                      label: Text(
+                                        trait,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      backgroundColor: Colors.transparent,
+                                      shape: StadiumBorder(
+                                        side: BorderSide(
+                                          color: Colors.white.withOpacity(0.5),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                                  )
+                                  .toList(),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 24),
+                  GradientButton(
+                    onPressed: () async {
+                      // ✅ Get the auth view model
+                      final authVM = ref.read(authViewModelProvider.notifier);
+
+                      // 🔐 Sign in anonymously via Firebase
+                      await authVM.signInAnonymously();
+
+                      // ✅ Navigate to dashboard
+                      context.go('/dashboard');
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Continue to FitSync'),
+                        SizedBox(width: 8),
+                        Icon(LucideIcons.check, size: 16),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              GradientButton(
-                onPressed: () => context.go('/dashboard'),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Continue to FitSync'),
-                    SizedBox(width: 8),
-                    Icon(LucideIcons.check, size: 16),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9)),
+        ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9));
+      },
     );
   }
 }

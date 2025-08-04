@@ -50,6 +50,10 @@ dependencies:
   provider: ^6.1.2 
   firebase_core: ^4.0.0
   firebase_auth: ^6.0.0
+  
+  # Image handling
+  image_picker: ^1.0.7
+  image: ^4.1.7
 
 dev_dependencies:
   flutter_test:

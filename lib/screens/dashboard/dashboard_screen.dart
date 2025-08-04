@@ -362,6 +362,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/constants/app_data.dart';
 import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
+import 'package:fitsyncgemini/widgets/dashboard/stats_overview_widget.dart';
+import 'package:fitsyncgemini/widgets/dashboard/quick_actions_widget.dart';
+import 'package:fitsyncgemini/widgets/dashboard/recent_activity_widget.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -462,7 +465,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   children: [
                     _buildGreetingSection(),
                     const SizedBox(height: 24),
-                    _buildQuickActions(),
+                    const QuickActionsWidget(),
+                    const SizedBox(height: 24),
+                    const StatsOverviewWidget(),
                     const SizedBox(height: 24),
                     _buildFeaturesGrid(),
                     const SizedBox(height: 24),
@@ -470,7 +475,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     const SizedBox(height: 24),
                     _buildStyleInsights(),
                     const SizedBox(height: 24),
-                    _buildRecentActivity(),
+                    const RecentActivityWidget(),
                   ],
                 ),
               ),
@@ -514,87 +519,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ).animate().fadeIn(delay: 300.ms),
       ],
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildQuickActionChip(
-                icon: LucideIcons.camera,
-                label: 'Add Item',
-                color: AppColors.pink,
-                onTap: () => _showAddItemModal(),
-              ),
-              const SizedBox(width: 8),
-              _buildQuickActionChip(
-                icon: LucideIcons.sparkles,
-                label: 'Get Outfit',
-                color: AppColors.purple,
-                onTap: () => context.go('/outfit-suggestions'),
-              ),
-              const SizedBox(width: 8),
-              _buildQuickActionChip(
-                icon: LucideIcons.play,
-                label: 'Try On',
-                color: AppColors.teal,
-                onTap: () => context.go('/try-on'),
-              ),
-              const SizedBox(width: 8),
-              _buildQuickActionChip(
-                icon: LucideIcons.trendingUp,
-                label: 'Trends',
-                color: AppColors.blue,
-                onTap: () => context.go('/trends'),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ).animate().fadeIn(delay: 400.ms);
-  }
-
-  Widget _buildQuickActionChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -965,79 +889,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildRecentActivity() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Recent Activity',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            TextButton(onPressed: () {}, child: const Text('View All')),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ...List.generate(3, (index) {
-          final activities = [
-            {
-              'icon': LucideIcons.plus,
-              'text': 'Added Blue Denim Jacket',
-              'time': '2h ago',
-              'color': Colors.green, // Green for "Added"
-            },
-            {
-              'icon': LucideIcons.heart,
-              'text': 'Liked Summer Vibes outfit',
-              'time': '4h ago',
-              'color': AppColors.pink, // Pink for "Liked"
-            },
-            {
-              'icon': LucideIcons.share2,
-              'text': 'Shared Casual Look',
-              'time': '1d ago',
-              'color': AppColors.blue, // Blue for "Shared"
-            },
-          ];
-          final activity = activities[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: (activity['color'] as Color).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    activity['icon'] as IconData,
-                    size: 16,
-                    color: activity['color'] as Color,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    activity['text'] as String,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-                Text(
-                  activity['time'] as String,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                ),
-              ],
-            ),
-          );
-        }),
-      ],
-    ).animate().fadeIn(delay: 800.ms);
-  }
-
   Widget _buildFloatingActionButton() {
     return FloatingActionButton(
       onPressed: () => _showAddItemModal(),
@@ -1181,76 +1032,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _showAddItemModal() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder:
-          (context) => Container(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Add to Closet',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // TODO: Implement camera functionality
-                        },
-                        icon: const Icon(LucideIcons.camera),
-                        label: const Text('Take Photo'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // TODO: Implement gallery functionality
-                        },
-                        icon: const Icon(LucideIcons.upload),
-                        label: const Text('Upload'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.pink,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.teal.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(LucideIcons.sparkles, color: AppColors.teal),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'AI will automatically detect and categorize your item!',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddItemModal(),
     );
   }
 }

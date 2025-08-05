@@ -14,7 +14,7 @@ import 'package:fitsyncgemini/screens/try_on/try_on_screen.dart';
 import 'package:fitsyncgemini/screens/explore/explore_screen.dart';
 import 'package:fitsyncgemini/screens/settings/settings_screen.dart';
 import 'package:fitsyncgemini/screens/outfit_suggestions/outfit_suggestions_screen.dart';
-import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
+import 'package:fitsyncgemini/providers/providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authViewModelProvider);

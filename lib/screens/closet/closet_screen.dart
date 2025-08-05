@@ -5,6 +5,8 @@ import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/constants/app_constants.dart';
 import 'package:fitsyncgemini/constants/app_data.dart';
 import 'package:fitsyncgemini/models/clothing_item.dart';
+import 'package:fitsyncgemini/widgets/closet/add_item_modal.dart';
+import 'package:fitsyncgemini/widgets/closet/closet_filter_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -21,6 +23,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   String _selectedCategory = 'all';
   bool _isGridView = true;
   List<String> _selectedItems = [];
+  ClosetFilter _currentFilter = const ClosetFilter();
 
   final List<Map<String, dynamic>> _categories = [
     {'id': 'all', 'name': 'All', 'count': 0},
@@ -177,7 +180,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               ),
               IconButton(
                 icon: const Icon(LucideIcons.filter, color: Colors.black87),
-                onPressed: () {},
+                onPressed: () => _showFilterModal(),
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 16),
@@ -187,7 +190,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () => _showAddItemModal(),
                     icon: const Icon(
                       LucideIcons.plus,
                       size: 16,
@@ -903,6 +906,39 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
     );
   }
 
+  void _showAddItemModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddItemModal(),
+    ).then((result) {
+      if (result == true) {
+        // Refresh closet data
+        setState(() {
+          _updateCategoryCounts();
+        });
+      }
+    });
+  }
+
+  void _showFilterModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => ClosetFilterWidget(
+            currentFilter: _currentFilter,
+            onFilterChanged: (filter) {
+              setState(() {
+                _currentFilter = filter;
+              });
+            },
+          ),
+    );
+  }
+
   Widget _buildAddItemCTA() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -956,7 +992,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               borderRadius: BorderRadius.circular(12),
             ),
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => _showAddItemModal(),
               icon: const Icon(
                 LucideIcons.camera,
                 size: 16,

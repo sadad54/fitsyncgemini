@@ -34,9 +34,13 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
   Future<void> _loadImageDimensions() async {
     try {
       final cameraService = ref.read(cameraServiceProvider);
+<<<<<<< HEAD
       final dimensions = await cameraService.getImageDimensions(
         widget.imageFile,
       );
+=======
+      final dimensions = await cameraService.getImageDimensions(widget.imageFile);
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       setState(() {
         _imageSize = Size(
           dimensions['width']!.toDouble(),
@@ -55,7 +59,11 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
 
     try {
       final cameraService = ref.read(cameraServiceProvider);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       File croppedFile;
       if (_cropRect != null) {
         croppedFile = await cameraService.cropAndOptimizeImage(
@@ -66,9 +74,13 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
           cropHeight: _cropRect!.height.toInt(),
         );
       } else {
+<<<<<<< HEAD
         croppedFile = await cameraService.cropAndOptimizeImage(
           widget.imageFile,
         );
+=======
+        croppedFile = await cameraService.cropAndOptimizeImage(widget.imageFile);
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       }
 
       widget.onCropped(croppedFile);
@@ -106,7 +118,14 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
                     Container(
                       width: double.infinity,
                       height: double.infinity,
+<<<<<<< HEAD
                       child: Image.file(widget.imageFile, fit: BoxFit.contain),
+=======
+                      child: Image.file(
+                        widget.imageFile,
+                        fit: BoxFit.contain,
+                      ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                     ),
                     // Crop overlay (simplified version)
                     if (_cropRect != null)
@@ -114,7 +133,14 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
                         rect: _cropRect!,
                         child: Container(
                           decoration: BoxDecoration(
+<<<<<<< HEAD
                             border: Border.all(color: AppColors.pink, width: 2),
+=======
+                            border: Border.all(
+                              color: AppColors.pink,
+                              width: 2,
+                            ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                           ),
                         ),
                       ),
@@ -124,7 +150,11 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
             ),
           ),
           const SizedBox(height: 16),
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Crop presets
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -134,9 +164,15 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
               _buildCropPreset('Free', Icons.crop_free),
             ],
           ),
+<<<<<<< HEAD
 
           const SizedBox(height: 24),
 
+=======
+          
+          const SizedBox(height: 24),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Action buttons
           Row(
             children: [
@@ -156,6 +192,7 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
                 flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: _isProcessing ? null : _cropImage,
+<<<<<<< HEAD
                   icon:
                       _isProcessing
                           ? const SizedBox(
@@ -170,6 +207,19 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
                   label: Text(
                     _isProcessing ? 'Processing...' : 'Crop & Continue',
                   ),
+=======
+                  icon: _isProcessing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(LucideIcons.crop),
+                  label: Text(_isProcessing ? 'Processing...' : 'Crop & Continue'),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.pink,
                     foregroundColor: Colors.white,
@@ -202,7 +252,14 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
             child: Icon(icon, color: AppColors.pink),
           ),
           const SizedBox(height: 4),
+<<<<<<< HEAD
           Text(label, style: const TextStyle(fontSize: 12)),
+=======
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12),
+          ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
         ],
       ),
     );
@@ -211,6 +268,7 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
   void _applyCropPreset(String preset) {
     // Simplified crop preset application
     final containerSize = Size(300, 400); // Approximate container size
+<<<<<<< HEAD
 
     switch (preset) {
       case 'Square':
@@ -218,6 +276,14 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
             containerSize.width < containerSize.height
                 ? containerSize.width
                 : containerSize.height;
+=======
+    
+    switch (preset) {
+      case 'Square':
+        final size = containerSize.width < containerSize.height 
+            ? containerSize.width 
+            : containerSize.height;
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
         setState(() {
           _cropRect = Rect.fromLTWH(
             (containerSize.width - size) / 2,
@@ -244,4 +310,8 @@ class _ImageCropWidgetState extends ConsumerState<ImageCropWidget> {
         break;
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

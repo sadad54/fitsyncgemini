@@ -927,6 +927,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+<<<<<<< HEAD
       builder:
           (context) => ClosetFilterWidget(
             currentFilter: _currentFilter,
@@ -936,6 +937,16 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               });
             },
           ),
+=======
+      builder: (context) => ClosetFilterWidget(
+        currentFilter: _currentFilter,
+        onFilterChanged: (filter) {
+          setState(() {
+            _currentFilter = filter;
+          });
+        },
+      ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     );
   }
 

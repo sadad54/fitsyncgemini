@@ -45,11 +45,19 @@ class RecentActivityWidget extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
+<<<<<<< HEAD
 
           ...activities.take(5).map((activity) {
             return _buildActivityItem(activity);
           }).toList(),
 
+=======
+          
+          ...activities.take(5).map((activity) {
+            return _buildActivityItem(activity);
+          }).toList(),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           if (activities.length > 5) ...[
             const SizedBox(height: 12),
             Center(
@@ -77,7 +85,15 @@ class RecentActivityWidget extends ConsumerWidget {
               color: activity.color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
+<<<<<<< HEAD
             child: Icon(activity.icon, size: 18, color: activity.color),
+=======
+            child: Icon(
+              activity.icon,
+              size: 18,
+              color: activity.color,
+            ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -86,7 +102,14 @@ class RecentActivityWidget extends ConsumerWidget {
               children: [
                 RichText(
                   text: TextSpan(
+<<<<<<< HEAD
                     style: const TextStyle(fontSize: 14, color: Colors.black87),
+=======
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                     children: [
                       TextSpan(
                         text: activity.action,
@@ -100,7 +123,14 @@ class RecentActivityWidget extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     activity.details!,
+<<<<<<< HEAD
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+=======
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                   ),
                 ],
               ],
@@ -111,7 +141,14 @@ class RecentActivityWidget extends ConsumerWidget {
             children: [
               Text(
                 activity.timestamp.toTimeAgo(),
+<<<<<<< HEAD
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+=======
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
               ),
               if (activity.hasNotification)
                 Container(
@@ -137,6 +174,7 @@ class RecentActivityWidget extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+<<<<<<< HEAD
       builder:
           (context) => Container(
             height: MediaQuery.of(context).size.height * 0.8,
@@ -172,6 +210,39 @@ class RecentActivityWidget extends ConsumerWidget {
               ],
             ),
           ),
+=======
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'All Activity',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(LucideIcons.x),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _getRecentActivities().length,
+                itemBuilder: (context, index) {
+                  return _buildActivityItem(_getRecentActivities()[index]);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     );
   }
 
@@ -255,4 +326,8 @@ class ActivityItem {
     this.details,
     this.hasNotification = false,
   });
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

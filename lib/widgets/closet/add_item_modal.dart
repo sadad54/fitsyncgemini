@@ -37,7 +37,11 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
 
   Future<void> _selectImageSource(ImageSource source) async {
     final cameraService = ref.read(cameraServiceProvider);
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     setState(() {
       _isProcessing = true;
     });
@@ -75,8 +79,12 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
   void _onTaggingComplete(Map<String, dynamic> tagData) {
     setState(() {
       _nameController.text = tagData['name'] ?? '';
+<<<<<<< HEAD
       _selectedCategory =
           tagData['category'] ?? AppConstants.clothingCategories.first;
+=======
+      _selectedCategory = tagData['category'] ?? AppConstants.clothingCategories.first;
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       _selectedColors = List<String>.from(tagData['colors'] ?? []);
       _tags = List<String>.from(tagData['tags'] ?? []);
       _brand = tagData['brand'];
@@ -95,7 +103,11 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
     try {
       // TODO: Implement actual save logic with ML analysis
       await Future.delayed(const Duration(seconds: 2));
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       if (mounted) {
         Navigator.of(context).pop(true); // Return success
       }
@@ -110,7 +122,14 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
+<<<<<<< HEAD
       SnackBar(content: Text(message), backgroundColor: Colors.red),
+=======
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     );
   }
 
@@ -153,7 +172,14 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
           Expanded(
             child: Text(
               _getStepTitle(),
+<<<<<<< HEAD
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+=======
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
             ),
           ),
           IconButton(
@@ -323,6 +349,7 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
           if (_selectedColors.isNotEmpty)
             Wrap(
               spacing: 8,
+<<<<<<< HEAD
               children:
                   _selectedColors.map((color) {
                     return Chip(
@@ -330,6 +357,14 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
                       backgroundColor: AppColors.teal.withOpacity(0.1),
                     );
                   }).toList(),
+=======
+              children: _selectedColors.map((color) {
+                return Chip(
+                  label: Text(color),
+                  backgroundColor: AppColors.teal.withOpacity(0.1),
+                );
+              }).toList(),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
             ),
           const Spacer(),
           SizedBox(
@@ -385,4 +420,8 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
   }
 }
 
+<<<<<<< HEAD
 enum ImageSource { camera, gallery }
+=======
+enum ImageSource { camera, gallery }
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

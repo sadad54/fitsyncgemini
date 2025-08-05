@@ -29,6 +29,7 @@ class StatsOverviewWidget extends ConsumerWidget {
         children: [
           Row(
             children: [
+<<<<<<< HEAD
               const Icon(
                 LucideIcons.barChart3,
                 color: AppColors.pink,
@@ -38,6 +39,16 @@ class StatsOverviewWidget extends ConsumerWidget {
               const Text(
                 'Your Style Stats',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+=======
+              const Icon(LucideIcons.barChart3, color: AppColors.pink, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Your Style Stats',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
               ),
               const Spacer(),
               Container(
@@ -65,7 +76,11 @@ class StatsOverviewWidget extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Stats grid
           Row(
             children: [
@@ -90,9 +105,15 @@ class StatsOverviewWidget extends ConsumerWidget {
               ),
             ],
           ),
+<<<<<<< HEAD
 
           const SizedBox(height: 16),
 
+=======
+          
+          const SizedBox(height: 16),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           Row(
             children: [
               Expanded(
@@ -116,9 +137,15 @@ class StatsOverviewWidget extends ConsumerWidget {
               ),
             ],
           ),
+<<<<<<< HEAD
 
           const SizedBox(height: 20),
 
+=======
+          
+          const SizedBox(height: 20),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Quick insights
           Container(
             padding: const EdgeInsets.all(16),
@@ -131,7 +158,14 @@ class StatsOverviewWidget extends ConsumerWidget {
               children: [
                 const Text(
                   'Quick Insights',
+<<<<<<< HEAD
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+=======
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                 ),
                 const SizedBox(height: 8),
                 _buildInsightRow(
@@ -230,8 +264,21 @@ class StatsOverviewWidget extends ConsumerWidget {
       children: [
         Icon(icon, size: 12, color: color),
         const SizedBox(width: 6),
+<<<<<<< HEAD
         Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
       ],
     );
   }
 }
+=======
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+      ],
+    );
+  }
+}
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

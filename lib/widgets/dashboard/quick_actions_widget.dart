@@ -115,12 +115,26 @@ class QuickActionsWidget extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(
               label,
+<<<<<<< HEAD
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+=======
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
+<<<<<<< HEAD
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+=======
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
             ),
           ],
         ),
@@ -136,4 +150,8 @@ class QuickActionsWidget extends ConsumerWidget {
       builder: (context) => const AddItemModal(),
     );
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

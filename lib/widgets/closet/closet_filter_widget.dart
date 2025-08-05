@@ -108,6 +108,7 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
+<<<<<<< HEAD
           children:
               ['All', ...AppConstants.clothingCategories].map((category) {
                 final isSelected =
@@ -141,6 +142,37 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
                   ),
                 );
               }).toList(),
+=======
+          children: ['All', ...AppConstants.clothingCategories].map((category) {
+            final isSelected = _filter.categories.contains(category) || 
+                              (category == 'All' && _filter.categories.isEmpty);
+            return FilterChip(
+              label: Text(category),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (category == 'All') {
+                    _filter = _filter.copyWith(categories: []);
+                  } else {
+                    final categories = List<String>.from(_filter.categories);
+                    if (selected) {
+                      categories.add(category);
+                    } else {
+                      categories.remove(category);
+                    }
+                    _filter = _filter.copyWith(categories: categories);
+                  }
+                });
+              },
+              selectedColor: AppColors.pink,
+              backgroundColor: Colors.white,
+              checkmarkColor: Colors.white,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            );
+          }).toList(),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
         ),
       ],
     );
@@ -158,6 +190,7 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
+<<<<<<< HEAD
           children:
               AppConstants.commonColors.map((color) {
                 final isSelected = _filter.colors.contains(color);
@@ -198,6 +231,47 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
                   ),
                 );
               }).toList(),
+=======
+          children: AppConstants.commonColors.map((color) {
+            final isSelected = _filter.colors.contains(color);
+            return FilterChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: _getColorFromString(color),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(color),
+                ],
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  final colors = List<String>.from(_filter.colors);
+                  if (selected) {
+                    colors.add(color);
+                  } else {
+                    colors.remove(color);
+                  }
+                  _filter = _filter.copyWith(colors: colors);
+                });
+              },
+              selectedColor: AppColors.teal,
+              backgroundColor: Colors.white,
+              checkmarkColor: Colors.white,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            );
+          }).toList(),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
         ),
       ],
     );
@@ -295,6 +369,7 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
 
   Color _getColorFromString(String colorName) {
     switch (colorName.toLowerCase()) {
+<<<<<<< HEAD
       case 'white':
         return Colors.white;
       case 'black':
@@ -316,11 +391,24 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
         return Colors.grey;
       default:
         return Colors.grey;
+=======
+      case 'white': return Colors.white;
+      case 'black': return Colors.black;
+      case 'blue': return Colors.blue;
+      case 'red': return Colors.red;
+      case 'green': return Colors.green;
+      case 'pink': return Colors.pink;
+      case 'beige': return const Color(0xFFF5F5DC);
+      case 'brown': return Colors.brown;
+      case 'gray': case 'grey': return Colors.grey;
+      default: return Colors.grey;
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     }
   }
 
   String _getSortOptionLabel(SortOption option) {
     switch (option) {
+<<<<<<< HEAD
       case SortOption.dateAdded:
         return 'Date Added';
       case SortOption.name:
@@ -331,11 +419,19 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
         return 'Color';
       case SortOption.mostWorn:
         return 'Most Worn';
+=======
+      case SortOption.dateAdded: return 'Date Added';
+      case SortOption.name: return 'Name';
+      case SortOption.category: return 'Category';
+      case SortOption.color: return 'Color';
+      case SortOption.mostWorn: return 'Most Worn';
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     }
   }
 
   String _getDateFilterLabel(DateFilter filter) {
     switch (filter) {
+<<<<<<< HEAD
       case DateFilter.all:
         return 'All Time';
       case DateFilter.lastWeek:
@@ -344,6 +440,12 @@ class _ClosetFilterWidgetState extends ConsumerState<ClosetFilterWidget> {
         return 'Last Month';
       case DateFilter.lastYear:
         return 'Last Year';
+=======
+      case DateFilter.all: return 'All Time';
+      case DateFilter.lastWeek: return 'Last Week';
+      case DateFilter.lastMonth: return 'Last Month';
+      case DateFilter.lastYear: return 'Last Year';
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     }
   }
 }
@@ -381,6 +483,23 @@ class ClosetFilter {
   }
 }
 
+<<<<<<< HEAD
 enum SortOption { dateAdded, name, category, color, mostWorn }
 
 enum DateFilter { all, lastWeek, lastMonth, lastYear }
+=======
+enum SortOption {
+  dateAdded,
+  name,
+  category,
+  color,
+  mostWorn,
+}
+
+enum DateFilter {
+  all,
+  lastWeek,
+  lastMonth,
+  lastYear,
+}
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

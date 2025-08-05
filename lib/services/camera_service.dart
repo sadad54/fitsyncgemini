@@ -16,7 +16,11 @@ class CameraService {
         maxWidth: 1024,
         maxHeight: 1024,
       );
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       if (photo != null) {
         return File(photo.path);
       }
@@ -35,7 +39,11 @@ class CameraService {
         maxWidth: 1024,
         maxHeight: 1024,
       );
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       if (image != null) {
         return File(image.path);
       }
@@ -46,8 +54,12 @@ class CameraService {
   }
 
   // Crop and optimize image
+<<<<<<< HEAD
   Future<File> cropAndOptimizeImage(
     File imageFile, {
+=======
+  Future<File> cropAndOptimizeImage(File imageFile, {
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     int? cropX,
     int? cropY,
     int? cropWidth,
@@ -56,12 +68,17 @@ class CameraService {
     try {
       final bytes = await imageFile.readAsBytes();
       img.Image? image = img.decodeImage(bytes);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       if (image == null) {
         throw Exception('Failed to decode image');
       }
 
       // Apply cropping if parameters provided
+<<<<<<< HEAD
       if (cropX != null &&
           cropY != null &&
           cropWidth != null &&
@@ -72,6 +89,14 @@ class CameraService {
           y: cropY,
           width: cropWidth,
           height: cropHeight,
+=======
+      if (cropX != null && cropY != null && cropWidth != null && cropHeight != null) {
+        image = img.copyCrop(image, 
+          x: cropX, 
+          y: cropY, 
+          width: cropWidth, 
+          height: cropHeight
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
         );
       }
 
@@ -80,6 +105,7 @@ class CameraService {
 
       // Optimize quality
       final optimizedBytes = img.encodeJpg(image, quality: 85);
+<<<<<<< HEAD
 
       // Create optimized file
       final optimizedFile = File(
@@ -87,6 +113,13 @@ class CameraService {
       );
       await optimizedFile.writeAsBytes(optimizedBytes);
 
+=======
+      
+      // Create optimized file
+      final optimizedFile = File('${imageFile.parent.path}/optimized_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await optimizedFile.writeAsBytes(optimizedBytes);
+      
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       return optimizedFile;
     } catch (e) {
       throw Exception('Failed to crop and optimize image: $e');
@@ -104,12 +137,23 @@ class CameraService {
     try {
       final bytes = await imageFile.readAsBytes();
       final image = img.decodeImage(bytes);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
       if (image == null) {
         throw Exception('Failed to decode image');
       }
 
+<<<<<<< HEAD
       return {'width': image.width, 'height': image.height};
+=======
+      return {
+        'width': image.width,
+        'height': image.height,
+      };
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     } catch (e) {
       throw Exception('Failed to get image dimensions: $e');
     }
@@ -117,4 +161,8 @@ class CameraService {
 }
 
 // Provider
+<<<<<<< HEAD
 final cameraServiceProvider = Provider((ref) => CameraService());
+=======
+final cameraServiceProvider = Provider((ref) => CameraService());
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

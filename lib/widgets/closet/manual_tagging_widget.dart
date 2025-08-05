@@ -17,8 +17,12 @@ class ManualTaggingWidget extends ConsumerStatefulWidget {
   });
 
   @override
+<<<<<<< HEAD
   ConsumerState<ManualTaggingWidget> createState() =>
       _ManualTaggingWidgetState();
+=======
+  ConsumerState<ManualTaggingWidget> createState() => _ManualTaggingWidgetState();
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
 }
 
 class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
@@ -99,10 +103,14 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
       'colors': _selectedColors,
       'tags': _tags,
       'brand': _brandController.text.isNotEmpty ? _brandController.text : null,
+<<<<<<< HEAD
       'price':
           _priceController.text.isNotEmpty
               ? double.tryParse(_priceController.text)
               : null,
+=======
+      'price': _priceController.text.isNotEmpty ? double.tryParse(_priceController.text) : null,
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     };
     widget.onComplete(data);
   }
@@ -148,11 +156,15 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
                     else
                       const Row(
                         children: [
+<<<<<<< HEAD
                           Icon(
                             LucideIcons.check,
                             color: Colors.green,
                             size: 16,
                           ),
+=======
+                          Icon(LucideIcons.check, color: Colors.green, size: 16),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                           SizedBox(width: 8),
                           Text('Analysis complete'),
                         ],
@@ -162,9 +174,15 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
               ),
             ],
           ),
+<<<<<<< HEAD
 
           const SizedBox(height: 24),
 
+=======
+          
+          const SizedBox(height: 24),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Item name
           _buildSectionTitle('Item Name'),
           TextField(
@@ -174,13 +192,20 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
               border: OutlineInputBorder(),
             ),
           ),
+<<<<<<< HEAD
 
           const SizedBox(height: 16),
 
+=======
+          
+          const SizedBox(height: 16),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Category selection
           _buildSectionTitle('Category'),
           DropdownButtonFormField<String>(
             value: _selectedCategory,
+<<<<<<< HEAD
             decoration: const InputDecoration(border: OutlineInputBorder()),
             items:
                 AppConstants.clothingCategories.map((category) {
@@ -189,6 +214,17 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
                     child: Text(category),
                   );
                 }).toList(),
+=======
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+            ),
+            items: AppConstants.clothingCategories.map((category) {
+              return DropdownMenuItem(
+                value: category,
+                child: Text(category),
+              );
+            }).toList(),
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
             onChanged: (value) {
               if (value != null) {
                 setState(() {
@@ -197,14 +233,21 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
               }
             },
           ),
+<<<<<<< HEAD
 
           const SizedBox(height: 16),
 
+=======
+          
+          const SizedBox(height: 16),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Color selection
           _buildSectionTitle('Colors'),
           Wrap(
             spacing: 8,
             runSpacing: 8,
+<<<<<<< HEAD
             children:
                 AppConstants.commonColors.map((color) {
                   final isSelected = _selectedColors.contains(color);
@@ -224,6 +267,26 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
 
           const SizedBox(height: 16),
 
+=======
+            children: AppConstants.commonColors.map((color) {
+              final isSelected = _selectedColors.contains(color);
+              return FilterChip(
+                label: Text(color),
+                selected: isSelected,
+                onSelected: (_) => _toggleColor(color),
+                selectedColor: AppColors.pink,
+                backgroundColor: Colors.white,
+                checkmarkColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
+              );
+            }).toList(),
+          ),
+          
+          const SizedBox(height: 16),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Tags
           _buildSectionTitle('Tags'),
           Row(
@@ -249,12 +312,17 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
               ),
             ],
           ),
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           if (_tags.isNotEmpty) ...[
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
+<<<<<<< HEAD
               children:
                   _tags.map((tag) {
                     return Chip(
@@ -269,6 +337,21 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
 
           const SizedBox(height: 16),
 
+=======
+              children: _tags.map((tag) {
+                return Chip(
+                  label: Text(tag),
+                  deleteIcon: const Icon(LucideIcons.x, size: 16),
+                  onDeleted: () => _removeTag(tag),
+                  backgroundColor: AppColors.teal.withOpacity(0.1),
+                );
+              }).toList(),
+            ),
+          ],
+          
+          const SizedBox(height: 16),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Optional fields
           ExpansionTile(
             title: const Text('Additional Details'),
@@ -293,9 +376,15 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
               ),
             ],
           ),
+<<<<<<< HEAD
 
           const SizedBox(height: 24),
 
+=======
+          
+          const SizedBox(height: 24),
+          
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
           // Continue button
           SizedBox(
             width: double.infinity,
@@ -320,8 +409,19 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
+<<<<<<< HEAD
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
   }
 }
+=======
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+>>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/constants/app_constants.dart';
+import 'package:fitsyncgemini/services/clothing_detection_service.dart';
 
 class ManualTaggingWidget extends ConsumerStatefulWidget {
   final File imageFile;
@@ -31,6 +32,7 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
   List<String> _selectedColors = [];
   List<String> _tags = [];
   bool _isAnalyzing = false;
+  String _analysisStatus = '';
 
   @override
   void initState() {
@@ -50,19 +52,92 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
   Future<void> _runAIAnalysis() async {
     setState(() {
       _isAnalyzing = true;
+      _analysisStatus = 'Connecting to AI service...';
     });
 
-    // Simulate AI analysis
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final clothingDetectionService = ref.read(
+        clothingDetectionServiceProvider,
+      );
 
-    if (mounted) {
+      // Check if service is healthy first
       setState(() {
-        _nameController.text = 'White Cotton T-Shirt';
-        _selectedCategory = 'Tops';
-        _selectedColors = ['White'];
-        _tags = ['casual', 'cotton', 'basic'];
-        _isAnalyzing = false;
+        _analysisStatus = 'Checking service availability...';
       });
+
+      final isHealthy = await clothingDetectionService.isServiceHealthy();
+      if (!isHealthy) {
+        throw ClothingDetectionException(
+          'AI service is currently unavailable',
+          503,
+        );
+      }
+
+      setState(() {
+        _analysisStatus = 'Analyzing clothing item...';
+      });
+
+      // Perform clothing analysis
+      final analysisResult = await clothingDetectionService.analyzeClothing(
+        widget.imageFile,
+      );
+
+      if (mounted) {
+        setState(() {
+          // Apply AI suggestions
+          _nameController.text =
+              analysisResult.suggestedName ?? 'Clothing Item';
+
+          // Set category if detected and valid
+          if (analysisResult.detectedCategory != null &&
+              AppConstants.clothingCategories.contains(
+                analysisResult.detectedCategory,
+              )) {
+            _selectedCategory = analysisResult.detectedCategory!;
+          }
+
+          // Set colors (filter to only include known colors)
+          _selectedColors =
+              analysisResult.colors
+                  .where((color) => AppConstants.commonColors.contains(color))
+                  .toList();
+
+          // Set tags
+          _tags = analysisResult.tags;
+
+          _isAnalyzing = false;
+          _analysisStatus =
+              'Analysis complete (${(analysisResult.confidence * 100).toStringAsFixed(1)}% confidence)';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          if (e is ClothingDetectionException) {
+            _analysisStatus = 'AI analysis failed: ${e.message}';
+          } else {
+            _analysisStatus = 'AI analysis failed: $e';
+          }
+
+          // Provide fallback values
+          _nameController.text = 'Clothing Item';
+          _selectedCategory = AppConstants.clothingCategories.first;
+          _selectedColors = [];
+          _tags = [];
+        });
+
+        // Show error snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'AI analysis failed. You can still manually tag the item.',
+            ),
+            backgroundColor: Colors.orange,
+            action: SnackBarAction(label: 'Retry', onPressed: _runAIAnalysis),
+          ),
+        );
+      }
     }
   }
 
@@ -114,7 +189,7 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image preview
+          // Image preview and analysis status
           Row(
             children: [
               Container(
@@ -134,28 +209,48 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_isAnalyzing)
-                      const Row(
+                      Row(
                         children: [
-                          SizedBox(
+                          const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                          SizedBox(width: 8),
-                          Text('AI analyzing...'),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _analysisStatus,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
                         ],
                       )
                     else
-                      const Row(
+                      Row(
                         children: [
                           Icon(
-                            LucideIcons.check,
-                            color: Colors.green,
+                            _analysisStatus.contains('failed')
+                                ? LucideIcons.alertCircle
+                                : LucideIcons.check,
+                            color:
+                                _analysisStatus.contains('failed')
+                                    ? Colors.orange
+                                    : Colors.green,
                             size: 16,
                           ),
-                          SizedBox(width: 8),
-                          Text('Analysis complete'),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _analysisStatus,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
                         ],
+                      ),
+                    if (!_isAnalyzing && _analysisStatus.contains('failed'))
+                      TextButton(
+                        onPressed: _runAIAnalysis,
+                        child: const Text('Retry Analysis'),
                       ),
                   ],
                 ),

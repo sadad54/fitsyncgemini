@@ -17,12 +17,8 @@ class ManualTaggingWidget extends ConsumerStatefulWidget {
   });
 
   @override
-<<<<<<< HEAD
   ConsumerState<ManualTaggingWidget> createState() =>
       _ManualTaggingWidgetState();
-=======
-  ConsumerState<ManualTaggingWidget> createState() => _ManualTaggingWidgetState();
->>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
 }
 
 class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
@@ -103,14 +99,10 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
       'colors': _selectedColors,
       'tags': _tags,
       'brand': _brandController.text.isNotEmpty ? _brandController.text : null,
-<<<<<<< HEAD
       'price':
           _priceController.text.isNotEmpty
               ? double.tryParse(_priceController.text)
               : null,
-=======
-      'price': _priceController.text.isNotEmpty ? double.tryParse(_priceController.text) : null,
->>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
     };
     widget.onComplete(data);
   }
@@ -142,7 +134,7 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_isAnalyzing)
-                      const Row(
+                      Row(
                         children: [
                           SizedBox(
                             width: 16,
@@ -150,21 +142,17 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                           SizedBox(width: 8),
-                          Text('AI analyzing...'),
+                          const Text('AI analyzing...'),
                         ],
                       )
                     else
                       const Row(
                         children: [
-<<<<<<< HEAD
                           Icon(
                             LucideIcons.check,
                             color: Colors.green,
                             size: 16,
                           ),
-=======
-                          Icon(LucideIcons.check, color: Colors.green, size: 16),
->>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
                           SizedBox(width: 8),
                           Text('Analysis complete'),
                         ],
@@ -205,16 +193,6 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
           _buildSectionTitle('Category'),
           DropdownButtonFormField<String>(
             value: _selectedCategory,
-<<<<<<< HEAD
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-            items:
-                AppConstants.clothingCategories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
-=======
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
             ),
@@ -224,7 +202,6 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
                 child: Text(category),
               );
             }).toList(),
->>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
             onChanged: (value) {
               if (value != null) {
                 setState(() {

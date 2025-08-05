@@ -50,16 +50,11 @@ dependencies:
   provider: ^6.1.2 
   firebase_core: ^4.0.0
   firebase_auth: ^6.0.0
-<<<<<<< HEAD
-  image_picker: ^1.1.2
-  image: ^4.1.7
-=======
   
   # Image handling
   image_picker: ^1.0.7
   image: ^4.1.7
 
->>>>>>> 4eb743f5c696f1242a8ef094993dd9ef82211e1e
 dev_dependencies:
   flutter_test:
     sdk: flutter

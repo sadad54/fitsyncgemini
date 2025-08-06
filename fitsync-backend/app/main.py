@@ -111,4 +111,3 @@ async def health_check():
         "timestamp": time.time(),
         "version": "2.0.0"
     }
-

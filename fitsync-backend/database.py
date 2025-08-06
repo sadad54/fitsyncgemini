@@ -15,80 +15,108 @@ class User(Base):
     style_archetype = Column(String, nullable=True)
     preferences = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=funcpost("/clothing", response_model=ClothingAnalysis)
-async def analyze_clothing(
-    file: UploadFile = File(...),
-    include_attributes: bool = True,
-    include_style_scores: bool = True,
-    ml_service: MLService = Depends(get_ml_service)
-):
-    """Advanced clothing analysis with fashion attributes"""
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    # Validate image
-    if not validate_image(file):
-        raise HTTPException(status_code=400, detail="Invalid image format")
-    
-    try:
-        # Process image
-        image_path = await process_image(file)
-        
-        # Perform analysis
-        result = await ml_service.analyze_clothing(
-            image_path=image_path,
-            include_attributes=include_attributes,
-            include_style_scores=include_style_scores
-        )
-        
-        logger.info(f"Clothing analysis completed for {file.filename}")
-        return result
-        
-    except Exception as e:
-        logger.error(f"Clothing analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Analysis failed")
+    # Relationships
+    wardrobe_items = relationship("WardrobeItem", back_populates="owner")
+    outfit_combinations = relationship("OutfitCombination", back_populates="user")
+    style_analyses = relationship("StyleAnalysis", back_populates="user")
 
-@router.post("/style", response_model=StyleAnalysis)
-async def analyze_style(
-    file: UploadFile = File(...),
-    user_preferences: Optional[dict] = None,
-    ml_service: MLService = Depends(get_ml_service)
-):
-    """Analyze personal style and fashion archetype"""
+class WardrobeItem(Base):
+    __tablename__ = "wardrobe_items"
     
-    try:
-        image_path = await process_image(file)
-        
-        result = await ml_service.analyze_style(
-            image_path=image_path,
-            user_preferences=user_preferences
-        )
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"Style analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Style analysis failed")
-
-@router.post("/color-palette")
-async def analyze_color_palette(
-    file: UploadFile = File(...),
-    ml_service: MLService = Depends(get_ml_service)
-):
-    """Analyze personal color palette"""
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    category = Column(String, nullable=False)  # tops, bottoms, shoes, accessories
+    subcategory = Column(String, nullable=True)  # t-shirt, jeans, sneakers, etc.
+    brand = Column(String, nullable=True)
+    color_palette = Column(JSON, nullable=True)  # Dominant colors
+    style_attributes = Column(JSON, nullable=True)  # Style tags and scores
+    image_url = Column(String, nullable=True)
+    purchase_date = Column(DateTime, nullable=True)
+    price = Column(Float, nullable=True)
+    sustainability_score = Column(Float, nullable=True)
+    usage_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    try:
-        image_path = await process_image(file)
-        
-        result = await ml_service.analyze_color_palette(image_path)
-        
-        return {
-            "dominant_colors": result["colors"],
-            "color_harmony_score": result["harmony_score"],
-            "seasonal_analysis": result["seasonal_compatibility"],
-            "recommended_colors": result["recommendations"]
-        }
-        
-    except Exception as e:
-        logger.error(f"Color palette analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Color analysis failed")
+    # Relationships
+    owner = relationship("User", back_populates="wardrobe_items")
 
-@router.post("/body-type", response_model=BodyTypeAnalysis)     
+class OutfitCombination(Base):
+    __tablename__ = "outfit_combinations"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    item_ids = Column(JSON, nullable=False)  # List of wardrobe item IDs
+    occasion = Column(String, nullable=True)
+    season = Column(String, nullable=True)
+    weather_conditions = Column(JSON, nullable=True)
+    style_scores = Column(JSON, nullable=True)
+    user_rating = Column(Integer, nullable=True)  # 1-5 rating
+    worn_count = Column(Integer, default=0)
+    last_worn = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="outfit_combinations")
+
+class StyleAnalysisResult(Base):
+    __tablename__ = "style_analyses"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    analysis_type = Column(String, nullable=False)  # clothing, style, color, body
+    image_url = Column(String, nullable=True)
+    results = Column(JSON, nullable=False)
+    confidence_score = Column(Float, nullable=True)
+    model_version = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="style_analyses")
+
+class TryOnJob(Base):
+    __tablename__ = "tryon_jobs"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    status = Column(String, default="processing")  # processing, completed, failed
+    user_photo_url = Column(String, nullable=False)
+    outfit_items = Column(JSON, nullable=False)
+    result_url = Column(String, nullable=True)
+    quality_score = Column(Float, nullable=True)
+    processing_time = Column(Float, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+
+class SocialInteraction(Base):
+    __tablename__ = "social_interactions"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    target_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    interaction_type = Column(String, nullable=False)  # like, comment, follow, rate
+    content_id = Column(String, nullable=True)  # outfit_id, challenge_id, etc.
+    content_type = Column(String, nullable=True)  # outfit, challenge, profile
+    metadata = Column(JSON, nullable=True)  # rating, comment text, etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class FashionTrend(Base):
+    __tablename__ = "fashion_trends"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String, nullable=False)  # color, style, item, pattern
+    trend_score = Column(Float, nullable=False)  # 0-1 trending intensity
+    season = Column(String, nullable=True)
+    demographic_tags = Column(JSON, nullable=True)  # age groups, styles, etc.
+    source_data = Column(JSON, nullable=True)  # social media metrics, runway data
+    start_date = Column(DateTime, nullable=True)
+    peak_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

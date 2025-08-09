@@ -43,3 +43,36 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Python
+venv/
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.dll
+*.lib
+*.so
+.env
+
+# FastAPI/Build junk
+dist/
+build/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.melos_tool/
+pubspec.lock
+build/
+ios/Flutter/Flutter.framework
+ios/Pods/
+android/.gradle/
+android/app/build/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

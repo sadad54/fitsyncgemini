@@ -1,17 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 
 class AuthService {
-  // TODO: Initialize Firebase Auth
-  // final FirebaseAuth _auth = FirebaseAuth.instance;
-  // final GoogleSignIn _googleSignIn = GoogleSignIn();
+  String? _currentUserId;
+  Map<String, dynamic>? _currentUser;
 
   // Current user stream
   Stream<String?> get authStateChanges {
-    // TODO: Replace with Firebase Auth stream
-    // return _auth.authStateChanges().map((user) => user?.uid);
-    return Stream.value(null); // Placeholder
+    return Stream.value(_currentUserId);
   }
 
   // Sign up with email and password
@@ -22,11 +18,21 @@ class AuthService {
     String lastName,
   ) async {
     try {
-      // TODO: Implement Firebase Auth signup
-      await Future.delayed(
-        const Duration(seconds: 1),
-      ); // Simulate network delay
-      return AuthResult.success('user123');
+      // Extract username from email (you can modify this logic)
+      final username = email.split('@')[0];
+
+      final result = await MLAPIService.registerUser(
+        email: email,
+        password: password,
+        username: username,
+        firstName: firstName,
+        lastName: lastName,
+      );
+
+      _currentUserId = result['id'].toString();
+      _currentUser = result;
+
+      return AuthResult.success(_currentUserId!);
     } catch (e) {
       return AuthResult.failure(e.toString());
     }
@@ -35,11 +41,14 @@ class AuthService {
   // Sign in with email and password
   Future<AuthResult> signInWithEmail(String email, String password) async {
     try {
-      // TODO: Implement Firebase Auth signin
-      await Future.delayed(
-        const Duration(seconds: 1),
-      ); // Simulate network delay
-      return AuthResult.success('user123');
+      await MLAPIService.loginUser(email: email, password: password);
+
+      // Get user info after successful login
+      final userInfo = await MLAPIService.getCurrentUser();
+      _currentUserId = userInfo['id'].toString();
+      _currentUser = userInfo;
+
+      return AuthResult.success(_currentUserId!);
     } catch (e) {
       return AuthResult.failure(e.toString());
     }
@@ -48,21 +57,9 @@ class AuthService {
   // Sign in with Google
   Future<AuthResult> signInWithGoogle() async {
     try {
-      // TODO: Implement Google Sign In
-      // final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      // if (googleUser == null) return AuthResult.failure('Sign in cancelled');
-
-      // final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      // final credential = GoogleAuthProvider.credential(
-      //   accessToken: googleAuth.accessToken,
-      //   idToken: googleAuth.idToken,
-      // );
-      // final userCredential = await _auth.signInWithCredential(credential);
-
-      await Future.delayed(
-        const Duration(seconds: 1),
-      ); // Simulate network delay
-      return AuthResult.success('user123');
+      // For now, return a failure since Google Sign-In requires additional setup
+      // You can implement this later with Firebase Auth or Google OAuth
+      return AuthResult.failure('Google Sign-In not implemented yet');
     } catch (e) {
       return AuthResult.failure(e.toString());
     }
@@ -70,17 +67,42 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
-    // TODO: Implement Firebase Auth signout
-    // await _auth.signOut();
-    // await _googleSignIn.signOut();
+    try {
+      await MLAPIService.logout();
+    } finally {
+      _currentUserId = null;
+      _currentUser = null;
+    }
   }
 
   // Get current user ID
   String? getCurrentUserId() {
-    // TODO: Replace with Firebase Auth current user
-    // return _auth.currentUser?.uid;
-    return 'user123'; // Placeholder
+    return _currentUserId;
   }
+
+  // Get current user info
+  Map<String, dynamic>? getCurrentUser() {
+    return _currentUser;
+  }
+
+  // Refresh current user info
+  Future<Map<String, dynamic>?> refreshUserInfo() async {
+    try {
+      if (_currentUserId != null) {
+        _currentUser = await MLAPIService.getCurrentUser();
+        return _currentUser;
+      }
+      return null;
+    } catch (e) {
+      // If refresh fails, user might need to re-login
+      _currentUserId = null;
+      _currentUser = null;
+      return null;
+    }
+  }
+
+  // Check if user is authenticated
+  bool get isAuthenticated => _currentUserId != null;
 }
 
 class AuthResult {

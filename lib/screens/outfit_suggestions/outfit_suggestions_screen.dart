@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/constants/app_constants.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -20,8 +21,10 @@ class _OutfitSuggestionsScreenState
   late TabController _tabController;
   String _selectedCategory = 'Today';
   bool _isGenerating = false;
+  bool _isLoadingRecommendations = false;
 
   final List<String> _categories = ['Today', 'Work', 'Casual', 'Event'];
+  List<Map<String, dynamic>> _backendRecommendations = [];
 
   final List<Map<String, dynamic>> _todayOutfits = [
     {
@@ -57,6 +60,7 @@ class _OutfitSuggestionsScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadRecommendations();
   }
 
   @override
@@ -65,18 +69,77 @@ class _OutfitSuggestionsScreenState
     super.dispose();
   }
 
-  void _generateOutfit() {
+  // Load recommendations from backend
+  Future<void> _loadRecommendations() async {
+    if (_isLoadingRecommendations) return;
+
+    setState(() {
+      _isLoadingRecommendations = true;
+    });
+
+    try {
+      final context = {
+        'category': _selectedCategory.toLowerCase(),
+        'weather': 'sunny', // You can integrate weather API here
+        'temperature': 24,
+        'time_of_day':
+            TimeOfDay.now().hour < 12
+                ? 'morning'
+                : TimeOfDay.now().hour < 18
+                ? 'afternoon'
+                : 'evening',
+      };
+
+      final recommendations = await MLAPIService.getRecommendations(
+        context: context,
+      );
+
+      setState(() {
+        if (recommendations['recommendations'] != null) {
+          _backendRecommendations = List<Map<String, dynamic>>.from(
+            recommendations['recommendations'],
+          );
+        }
+      });
+    } catch (e) {
+      _showErrorSnackBar('Failed to load recommendations: ${e.toString()}');
+      // Continue with sample data if backend fails
+    } finally {
+      setState(() {
+        _isLoadingRecommendations = false;
+      });
+    }
+  }
+
+  void _generateOutfit() async {
     setState(() {
       _isGenerating = true;
     });
 
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      // Generate new recommendations
+      await _loadRecommendations();
+    } catch (e) {
+      _showErrorSnackBar('Failed to generate outfit: ${e.toString()}');
+    } finally {
       if (mounted) {
         setState(() {
           _isGenerating = false;
         });
       }
-    });
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -300,14 +363,51 @@ class _OutfitSuggestionsScreenState
   }
 
   Widget _buildTodayView() {
+    // Use backend recommendations if available, otherwise use sample data
+    final outfitsToShow =
+        _backendRecommendations.isNotEmpty
+            ? _backendRecommendations
+            : _todayOutfits;
+
     return SingleChildScrollView(
       child: Column(
         children: [
           _buildStyleFocusHeader(),
           SizedBox(height: 16),
-          ..._todayOutfits.map((outfit) => _buildOutfitCard(outfit)).toList(),
+          if (_isLoadingRecommendations)
+            _buildLoadingCard()
+          else
+            ...outfitsToShow.map((outfit) => _buildOutfitCard(outfit)).toList(),
           _buildGenerateMoreCard(),
           SizedBox(height: 100), // Bottom padding for any floating elements
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingCard() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircularProgressIndicator(color: AppColors.pink),
+          SizedBox(height: 16),
+          Text(
+            'Loading personalized recommendations...',
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          ),
         ],
       ),
     );

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 
 class GradientButton extends StatelessWidget {
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double borderRadius;

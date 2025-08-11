@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class TryOnScreen extends StatefulWidget {
@@ -14,6 +17,12 @@ class TryOnScreen extends StatefulWidget {
 class _TryOnScreenState extends State<TryOnScreen> {
   bool _hasUserPhoto = false;
   bool _isProcessing = false;
+  File? _userPhoto;
+  File? _selectedClothingImage;
+  Map<String, dynamic>? _poseAnalysis;
+  List<Map<String, dynamic>> _availableClothing = [];
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
@@ -172,13 +181,24 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 100,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 5,
-                    separatorBuilder:
-                        (context, index) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) => _buildOutfitOption(index),
-                  ),
+                  child:
+                      _availableClothing.isEmpty
+                          ? Center(
+                            child: Text(
+                              'No clothing items available',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          )
+                          : ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _availableClothing.length,
+                            separatorBuilder:
+                                (context, index) => const SizedBox(width: 12),
+                            itemBuilder: (context, index) {
+                              final item = _availableClothing[index];
+                              return _buildOutfitOption(item, index);
+                            },
+                          ),
                 ),
               ],
             ),
@@ -212,25 +232,57 @@ class _TryOnScreenState extends State<TryOnScreen> {
     ).animate().fadeIn();
   }
 
-  Widget _buildOutfitOption(int index) {
+  Widget _buildOutfitOption(Map<String, dynamic> item, int index) {
+    final isSelected =
+        _selectedClothingImage != null; // You can make this more specific
+
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        // For demo purposes, we'll simulate selecting this clothing item
+        // In a real app, you'd need the actual image file from the server
+        setState(() {
+          // You'd need to download or get the image file here
+          // _selectedClothingImage = File(item['image_url']);
+        });
+        _showSuccessSnackBar('Selected: ${item['name']}');
+      },
       child: Container(
         width: 80,
         height: 100,
         decoration: BoxDecoration(
-          color: AppColors.pink.withOpacity(0.1),
+          color:
+              isSelected
+                  ? AppColors.pink.withOpacity(0.2)
+                  : AppColors.pink.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.pink.withOpacity(0.3)),
+          border: Border.all(
+            color:
+                isSelected ? AppColors.pink : AppColors.pink.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.shirt, color: AppColors.pink),
-            SizedBox(height: 4),
-            Text(
-              'Outfit',
-              style: TextStyle(fontSize: 10, color: AppColors.pink),
+            Icon(
+              LucideIcons.shirt,
+              color: AppColors.pink,
+              size: isSelected ? 24 : 20,
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                item['name'] ?? 'Item',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: AppColors.pink,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -270,26 +322,118 @@ class _TryOnScreenState extends State<TryOnScreen> {
     );
   }
 
-  void _uploadPhoto(String source) {
-    // TODO: Implement camera/gallery photo selection
-    setState(() {
-      _hasUserPhoto = true;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadAvailableClothing();
   }
 
-  void _tryOnOutfit() {
+  Future<void> _loadAvailableClothing() async {
+    try {
+      final items = await MLAPIService.getUserWardrobe(limit: 20);
+      setState(() {
+        _availableClothing = items;
+      });
+    } catch (e) {
+      print('Failed to load clothing: $e');
+    }
+  }
+
+  Future<void> _uploadPhoto(String source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        final file = File(image.path);
+        setState(() {
+          _userPhoto = file;
+          _hasUserPhoto = true;
+        });
+
+        // Analyze pose when user uploads photo
+        await _analyzePose(file);
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to select photo: ${e.toString()}');
+    }
+  }
+
+  Future<void> _analyzePose(File imageFile) async {
+    try {
+      setState(() {
+        _isProcessing = true;
+      });
+
+      final analysis = await MLAPIService.estimateBodyPose(imageFile);
+      setState(() {
+        _poseAnalysis = analysis;
+      });
+    } catch (e) {
+      _showErrorSnackBar('Failed to analyze pose: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Future<void> _tryOnOutfit() async {
+    if (_userPhoto == null || _selectedClothingImage == null) {
+      _showErrorSnackBar('Please select both a photo and clothing item');
+      return;
+    }
+
     setState(() {
       _isProcessing = true;
     });
 
-    // Simulate processing time
-    Future.delayed(const Duration(seconds: 3), () {
+    try {
+      final result = await MLAPIService.generateVirtualTryOn(
+        _userPhoto!,
+        _selectedClothingImage!,
+      );
+
+      // Handle the virtual try-on result
+      _showSuccessSnackBar('Virtual try-on completed!');
+      // You can display the result image or save it
+    } catch (e) {
+      _showErrorSnackBar('Virtual try-on failed: ${e.toString()}');
+    } finally {
       if (mounted) {
         setState(() {
           _isProcessing = false;
         });
       }
-    });
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _showHelpDialog() {

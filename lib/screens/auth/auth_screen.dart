@@ -7,8 +7,13 @@ import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/widgets/common/gradient_button.dart';
 import 'package:fitsyncgemini/widgets/common/social_button.dart';
 import 'package:fitsyncgemini/widgets/common/custom_text_field.dart';
+import 'package:fitsyncgemini/services/auth_service.dart';
 
 enum AuthMode { login, signup }
+
+extension AuthModeExtension on AuthMode {
+  bool get isLogin => this == AuthMode.login;
+}
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -20,6 +25,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   AuthMode _authMode = AuthMode.login;
   bool _showPassword = false;
+  bool _isLoading = false;
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -50,9 +56,80 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
   }
 
-  void _submit() {
-    // In a real app, you would add form validation and authentication logic here.
-    context.go('/onboarding');
+  void _submit() async {
+    if (_isLoading) return;
+
+    // Basic validation
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
+      _showErrorSnackBar('Please fill in all required fields');
+      return;
+    }
+
+    if (!_authMode.isLogin &&
+        (_firstNameController.text.trim().isEmpty ||
+            _lastNameController.text.trim().isEmpty)) {
+      _showErrorSnackBar('Please fill in your name');
+      return;
+    }
+
+    if (!_authMode.isLogin &&
+        _passwordController.text != _confirmPasswordController.text) {
+      _showErrorSnackBar('Passwords do not match');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      AuthResult result;
+
+      if (_authMode == AuthMode.login) {
+        result = await authService.signInWithEmail(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+      } else {
+        result = await authService.signUpWithEmail(
+          _emailController.text.trim(),
+          _passwordController.text,
+          _firstNameController.text.trim(),
+          _lastNameController.text.trim(),
+        );
+      }
+
+      if (result.isSuccess) {
+        // Navigate to onboarding or dashboard based on user state
+        if (mounted) {
+          context.go('/onboarding');
+        }
+      } else {
+        _showErrorSnackBar(result.error ?? 'Authentication failed');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Network error. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -168,13 +245,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ],
 
                   GradientButton(
-                    onPressed: _submit,
+                    onPressed: _isLoading ? null : _submit,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(isLogin ? 'Sign In' : 'Create Account'),
-                        const SizedBox(width: 8),
-                        const Icon(LucideIcons.arrowRight, size: 16),
+                        if (_isLoading) ...[
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isLogin ? 'Signing In...' : 'Creating Account...',
+                          ),
+                        ] else ...[
+                          Text(isLogin ? 'Sign In' : 'Create Account'),
+                          const SizedBox(width: 8),
+                          const Icon(LucideIcons.arrowRight, size: 16),
+                        ],
                       ],
                     ),
                   ),

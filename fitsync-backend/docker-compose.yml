@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  # FitSync Backend API
+  fitsync-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: fitsync-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://fitsync_user:fitsync_password@postgres:5432/fitsync_db
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=your-development-secret-key-change-in-production
+      - DEBUG=true
+      - ENVIRONMENT=development
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./chroma_db:/app/chroma_db
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - fitsync-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: fitsync-postgres
+    environment:
+      - POSTGRES_DB=fitsync_db
+      - POSTGRES_USER=fitsync_user
+      - POSTGRES_PASSWORD=fitsync_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - fitsync-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: fitsync-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fitsync-network
+    restart: unless-stopped
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: fitsync-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - fitsync-network
+    restart: unless-stopped
+
+  # Grafana for monitoring dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: fitsync-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - fitsync-network
+    restart: unless-stopped
+
+  # Flower for Celery monitoring (if using Celery)
+  flower:
+    image: mher/flower:latest
+    container_name: fitsync-flower
+    ports:
+      - "5555:5555"
+    environment:
+      - FLOWER_BROKER_API=redis://redis:6379/0
+    networks:
+      - fitsync-network
+    restart: unless-stopped
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: fitsync-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/ssl:/etc/nginx/ssl
+    depends_on:
+      - fitsync-api
+    networks:
+      - fitsync-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  fitsync-network:
+    driver: bridge

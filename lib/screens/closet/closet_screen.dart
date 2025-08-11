@@ -7,6 +7,7 @@ import 'package:fitsyncgemini/constants/app_data.dart';
 import 'package:fitsyncgemini/models/clothing_item.dart';
 import 'package:fitsyncgemini/widgets/closet/add_item_modal.dart';
 import 'package:fitsyncgemini/widgets/closet/closet_filter_widget.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -25,6 +26,11 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   List<String> _selectedItems = [];
   ClosetFilter _currentFilter = const ClosetFilter();
 
+  // Backend integration variables
+  List<Map<String, dynamic>> _backendItems = [];
+  bool _isLoadingItems = false;
+  bool _isLoadingStats = false;
+
   final List<Map<String, dynamic>> _categories = [
     {'id': 'all', 'name': 'All', 'count': 0},
     {'id': 'tops', 'name': 'Tops', 'count': 0},
@@ -34,12 +40,12 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
     {'id': 'shoes', 'name': 'Shoes', 'count': 0},
   ];
 
-  final Map<String, dynamic> _closetStats = {
-    'totalItems': 6,
-    'recentlyAdded': 3,
-    'mostWorn': 'White Button Shirt',
-    'leastWorn': 'Black Dress',
-    'totalValue': 2840,
+  Map<String, dynamic> _closetStats = {
+    'totalItems': 0,
+    'recentlyAdded': 0,
+    'mostWorn': 'N/A',
+    'leastWorn': 'N/A',
+    'totalValue': 0,
   };
 
   final List<Map<String, dynamic>> _recentActivity = [
@@ -66,33 +72,161 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   @override
   void initState() {
     super.initState();
-    _updateCategoryCounts();
+    _loadWardrobeData();
+    _loadWardrobeStats();
+  }
+
+  // Load wardrobe data from backend
+  Future<void> _loadWardrobeData() async {
+    if (_isLoadingItems) return;
+
+    setState(() {
+      _isLoadingItems = true;
+    });
+
+    try {
+      final items = await MLAPIService.getUserWardrobe(
+        category: _selectedCategory == 'all' ? null : _selectedCategory,
+        limit: 100, // Load all items for now
+      );
+
+      setState(() {
+        _backendItems = items;
+        _updateCategoryCounts();
+      });
+    } catch (e) {
+      _showErrorSnackBar('Failed to load wardrobe: ${e.toString()}');
+      // Fallback to sample data if backend fails
+      setState(() {
+        _updateCategoryCounts();
+      });
+    } finally {
+      setState(() {
+        _isLoadingItems = false;
+      });
+    }
+  }
+
+  // Load wardrobe statistics from backend
+  Future<void> _loadWardrobeStats() async {
+    if (_isLoadingStats) return;
+
+    setState(() {
+      _isLoadingStats = true;
+    });
+
+    try {
+      final stats = await MLAPIService.getWardrobeStats();
+      setState(() {
+        _closetStats = {
+          'totalItems': stats['total_items'] ?? 0,
+          'recentlyAdded': stats['recent_count'] ?? 0,
+          'mostWorn': stats['most_worn_item'] ?? 'N/A',
+          'leastWorn': stats['least_worn_item'] ?? 'N/A',
+          'totalValue': stats['total_value'] ?? 0,
+        };
+      });
+    } catch (e) {
+      // Keep default stats if backend fails
+      print('Failed to load stats: $e');
+    } finally {
+      setState(() {
+        _isLoadingStats = false;
+      });
+    }
   }
 
   void _updateCategoryCounts() {
-    _categories[0]['count'] = sampleCloset.length;
+    // Update category counts based on backend data or fallback to sample data
+    final itemsToCount =
+        _backendItems.isNotEmpty
+            ? _backendItems
+            : sampleCloset.map((item) => {'category': item.category}).toList();
+
+    _categories[0]['count'] = itemsToCount.length;
     _categories[1]['count'] =
-        sampleCloset.where((item) => item.category == 'Tops').length;
+        itemsToCount
+            .where(
+              (item) =>
+                  item['category']?.toLowerCase() == 'tops' ||
+                  item['category']?.toLowerCase() == 'top',
+            )
+            .length;
     _categories[2]['count'] =
-        sampleCloset.where((item) => item.category == 'Bottoms').length;
+        itemsToCount
+            .where(
+              (item) =>
+                  item['category']?.toLowerCase() == 'bottoms' ||
+                  item['category']?.toLowerCase() == 'bottom',
+            )
+            .length;
     _categories[3]['count'] =
-        sampleCloset.where((item) => item.category == 'Dresses').length;
+        itemsToCount
+            .where(
+              (item) =>
+                  item['category']?.toLowerCase() == 'dresses' ||
+                  item['category']?.toLowerCase() == 'dress',
+            )
+            .length;
     _categories[4]['count'] =
-        sampleCloset.where((item) => item.category == 'Outerwear').length;
+        itemsToCount
+            .where(
+              (item) =>
+                  item['category']?.toLowerCase() == 'outerwear' ||
+                  item['category']?.toLowerCase() == 'jacket',
+            )
+            .length;
     _categories[5]['count'] =
-        sampleCloset.where((item) => item.category == 'Shoes').length;
+        itemsToCount
+            .where(
+              (item) =>
+                  item['category']?.toLowerCase() == 'shoes' ||
+                  item['category']?.toLowerCase() == 'shoe',
+            )
+            .length;
   }
 
-  List<ClothingItem> get _filteredItems {
-    return sampleCloset.where((item) {
-      final matchesSearch = item.name.toLowerCase().contains(
-        _searchController.text.toLowerCase(),
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
-      final matchesCategory =
-          _selectedCategory == 'all' ||
-          item.category.toLowerCase() == _selectedCategory.toLowerCase();
-      return matchesSearch && matchesCategory;
-    }).toList();
+    }
+  }
+
+  List<dynamic> get _filteredItems {
+    // Use backend items if available, otherwise fall back to sample data
+    final sourceItems = _backendItems.isNotEmpty ? _backendItems : sampleCloset;
+
+    if (_backendItems.isNotEmpty) {
+      // Filter backend items
+      return _backendItems.where((item) {
+        final matchesSearch = (item['name'] ?? '').toLowerCase().contains(
+          _searchController.text.toLowerCase(),
+        );
+        final itemCategory = (item['category'] ?? '').toLowerCase();
+        final matchesCategory =
+            _selectedCategory == 'all' ||
+            itemCategory == _selectedCategory.toLowerCase() ||
+            itemCategory.contains(_selectedCategory.toLowerCase());
+        return matchesSearch && matchesCategory;
+      }).toList();
+    } else {
+      // Filter sample data
+      return sampleCloset.where((item) {
+        final matchesSearch = item.name.toLowerCase().contains(
+          _searchController.text.toLowerCase(),
+        );
+        final matchesCategory =
+            _selectedCategory == 'all' ||
+            item.category.toLowerCase() == _selectedCategory.toLowerCase();
+        return matchesSearch && matchesCategory;
+      }).toList();
+    }
   }
 
   void _toggleItemSelection(String itemId) {
@@ -402,6 +536,8 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                 setState(() {
                   _selectedCategory = category['id'];
                 });
+                // Reload data when category changes
+                _loadWardrobeData();
               },
               selectedColor: AppColors.pink,
               backgroundColor: Colors.white,
@@ -521,10 +657,26 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final item = _filteredItems[index];
-          final isSelected = _selectedItems.contains(item.id);
+          final itemId =
+              _backendItems.isNotEmpty
+                  ? item['id'].toString()
+                  : (item as ClothingItem).id;
+          final itemName =
+              _backendItems.isNotEmpty
+                  ? item['name'] ?? 'Unknown Item'
+                  : (item as ClothingItem).name;
+          final itemCategory =
+              _backendItems.isNotEmpty
+                  ? item['category'] ?? 'Unknown'
+                  : (item as ClothingItem).category;
+          final itemColors =
+              _backendItems.isNotEmpty
+                  ? [item['color'] ?? 'grey']
+                  : (item as ClothingItem).colors;
+          final isSelected = _selectedItems.contains(itemId);
 
           return GestureDetector(
-            onTap: () => _toggleItemSelection(item.id),
+            onTap: () => _toggleItemSelection(itemId),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
@@ -605,7 +757,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.name,
+                          itemName,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -615,7 +767,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          item.category,
+                          itemCategory,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -627,7 +779,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                             Expanded(
                               child: Row(
                                 children:
-                                    item.colors.take(3).map((color) {
+                                    itemColors.take(3).map((color) {
                                       return Container(
                                         width: 12,
                                         height: 12,
@@ -664,12 +816,28 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final item = _filteredItems[index];
-          final isSelected = _selectedItems.contains(item.id);
+          final itemId =
+              _backendItems.isNotEmpty
+                  ? item['id'].toString()
+                  : (item as ClothingItem).id;
+          final itemName =
+              _backendItems.isNotEmpty
+                  ? item['name'] ?? 'Unknown Item'
+                  : (item as ClothingItem).name;
+          final itemCategory =
+              _backendItems.isNotEmpty
+                  ? item['category'] ?? 'Unknown'
+                  : (item as ClothingItem).category;
+          final itemColors =
+              _backendItems.isNotEmpty
+                  ? [item['color'] ?? 'grey']
+                  : (item as ClothingItem).colors;
+          final isSelected = _selectedItems.contains(itemId);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: GestureDetector(
-              onTap: () => _toggleItemSelection(item.id),
+              onTap: () => _toggleItemSelection(itemId),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.all(16),
@@ -714,7 +882,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.name,
+                            itemName,
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -724,7 +892,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            item.category,
+                            itemCategory,
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade600,
@@ -733,7 +901,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              ...item.colors.take(3).map((color) {
+                              ...itemColors.take(3).map((color) {
                                 return Container(
                                   width: 12,
                                   height: 12,
@@ -914,10 +1082,9 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
       builder: (context) => const AddItemModal(),
     ).then((result) {
       if (result == true) {
-        // Refresh closet data
-        setState(() {
-          _updateCategoryCounts();
-        });
+        // Refresh closet data from backend
+        _loadWardrobeData();
+        _loadWardrobeStats();
       }
     });
   }

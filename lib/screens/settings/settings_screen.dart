@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fitsyncgemini/widgets/common/backend_status_widget.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -17,6 +18,9 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: const [
+          // Backend connection status
+          BackendStatusWidget(),
+
           ListTile(
             leading: Icon(Icons.person),
             title: Text('Account'),

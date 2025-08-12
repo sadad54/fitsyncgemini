@@ -5,6 +5,7 @@ ML-specific API endpoints for model interactions
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, Optional
 import asyncio
 
@@ -21,7 +22,7 @@ router = APIRouter()
 async def analyze_clothing_image(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Analyze clothing items in uploaded image"""
     

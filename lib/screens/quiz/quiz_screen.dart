@@ -310,8 +310,8 @@ class _QuizScreenState extends State<QuizScreen> {
                       // ✅ Get the auth view model
                       final authVM = ref.read(authViewModelProvider.notifier);
 
-                      // 🔐 Sign in anonymously via Firebase
-                      await authVM.signInAnonymously();
+                      // 🔐 Mark onboarding as completed
+                      await authVM.completeOnboarding();
 
                       // ✅ Navigate to dashboard
                       context.go('/dashboard');

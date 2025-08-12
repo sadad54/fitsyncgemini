@@ -23,10 +23,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     redirect: (context, state) {
       final isAuthenticated = authState.isAuthenticated;
+      final hasCompletedOnboarding = authState.hasCompletedOnboarding;
       final isGoingToAuth = state.uri.toString() == '/auth';
       final isGoingToSplash = state.uri.toString() == '/splash';
       final isGoingToOnboarding = state.uri.toString() == '/onboarding';
       final isGoingToQuiz = state.uri.toString() == '/quiz';
+      final isGoingToDashboard = state.uri.toString() == '/dashboard';
 
       // If not authenticated and not going to auth/splash/onboarding/quiz, redirect to auth
       if (!isAuthenticated &&
@@ -37,8 +39,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/auth';
       }
 
-      // If authenticated and going to auth/splash, redirect to dashboard
-      if (isAuthenticated && (isGoingToAuth || isGoingToSplash)) {
+      // If authenticated but hasn't completed onboarding and not going to onboarding/quiz, redirect to onboarding
+      if (isAuthenticated &&
+          !hasCompletedOnboarding &&
+          !isGoingToOnboarding &&
+          !isGoingToQuiz &&
+          !isGoingToSplash) {
+        return '/onboarding';
+      }
+
+      // If authenticated and has completed onboarding and going to auth/splash/onboarding/quiz, redirect to dashboard
+      if (isAuthenticated &&
+          hasCompletedOnboarding &&
+          (isGoingToAuth ||
+              isGoingToSplash ||
+              isGoingToOnboarding ||
+              isGoingToQuiz)) {
         return '/dashboard';
       }
 

@@ -81,7 +81,10 @@ class MLAPIService {
   }
 
   static Map<String, String> get _headers {
-    final headers = <String, String>{'Accept': 'application/json'};
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
     if (_authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';
     }
@@ -114,13 +117,14 @@ class MLAPIService {
       final r = await http
           .post(
             Uri.parse(epRegister),
-            headers: {'Content-Type': 'application/json'},
+            headers: _headers,
             body: json.encode({
               'email': email,
               'password': password,
+              'confirm_password': password, // Add this field
               'username': username,
-              'first_name': firstName,
-              'last_name': lastName,
+              'first_name': firstName, // Changed from firstName
+              'last_name': lastName, // Changed from lastName
             }),
           )
           .timeout(_timeout);

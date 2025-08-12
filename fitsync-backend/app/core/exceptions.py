@@ -1,43 +1,53 @@
+from typing import Optional, Dict, Any
 from fastapi import HTTPException, status
-from typing import Any, Dict, Optional
 
 class FitSyncException(Exception):
-    """Base exception for FitSync application"""
-    
     def __init__(
-        self, 
-        message: str, 
-        error_code: str = None, 
-        status_code: int = 500,
-        details: Dict[str, Any] = None
+        self,
+        message: str,
+        error_code: str,
+        status_code: int = status.HTTP_400_BAD_REQUEST,
+        details: Optional[Dict[str, Any]] = None
     ):
         self.message = message
         self.error_code = error_code
         self.status_code = status_code
         self.details = details or {}
-        super().__init__(self.message)
+        super().__init__(message)
 
 class ValidationError(FitSyncException):
-    """Raised when input validation fails"""
-    
-    def __init__(self, message: str, field: str = None, details: Dict[str, Any] = None):
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
         super().__init__(
             message=message,
             error_code="VALIDATION_ERROR",
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            details={"field": field, **(details or {})}
+            details=details
+        )
+
+class ResourceNotFoundError(FitSyncException):
+    def __init__(self, message: str = "Resource not found"):
+        super().__init__(
+            message=message,
+            error_code="RESOURCE_NOT_FOUND",
+            status_code=status.HTTP_404_NOT_FOUND
         )
 
 class AuthenticationError(FitSyncException):
-    """Raised when authentication fails"""
-    
-    def __init__(self, message: str = "Authentication failed", details: Dict[str, Any] = None):
+    def __init__(self, message: str = "Authentication failed"):
         super().__init__(
             message=message,
             error_code="AUTHENTICATION_ERROR",
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            details=details
+            status_code=status.HTTP_401_UNAUTHORIZED
         )
+
+def handle_fitsync_exception(exc: FitSyncException) -> Dict[str, Any]:
+    return {
+        "error": {
+            "code": exc.error_code,
+            "message": exc.message,
+            "details": exc.details
+        }
+    }
 
 class AuthorizationError(FitSyncException):
     """Raised when user lacks permission"""

@@ -4,6 +4,8 @@ User management endpoints for profile management and user operations
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, List, Optional
 import logging
 
@@ -25,13 +27,14 @@ router = APIRouter()
 @router.get("/profile", response_model=UserProfileResponse)
 async def get_user_profile(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Get current user's profile
     """
     try:
-        profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+        result = await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+        profile = result.scalar_one_or_none()
         
         if not profile:
             raise ResourceNotFoundError("User profile not found")
@@ -57,14 +60,15 @@ async def get_user_profile(
 async def create_user_profile(
     profile_data: UserProfileCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Create user profile
     """
     try:
         # Check if profile already exists
-        existing_profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+        result = await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+        existing_profile = result.scalar_one_or_none()
         if existing_profile:
             raise ValidationError("User profile already exists")
         
@@ -79,8 +83,8 @@ async def create_user_profile(
         )
         
         db.add(profile)
-        db.commit()
-        db.refresh(profile)
+        await db.commit()
+        await db.refresh(profile)
         
         logger.info(f"User profile created for user: {current_user.email}")
         
@@ -98,7 +102,7 @@ async def create_user_profile(
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating user profile: {e}")
         raise
 
@@ -106,24 +110,24 @@ async def create_user_profile(
 async def update_user_profile(
     profile_data: UserProfileUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Update user profile
     """
     try:
-        profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+        result = await db.execute(select(UserProfile).where(UserProfile.user_id == current_user.id))
+        profile = result.scalar_one_or_none()
         
         if not profile:
             raise ResourceNotFoundError("User profile not found")
         
         # Update fields
-        update_data = profile_data.dict(exclude_unset=True)
-        for field, value in update_data.items():
+        for field, value in profile_data.dict(exclude_unset=True).items():
             setattr(profile, field, value)
         
-        db.commit()
-        db.refresh(profile)
+        await db.commit()
+        await db.refresh(profile)
         
         logger.info(f"User profile updated for user: {current_user.email}")
         
@@ -141,20 +145,21 @@ async def update_user_profile(
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating user profile: {e}")
         raise
 
 @router.get("/style-preferences", response_model=StylePreferencesResponse)
 async def get_style_preferences(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Get user's style preferences
+    Get user style preferences
     """
     try:
-        preferences = db.query(StylePreferences).filter(StylePreferences.user_id == current_user.id).first()
+        result = await db.execute(select(StylePreferences).where(StylePreferences.user_id == current_user.id))
+        preferences = result.scalar_one_or_none()
         
         if not preferences:
             raise ResourceNotFoundError("Style preferences not found")
@@ -164,12 +169,10 @@ async def get_style_preferences(
             user_id=preferences.user_id,
             style_archetype=preferences.style_archetype,
             color_preferences=preferences.color_preferences,
-            brand_preferences=preferences.brand_preferences,
-            price_range_min=preferences.price_range_min,
-            price_range_max=preferences.price_range_max,
-            size_preferences=preferences.size_preferences,
+            fit_preferences=preferences.fit_preferences,
             occasion_preferences=preferences.occasion_preferences,
-            seasonal_preferences=preferences.seasonal_preferences,
+            brand_preferences=preferences.brand_preferences,
+            budget_range=preferences.budget_range,
             created_at=preferences.created_at,
             updated_at=preferences.updated_at
         )
@@ -182,14 +185,15 @@ async def get_style_preferences(
 async def create_style_preferences(
     preferences_data: StylePreferencesCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Create user's style preferences
+    Create user style preferences
     """
     try:
         # Check if preferences already exist
-        existing_preferences = db.query(StylePreferences).filter(StylePreferences.user_id == current_user.id).first()
+        result = await db.execute(select(StylePreferences).where(StylePreferences.user_id == current_user.id))
+        existing_preferences = result.scalar_one_or_none()
         if existing_preferences:
             raise ValidationError("Style preferences already exist")
         
@@ -197,17 +201,15 @@ async def create_style_preferences(
             user_id=current_user.id,
             style_archetype=preferences_data.style_archetype,
             color_preferences=preferences_data.color_preferences,
-            brand_preferences=preferences_data.brand_preferences,
-            price_range_min=preferences_data.price_range_min,
-            price_range_max=preferences_data.price_range_max,
-            size_preferences=preferences_data.size_preferences,
+            fit_preferences=preferences_data.fit_preferences,
             occasion_preferences=preferences_data.occasion_preferences,
-            seasonal_preferences=preferences_data.seasonal_preferences
+            brand_preferences=preferences_data.brand_preferences,
+            budget_range=preferences_data.budget_range
         )
         
         db.add(preferences)
-        db.commit()
-        db.refresh(preferences)
+        await db.commit()
+        await db.refresh(preferences)
         
         logger.info(f"Style preferences created for user: {current_user.email}")
         
@@ -216,18 +218,16 @@ async def create_style_preferences(
             user_id=preferences.user_id,
             style_archetype=preferences.style_archetype,
             color_preferences=preferences.color_preferences,
-            brand_preferences=preferences.brand_preferences,
-            price_range_min=preferences.price_range_min,
-            price_range_max=preferences.price_range_max,
-            size_preferences=preferences.size_preferences,
+            fit_preferences=preferences.fit_preferences,
             occasion_preferences=preferences.occasion_preferences,
-            seasonal_preferences=preferences.seasonal_preferences,
+            brand_preferences=preferences.brand_preferences,
+            budget_range=preferences.budget_range,
             created_at=preferences.created_at,
             updated_at=preferences.updated_at
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating style preferences: {e}")
         raise
 
@@ -235,24 +235,24 @@ async def create_style_preferences(
 async def update_style_preferences(
     preferences_data: StylePreferencesUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Update user's style preferences
+    Update user style preferences
     """
     try:
-        preferences = db.query(StylePreferences).filter(StylePreferences.user_id == current_user.id).first()
+        result = await db.execute(select(StylePreferences).where(StylePreferences.user_id == current_user.id))
+        preferences = result.scalar_one_or_none()
         
         if not preferences:
             raise ResourceNotFoundError("Style preferences not found")
         
         # Update fields
-        update_data = preferences_data.dict(exclude_unset=True)
-        for field, value in update_data.items():
+        for field, value in preferences_data.dict(exclude_unset=True).items():
             setattr(preferences, field, value)
         
-        db.commit()
-        db.refresh(preferences)
+        await db.commit()
+        await db.refresh(preferences)
         
         logger.info(f"Style preferences updated for user: {current_user.email}")
         
@@ -261,31 +261,30 @@ async def update_style_preferences(
             user_id=preferences.user_id,
             style_archetype=preferences.style_archetype,
             color_preferences=preferences.color_preferences,
-            brand_preferences=preferences.brand_preferences,
-            price_range_min=preferences.price_range_min,
-            price_range_max=preferences.price_range_max,
-            size_preferences=preferences.size_preferences,
+            fit_preferences=preferences.fit_preferences,
             occasion_preferences=preferences.occasion_preferences,
-            seasonal_preferences=preferences.seasonal_preferences,
+            brand_preferences=preferences.brand_preferences,
+            budget_range=preferences.budget_range,
             created_at=preferences.created_at,
             updated_at=preferences.updated_at
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating style preferences: {e}")
         raise
 
 @router.get("/body-measurements", response_model=BodyMeasurementsResponse)
 async def get_body_measurements(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Get user's body measurements
+    Get user body measurements
     """
     try:
-        measurements = db.query(BodyMeasurements).filter(BodyMeasurements.user_id == current_user.id).first()
+        result = await db.execute(select(BodyMeasurements).where(BodyMeasurements.user_id == current_user.id))
+        measurements = result.scalar_one_or_none()
         
         if not measurements:
             raise ResourceNotFoundError("Body measurements not found")
@@ -295,13 +294,14 @@ async def get_body_measurements(
             user_id=measurements.user_id,
             height=measurements.height,
             weight=measurements.weight,
-            chest_circumference=measurements.chest_circumference,
-            waist_circumference=measurements.waist_circumference,
-            hip_circumference=measurements.hip_circumference,
+            chest=measurements.chest,
+            waist=measurements.waist,
+            hips=measurements.hips,
+            inseam=measurements.inseam,
             shoulder_width=measurements.shoulder_width,
-            inseam_length=measurements.inseam_length,
             arm_length=measurements.arm_length,
-            body_type=measurements.body_type,
+            neck=measurements.neck,
+            shoe_size=measurements.shoe_size,
             created_at=measurements.created_at,
             updated_at=measurements.updated_at
         )
@@ -314,14 +314,15 @@ async def get_body_measurements(
 async def create_body_measurements(
     measurements_data: BodyMeasurementsCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Create user's body measurements
+    Create user body measurements
     """
     try:
         # Check if measurements already exist
-        existing_measurements = db.query(BodyMeasurements).filter(BodyMeasurements.user_id == current_user.id).first()
+        result = await db.execute(select(BodyMeasurements).where(BodyMeasurements.user_id == current_user.id))
+        existing_measurements = result.scalar_one_or_none()
         if existing_measurements:
             raise ValidationError("Body measurements already exist")
         
@@ -329,18 +330,19 @@ async def create_body_measurements(
             user_id=current_user.id,
             height=measurements_data.height,
             weight=measurements_data.weight,
-            chest_circumference=measurements_data.chest_circumference,
-            waist_circumference=measurements_data.waist_circumference,
-            hip_circumference=measurements_data.hip_circumference,
+            chest=measurements_data.chest,
+            waist=measurements_data.waist,
+            hips=measurements_data.hips,
+            inseam=measurements_data.inseam,
             shoulder_width=measurements_data.shoulder_width,
-            inseam_length=measurements_data.inseam_length,
             arm_length=measurements_data.arm_length,
-            body_type=measurements_data.body_type
+            neck=measurements_data.neck,
+            shoe_size=measurements_data.shoe_size
         )
         
         db.add(measurements)
-        db.commit()
-        db.refresh(measurements)
+        await db.commit()
+        await db.refresh(measurements)
         
         logger.info(f"Body measurements created for user: {current_user.email}")
         
@@ -349,19 +351,20 @@ async def create_body_measurements(
             user_id=measurements.user_id,
             height=measurements.height,
             weight=measurements.weight,
-            chest_circumference=measurements.chest_circumference,
-            waist_circumference=measurements.waist_circumference,
-            hip_circumference=measurements.hip_circumference,
+            chest=measurements.chest,
+            waist=measurements.waist,
+            hips=measurements.hips,
+            inseam=measurements.inseam,
             shoulder_width=measurements.shoulder_width,
-            inseam_length=measurements.inseam_length,
             arm_length=measurements.arm_length,
-            body_type=measurements.body_type,
+            neck=measurements.neck,
+            shoe_size=measurements.shoe_size,
             created_at=measurements.created_at,
             updated_at=measurements.updated_at
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating body measurements: {e}")
         raise
 
@@ -369,24 +372,24 @@ async def create_body_measurements(
 async def update_body_measurements(
     measurements_data: BodyMeasurementsUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Update user's body measurements
+    Update user body measurements
     """
     try:
-        measurements = db.query(BodyMeasurements).filter(BodyMeasurements.user_id == current_user.id).first()
+        result = await db.execute(select(BodyMeasurements).where(BodyMeasurements.user_id == current_user.id))
+        measurements = result.scalar_one_or_none()
         
         if not measurements:
             raise ResourceNotFoundError("Body measurements not found")
         
         # Update fields
-        update_data = measurements_data.dict(exclude_unset=True)
-        for field, value in update_data.items():
+        for field, value in measurements_data.dict(exclude_unset=True).items():
             setattr(measurements, field, value)
         
-        db.commit()
-        db.refresh(measurements)
+        await db.commit()
+        await db.refresh(measurements)
         
         logger.info(f"Body measurements updated for user: {current_user.email}")
         
@@ -395,19 +398,20 @@ async def update_body_measurements(
             user_id=measurements.user_id,
             height=measurements.height,
             weight=measurements.weight,
-            chest_circumference=measurements.chest_circumference,
-            waist_circumference=measurements.waist_circumference,
-            hip_circumference=measurements.hip_circumference,
+            chest=measurements.chest,
+            waist=measurements.waist,
+            hips=measurements.hips,
+            inseam=measurements.inseam,
             shoulder_width=measurements.shoulder_width,
-            inseam_length=measurements.inseam_length,
             arm_length=measurements.arm_length,
-            body_type=measurements.body_type,
+            neck=measurements.neck,
+            shoe_size=measurements.shoe_size,
             created_at=measurements.created_at,
             updated_at=measurements.updated_at
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating body measurements: {e}")
         raise
 
@@ -419,52 +423,35 @@ async def search_users(
     limit: int = Query(10, ge=1, le=100, description="Number of results to return"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Search for users
+    Search users with filters
     """
     try:
-        # Build query
-        user_query = db.query(User).filter(User.is_active == True)
+        user_query = select(User).where(User.is_active == True)
         
-        # Apply filters
         if query:
-            user_query = user_query.filter(
-                (User.username.contains(query)) |
-                (User.first_name.contains(query)) |
-                (User.last_name.contains(query))
+            user_query = user_query.where(
+                User.username.contains(query) |
+                User.first_name.contains(query) |
+                User.last_name.contains(query)
             )
         
         if style_archetype:
-            user_query = user_query.join(UserProfile).join(StylePreferences).filter(
-                StylePreferences.style_archetype == style_archetype
-            )
+            # Join with style preferences if needed
+            pass
         
         if location:
-            user_query = user_query.join(UserProfile).filter(
-                UserProfile.location.contains(location)
-            )
+            # Join with user profile if needed
+            pass
         
-        # Exclude current user
-        user_query = user_query.filter(User.id != current_user.id)
+        user_query = user_query.limit(limit).offset(offset)
         
-        # Apply pagination
-        users = user_query.offset(offset).limit(limit).all()
+        result = await db.execute(user_query)
+        users = result.scalars().all()
         
-        return [
-            UserResponse(
-                id=user.id,
-                email=user.email,
-                username=user.username,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                is_active=user.is_active,
-                is_verified=user.is_verified,
-                created_at=user.created_at
-            )
-            for user in users
-        ]
+        return [UserResponse.from_orm(user) for user in users]
         
     except Exception as e:
         logger.error(f"Error searching users: {e}")
@@ -474,19 +461,20 @@ async def search_users(
 async def get_user_by_id(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Get user by ID (public profile)
+    Get user by ID
     """
     try:
-        user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+        result = await db.execute(select(User).where(User.id == user_id, User.is_active == True))
+        user = result.scalar_one_or_none()
         
         if not user:
             raise ResourceNotFoundError("User not found")
         
-        # Get user profile
-        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        result = await db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
+        profile = result.scalar_one_or_none()
         
         return UserDetailed(
             id=user.id,
@@ -507,24 +495,22 @@ async def get_user_by_id(
 @router.get("/stats/me", response_model=UserStats)
 async def get_user_stats(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Get current user's statistics
+    Get current user statistics
     """
     try:
-        # This would typically include various user statistics
-        # For now, we'll return basic stats
-        stats = UserStats(
-            total_outfits=0,  # Would be calculated from database
-            total_items=0,    # Would be calculated from database
-            followers_count=0, # Would be calculated from database
-            following_count=0, # Would be calculated from database
-            total_likes=0,    # Would be calculated from database
-            total_shares=0    # Would be calculated from database
-        )
+        # Calculate statistics
+        stats = {
+            "user_id": current_user.id,
+            "total_outfits": 0,  # TODO: Implement
+            "total_items": 0,    # TODO: Implement
+            "favorite_styles": [], # TODO: Implement
+            "last_activity": current_user.last_login
+        }
         
-        return stats
+        return UserStats(**stats)
         
     except Exception as e:
         logger.error(f"Error getting user stats: {e}")

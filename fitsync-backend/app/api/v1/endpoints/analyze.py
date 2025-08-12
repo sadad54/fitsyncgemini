@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.services.ml_service import MLService
 from app.models.user import User
+from app.models.clothing import ClothingItem
 from app.schemas.clothing import ClothingAnalysisResponse
 
 router = APIRouter()
@@ -15,7 +18,7 @@ ml_service = MLService()
 async def analyze_clothing(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Analyze clothing items in uploaded image"""
     
@@ -41,14 +44,13 @@ async def analyze_clothing(
 @router.post("/style")
 async def analyze_style(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Analyze user's overall style preferences"""
     
     # Get user's clothing history
-    clothing_items = db.query(ClothingItem).filter(
-        ClothingItem.user_id == current_user.id
-    ).all()
+    result = await db.execute(select(ClothingItem).where(ClothingItem.user_id == current_user.id))
+    clothing_items = result.scalars().all()
     
     if not clothing_items:
         raise HTTPException(status_code=404, detail="No clothing items found for analysis")

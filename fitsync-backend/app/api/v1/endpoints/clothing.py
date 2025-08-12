@@ -4,6 +4,8 @@ Clothing management endpoints for wardrobe and outfit operations
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, List, Optional
 import logging
 
@@ -36,7 +38,7 @@ async def upload_clothing_item(
     occasion: Optional[str] = None,
     image: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Upload a new clothing item
@@ -67,8 +69,8 @@ async def upload_clothing_item(
         )
         
         db.add(clothing_item)
-        db.commit()
-        db.refresh(clothing_item)
+        await db.commit()
+        await db.refresh(clothing_item)
         
         logger.info(f"Clothing item uploaded by user: {current_user.email}")
         
@@ -91,61 +93,45 @@ async def upload_clothing_item(
         )
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error uploading clothing item: {e}")
         raise
 
 @router.get("/items", response_model=List[ClothingItemResponse])
 async def get_user_wardrobe(
     category: Optional[str] = Query(None, description="Filter by category"),
+    subcategory: Optional[str] = Query(None, description="Filter by subcategory"),
     color: Optional[str] = Query(None, description="Filter by color"),
     season: Optional[str] = Query(None, description="Filter by season"),
     limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Get user's wardrobe items
+    Get user's wardrobe items with filters
     """
     try:
-        # Build query
-        query = db.query(ClothingItem).filter(
+        query = select(ClothingItem).where(
             ClothingItem.user_id == current_user.id,
             ClothingItem.is_active == True
         )
         
-        # Apply filters
         if category:
-            query = query.filter(ClothingItem.category == category)
+            query = query.where(ClothingItem.category == category)
+        if subcategory:
+            query = query.where(ClothingItem.subcategory == subcategory)
         if color:
-            query = query.filter(ClothingItem.color == color)
+            query = query.where(ClothingItem.color == color)
         if season:
-            query = query.filter(ClothingItem.season == season)
+            query = query.where(ClothingItem.season == season)
         
-        # Apply pagination
-        items = query.offset(offset).limit(limit).all()
+        query = query.limit(limit).offset(offset)
         
-        return [
-            ClothingItemResponse(
-                id=item.id,
-                user_id=item.user_id,
-                name=item.name,
-                category=item.category,
-                subcategory=item.subcategory,
-                color=item.color,
-                brand=item.brand,
-                size=item.size,
-                price=item.price,
-                season=item.season,
-                occasion=item.occasion,
-                image_url=item.image_url,
-                is_active=item.is_active,
-                created_at=item.created_at,
-                updated_at=item.updated_at
-            )
-            for item in items
-        ]
+        result = await db.execute(query)
+        items = result.scalars().all()
+        
+        return [ClothingItemResponse.from_orm(item) for item in items]
         
     except Exception as e:
         logger.error(f"Error getting user wardrobe: {e}")
@@ -155,37 +141,23 @@ async def get_user_wardrobe(
 async def get_clothing_item(
     item_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Get specific clothing item
     """
     try:
-        item = db.query(ClothingItem).filter(
+        result = await db.execute(select(ClothingItem).where(
             ClothingItem.id == item_id,
-            ClothingItem.user_id == current_user.id
-        ).first()
+            ClothingItem.user_id == current_user.id,
+            ClothingItem.is_active == True
+        ))
+        item = result.scalar_one_or_none()
         
         if not item:
             raise ResourceNotFoundError("Clothing item not found")
         
-        return ClothingItemResponse(
-            id=item.id,
-            user_id=item.user_id,
-            name=item.name,
-            category=item.category,
-            subcategory=item.subcategory,
-            color=item.color,
-            brand=item.brand,
-            size=item.size,
-            price=item.price,
-            season=item.season,
-            occasion=item.occasion,
-            image_url=item.image_url,
-            is_active=item.is_active,
-            created_at=item.created_at,
-            updated_at=item.updated_at
-        )
+        return ClothingItemResponse.from_orm(item)
         
     except Exception as e:
         logger.error(f"Error getting clothing item: {e}")
@@ -196,50 +168,35 @@ async def update_clothing_item(
     item_id: int,
     item_data: ClothingItemUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Update clothing item
     """
     try:
-        item = db.query(ClothingItem).filter(
+        result = await db.execute(select(ClothingItem).where(
             ClothingItem.id == item_id,
-            ClothingItem.user_id == current_user.id
-        ).first()
+            ClothingItem.user_id == current_user.id,
+            ClothingItem.is_active == True
+        ))
+        item = result.scalar_one_or_none()
         
         if not item:
             raise ResourceNotFoundError("Clothing item not found")
         
         # Update fields
-        update_data = item_data.dict(exclude_unset=True)
-        for field, value in update_data.items():
+        for field, value in item_data.dict(exclude_unset=True).items():
             setattr(item, field, value)
         
-        db.commit()
-        db.refresh(item)
+        await db.commit()
+        await db.refresh(item)
         
         logger.info(f"Clothing item updated by user: {current_user.email}")
         
-        return ClothingItemResponse(
-            id=item.id,
-            user_id=item.user_id,
-            name=item.name,
-            category=item.category,
-            subcategory=item.subcategory,
-            color=item.color,
-            brand=item.brand,
-            size=item.size,
-            price=item.price,
-            season=item.season,
-            occasion=item.occasion,
-            image_url=item.image_url,
-            is_active=item.is_active,
-            created_at=item.created_at,
-            updated_at=item.updated_at
-        )
+        return ClothingItemResponse.from_orm(item)
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating clothing item: {e}")
         raise
 
@@ -247,30 +204,31 @@ async def update_clothing_item(
 async def delete_clothing_item(
     item_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Delete clothing item (soft delete)
     """
     try:
-        item = db.query(ClothingItem).filter(
+        result = await db.execute(select(ClothingItem).where(
             ClothingItem.id == item_id,
-            ClothingItem.user_id == current_user.id
-        ).first()
+            ClothingItem.user_id == current_user.id,
+            ClothingItem.is_active == True
+        ))
+        item = result.scalar_one_or_none()
         
         if not item:
             raise ResourceNotFoundError("Clothing item not found")
         
-        # Soft delete
         item.is_active = False
-        db.commit()
+        await db.commit()
         
         logger.info(f"Clothing item deleted by user: {current_user.email}")
         
         return {"message": "Clothing item deleted successfully"}
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting clothing item: {e}")
         raise
 
@@ -278,7 +236,7 @@ async def delete_clothing_item(
 async def create_outfit(
     outfit_data: OutfitCombinationCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Create a new outfit combination
@@ -291,39 +249,31 @@ async def create_outfit(
             description=outfit_data.description,
             season=outfit_data.season,
             occasion=outfit_data.occasion,
-            is_favorite=outfit_data.is_favorite
+            is_favorite=outfit_data.is_favorite,
+            is_active=True
         )
         
         db.add(outfit)
-        db.commit()
-        db.refresh(outfit)
+        await db.flush()  # Get the outfit ID
         
         # Add outfit items
-        for item_id in outfit_data.item_ids:
+        for item_data in outfit_data.items:
             outfit_item = OutfitItem(
                 outfit_id=outfit.id,
-                clothing_item_id=item_id
+                clothing_item_id=item_data.clothing_item_id,
+                position=item_data.position
             )
             db.add(outfit_item)
         
-        db.commit()
+        await db.commit()
+        await db.refresh(outfit)
         
         logger.info(f"Outfit created by user: {current_user.email}")
         
-        return OutfitCombinationResponse(
-            id=outfit.id,
-            user_id=outfit.user_id,
-            name=outfit.name,
-            description=outfit.description,
-            season=outfit.season,
-            occasion=outfit.occasion,
-            is_favorite=outfit.is_favorite,
-            created_at=outfit.created_at,
-            updated_at=outfit.updated_at
-        )
+        return OutfitCombinationResponse.from_orm(outfit)
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating outfit: {e}")
         raise
 
@@ -335,42 +285,30 @@ async def get_user_outfits(
     limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Get user's outfits
+    Get user's outfits with filters
     """
     try:
-        # Build query
-        query = db.query(OutfitCombination).filter(
-            OutfitCombination.user_id == current_user.id
+        query = select(OutfitCombination).where(
+            OutfitCombination.user_id == current_user.id,
+            OutfitCombination.is_active == True
         )
         
-        # Apply filters
         if season:
-            query = query.filter(OutfitCombination.season == season)
+            query = query.where(OutfitCombination.season == season)
         if occasion:
-            query = query.filter(OutfitCombination.occasion == occasion)
+            query = query.where(OutfitCombination.occasion == occasion)
         if is_favorite is not None:
-            query = query.filter(OutfitCombination.is_favorite == is_favorite)
+            query = query.where(OutfitCombination.is_favorite == is_favorite)
         
-        # Apply pagination
-        outfits = query.offset(offset).limit(limit).all()
+        query = query.limit(limit).offset(offset)
         
-        return [
-            OutfitCombinationResponse(
-                id=outfit.id,
-                user_id=outfit.user_id,
-                name=outfit.name,
-                description=outfit.description,
-                season=outfit.season,
-                occasion=outfit.occasion,
-                is_favorite=outfit.is_favorite,
-                created_at=outfit.created_at,
-                updated_at=outfit.updated_at
-            )
-            for outfit in outfits
-        ]
+        result = await db.execute(query)
+        outfits = result.scalars().all()
+        
+        return [OutfitCombinationResponse.from_orm(outfit) for outfit in outfits]
         
     except Exception as e:
         logger.error(f"Error getting user outfits: {e}")
@@ -380,60 +318,39 @@ async def get_user_outfits(
 async def get_outfit_with_items(
     outfit_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Get outfit with its items
     """
     try:
-        outfit = db.query(OutfitCombination).filter(
+        result = await db.execute(select(OutfitCombination).where(
             OutfitCombination.id == outfit_id,
-            OutfitCombination.user_id == current_user.id
-        ).first()
+            OutfitCombination.user_id == current_user.id,
+            OutfitCombination.is_active == True
+        ))
+        outfit = result.scalar_one_or_none()
         
         if not outfit:
             raise ResourceNotFoundError("Outfit not found")
         
         # Get outfit items
-        outfit_items = db.query(OutfitItem).filter(OutfitItem.outfit_id == outfit_id).all()
+        result = await db.execute(select(OutfitItem).where(OutfitItem.outfit_id == outfit_id))
+        outfit_items = result.scalars().all()
         
-        # Get clothing items
+        # Get clothing items for each outfit item
         clothing_items = []
         for outfit_item in outfit_items:
-            clothing_item = db.query(ClothingItem).filter(
-                ClothingItem.id == outfit_item.clothing_item_id
-            ).first()
+            result = await db.execute(select(ClothingItem).where(
+                ClothingItem.id == outfit_item.clothing_item_id,
+                ClothingItem.is_active == True
+            ))
+            clothing_item = result.scalar_one_or_none()
             if clothing_item:
-                clothing_items.append(ClothingItemResponse(
-                    id=clothing_item.id,
-                    user_id=clothing_item.user_id,
-                    name=clothing_item.name,
-                    category=clothing_item.category,
-                    subcategory=clothing_item.subcategory,
-                    color=clothing_item.color,
-                    brand=clothing_item.brand,
-                    size=clothing_item.size,
-                    price=clothing_item.price,
-                    season=clothing_item.season,
-                    occasion=clothing_item.occasion,
-                    image_url=clothing_item.image_url,
-                    is_active=clothing_item.is_active,
-                    created_at=clothing_item.created_at,
-                    updated_at=clothing_item.updated_at
-                ))
+                clothing_items.append(clothing_item)
         
         return OutfitWithItems(
-            outfit=OutfitCombinationResponse(
-                id=outfit.id,
-                user_id=outfit.user_id,
-                name=outfit.name,
-                description=outfit.description,
-                season=outfit.season,
-                occasion=outfit.occasion,
-                is_favorite=outfit.is_favorite,
-                created_at=outfit.created_at,
-                updated_at=outfit.updated_at
-            ),
+            outfit=OutfitCombinationResponse.from_orm(outfit),
             items=clothing_items
         )
         
@@ -446,44 +363,35 @@ async def update_outfit(
     outfit_id: int,
     outfit_data: OutfitCombinationUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Update outfit
     """
     try:
-        outfit = db.query(OutfitCombination).filter(
+        result = await db.execute(select(OutfitCombination).where(
             OutfitCombination.id == outfit_id,
-            OutfitCombination.user_id == current_user.id
-        ).first()
+            OutfitCombination.user_id == current_user.id,
+            OutfitCombination.is_active == True
+        ))
+        outfit = result.scalar_one_or_none()
         
         if not outfit:
             raise ResourceNotFoundError("Outfit not found")
         
         # Update fields
-        update_data = outfit_data.dict(exclude_unset=True)
-        for field, value in update_data.items():
+        for field, value in outfit_data.dict(exclude_unset=True).items():
             setattr(outfit, field, value)
         
-        db.commit()
-        db.refresh(outfit)
+        await db.commit()
+        await db.refresh(outfit)
         
         logger.info(f"Outfit updated by user: {current_user.email}")
         
-        return OutfitCombinationResponse(
-            id=outfit.id,
-            user_id=outfit.user_id,
-            name=outfit.name,
-            description=outfit.description,
-            season=outfit.season,
-            occasion=outfit.occasion,
-            is_favorite=outfit.is_favorite,
-            created_at=outfit.created_at,
-            updated_at=outfit.updated_at
-        )
+        return OutfitCombinationResponse.from_orm(outfit)
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating outfit: {e}")
         raise
 
@@ -491,73 +399,72 @@ async def update_outfit(
 async def delete_outfit(
     outfit_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Delete outfit
+    Delete outfit (soft delete)
     """
     try:
-        outfit = db.query(OutfitCombination).filter(
+        result = await db.execute(select(OutfitCombination).where(
             OutfitCombination.id == outfit_id,
-            OutfitCombination.user_id == current_user.id
-        ).first()
+            OutfitCombination.user_id == current_user.id,
+            OutfitCombination.is_active == True
+        ))
+        outfit = result.scalar_one_or_none()
         
         if not outfit:
             raise ResourceNotFoundError("Outfit not found")
         
-        # Delete outfit items first
-        db.query(OutfitItem).filter(OutfitItem.outfit_id == outfit_id).delete()
+        # Delete outfit items
+        await db.execute(select(OutfitItem).where(OutfitItem.outfit_id == outfit_id).delete())
         
-        # Delete outfit
-        db.delete(outfit)
-        db.commit()
+        # Soft delete outfit
+        outfit.is_active = False
+        await db.commit()
         
         logger.info(f"Outfit deleted by user: {current_user.email}")
         
         return {"message": "Outfit deleted successfully"}
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error deleting outfit: {e}")
         raise
 
 @router.get("/stats/wardrobe", response_model=WardrobeStats)
 async def get_wardrobe_stats(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Get wardrobe statistics
     """
     try:
-        # Calculate stats
-        total_items = db.query(ClothingItem).filter(
+        # Get total items
+        result = await db.execute(select(ClothingItem).where(
             ClothingItem.user_id == current_user.id,
             ClothingItem.is_active == True
-        ).count()
+        ))
+        total_items = len(result.scalars().all())
         
-        # Category breakdown
-        categories = db.query(ClothingItem.category).filter(
+        # Get categories
+        result = await db.execute(select(ClothingItem.category).where(
             ClothingItem.user_id == current_user.id,
             ClothingItem.is_active == True
-        ).distinct().all()
+        ))
+        categories = [row[0] for row in result.fetchall()]
         
-        category_count = len(categories)
-        
-        # Color breakdown
-        colors = db.query(ClothingItem.color).filter(
+        # Get colors
+        result = await db.execute(select(ClothingItem.color).where(
             ClothingItem.user_id == current_user.id,
             ClothingItem.is_active == True
-        ).distinct().all()
-        
-        color_count = len(colors)
+        ))
+        colors = [row[0] for row in result.fetchall()]
         
         return WardrobeStats(
             total_items=total_items,
-            category_count=category_count,
-            color_count=color_count,
-            total_outfits=0,  # Would be calculated
-            favorite_outfits=0  # Would be calculated
+            categories=list(set(categories)),
+            colors=list(set(colors))
         )
         
     except Exception as e:

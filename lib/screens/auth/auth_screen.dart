@@ -1,4 +1,5 @@
 // lib/screens/auth/auth_screen.dart
+import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -84,30 +85,33 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
 
     try {
-      final authService = ref.read(authServiceProvider);
-      AuthResult result;
+      final authViewModel = ref.read(authViewModelProvider.notifier);
 
       if (_authMode == AuthMode.login) {
-        result = await authService.signInWithEmail(
-          _emailController.text.trim(),
-          _passwordController.text,
+        await authViewModel.signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
       } else {
-        result = await authService.signUpWithEmail(
-          _emailController.text.trim(),
-          _passwordController.text,
-          _firstNameController.text.trim(),
-          _lastNameController.text.trim(),
+        await authViewModel.signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
         );
       }
 
-      if (result.isSuccess) {
-        // Navigate to onboarding or dashboard based on user state
-        if (mounted) {
+      // Check if authentication was successful
+      final authState = ref.read(authViewModelProvider);
+      if (authState.isAuthenticated && mounted) {
+        // Check if user has completed onboarding
+        if (authState.hasCompletedOnboarding) {
+          context.go('/dashboard');
+        } else {
           context.go('/onboarding');
         }
-      } else {
-        _showErrorSnackBar(result.error ?? 'Authentication failed');
+      } else if (authState.error != null) {
+        _showErrorSnackBar(authState.error!);
       }
     } catch (e) {
       _showErrorSnackBar('Network error. Please try again.');
@@ -135,6 +139,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final isLogin = _authMode == AuthMode.login;
+    final authState = ref.watch(authViewModelProvider);
+    ref.listen<AuthState>(authViewModelProvider, (previous, next) {
+      if (next.isAuthenticated && mounted) {
+        // Check if user has completed onboarding
+        if (next.hasCompletedOnboarding) {
+          context.go('/dashboard');
+        } else {
+          context.go('/onboarding');
+        }
+      } else if (next.error != null && mounted) {
+        _showErrorSnackBar(next.error!);
+      }
+    });
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

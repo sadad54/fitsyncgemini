@@ -87,5 +87,5 @@ final settingsViewModelProvider =
 final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
   ref,
 ) {
-  return AuthViewModel();
+  return AuthViewModel(ref.watch(authServiceProvider));
 });

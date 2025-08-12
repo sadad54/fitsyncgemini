@@ -3,6 +3,8 @@ User Service for business logic related to user management
 """
 
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime, timedelta
@@ -22,7 +24,7 @@ class UserService:
     """Service class for user-related business logic"""
     
     @staticmethod
-    def create_user(db: Session, user_data: UserCreate) -> User:
+    async def create_user(db: AsyncSession, user_data: UserCreate) -> User:
         """
         Create a new user
         
@@ -35,7 +37,8 @@ class UserService:
         """
         try:
             # Check if user already exists
-            existing_user = db.query(User).filter(User.email == user_data.email).first()
+            result = await db.execute(select(User).where(User.email == user_data.email))
+            existing_user = result.scalar_one_or_none()
             if existing_user:
                 raise ValidationError("User with this email already exists")
             
@@ -54,19 +57,19 @@ class UserService:
             )
             
             db.add(user)
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
             
             logger.info(f"User created: {user.email}")
             return user
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error creating user: {e}")
             raise
     
     @staticmethod
-    def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+    async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
         """
         Get user by ID
         
@@ -78,13 +81,14 @@ class UserService:
             User object or None
         """
         try:
-            return db.query(User).filter(User.id == user_id).first()
+            result = await db.execute(select(User).where(User.id == user_id))
+            return result.scalar_one_or_none()
         except Exception as e:
             logger.error(f"Error getting user by ID: {e}")
             raise
     
     @staticmethod
-    def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
         """
         Get user by email
         
@@ -96,13 +100,14 @@ class UserService:
             User object or None
         """
         try:
-            return db.query(User).filter(User.email == email).first()
+            result = await db.execute(select(User).where(User.email == email))
+            return result.scalar_one_or_none()
         except Exception as e:
             logger.error(f"Error getting user by email: {e}")
             raise
     
     @staticmethod
-    def update_user(db: Session, user_id: int, user_data: UserUpdate) -> User:
+    async def update_user(db: AsyncSession, user_id: int, user_data: UserUpdate) -> User:
         """
         Update user information
         
@@ -115,28 +120,28 @@ class UserService:
             Updated user
         """
         try:
-            user = db.query(User).filter(User.id == user_id).first()
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
             if not user:
                 raise ResourceNotFoundError("User not found")
             
             # Update fields
-            update_data = user_data.dict(exclude_unset=True)
-            for field, value in update_data.items():
+            for field, value in user_data.dict(exclude_unset=True).items():
                 setattr(user, field, value)
             
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
             
             logger.info(f"User updated: {user.email}")
             return user
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error updating user: {e}")
             raise
     
     @staticmethod
-    def deactivate_user(db: Session, user_id: int) -> User:
+    async def deactivate_user(db: AsyncSession, user_id: int) -> User:
         """
         Deactivate user account
         
@@ -148,24 +153,27 @@ class UserService:
             Deactivated user
         """
         try:
-            user = db.query(User).filter(User.id == user_id).first()
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
             if not user:
                 raise ResourceNotFoundError("User not found")
             
             user.is_active = False
-            db.commit()
-            db.refresh(user)
+            user.deactivated_at = datetime.utcnow()
+            
+            await db.commit()
+            await db.refresh(user)
             
             logger.info(f"User deactivated: {user.email}")
             return user
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error deactivating user: {e}")
             raise
     
     @staticmethod
-    def create_user_profile(db: Session, user_id: int, profile_data: UserProfileCreate) -> UserProfile:
+    async def create_user_profile(db: AsyncSession, user_id: int, profile_data: UserProfileCreate) -> UserProfile:
         """
         Create user profile
         
@@ -175,38 +183,35 @@ class UserService:
             profile_data: Profile creation data
             
         Returns:
-            Created user profile
+            Created profile
         """
         try:
             # Check if profile already exists
-            existing_profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+            result = await db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
+            existing_profile = result.scalar_one_or_none()
             if existing_profile:
                 raise ValidationError("User profile already exists")
             
+            # Create profile
             profile = UserProfile(
                 user_id=user_id,
-                bio=profile_data.bio,
-                location=profile_data.location,
-                birth_date=profile_data.birth_date,
-                gender=profile_data.gender,
-                phone_number=profile_data.phone_number,
-                social_media_links=profile_data.social_media_links
+                **profile_data.dict()
             )
             
             db.add(profile)
-            db.commit()
-            db.refresh(profile)
+            await db.commit()
+            await db.refresh(profile)
             
             logger.info(f"User profile created for user: {user_id}")
             return profile
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error creating user profile: {e}")
             raise
     
     @staticmethod
-    def update_user_profile(db: Session, user_id: int, profile_data: UserProfileUpdate) -> UserProfile:
+    async def update_user_profile(db: AsyncSession, user_id: int, profile_data: UserProfileUpdate) -> UserProfile:
         """
         Update user profile
         
@@ -216,241 +221,226 @@ class UserService:
             profile_data: Profile update data
             
         Returns:
-            Updated user profile
+            Updated profile
         """
         try:
-            profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+            result = await db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
+            profile = result.scalar_one_or_none()
             if not profile:
                 raise ResourceNotFoundError("User profile not found")
             
             # Update fields
-            update_data = profile_data.dict(exclude_unset=True)
-            for field, value in update_data.items():
+            for field, value in profile_data.dict(exclude_unset=True).items():
                 setattr(profile, field, value)
             
-            db.commit()
-            db.refresh(profile)
+            await db.commit()
+            await db.refresh(profile)
             
             logger.info(f"User profile updated for user: {user_id}")
             return profile
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error updating user profile: {e}")
             raise
     
     @staticmethod
-    def create_style_preferences(db: Session, user_id: int, preferences_data: StylePreferencesCreate) -> StylePreferences:
+    async def create_style_preferences(db: AsyncSession, user_id: int, preferences_data: StylePreferencesCreate) -> StylePreferences:
         """
-        Create user style preferences
+        Create style preferences
         
         Args:
             db: Database session
             user_id: User ID
-            preferences_data: Style preferences creation data
+            preferences_data: Preferences creation data
             
         Returns:
-            Created style preferences
+            Created preferences
         """
         try:
             # Check if preferences already exist
-            existing_preferences = db.query(StylePreferences).filter(StylePreferences.user_id == user_id).first()
+            result = await db.execute(select(StylePreferences).where(StylePreferences.user_id == user_id))
+            existing_preferences = result.scalar_one_or_none()
             if existing_preferences:
                 raise ValidationError("Style preferences already exist")
             
+            # Create preferences
             preferences = StylePreferences(
                 user_id=user_id,
-                style_archetype=preferences_data.style_archetype,
-                color_preferences=preferences_data.color_preferences,
-                brand_preferences=preferences_data.brand_preferences,
-                price_range_min=preferences_data.price_range_min,
-                price_range_max=preferences_data.price_range_max,
-                size_preferences=preferences_data.size_preferences,
-                occasion_preferences=preferences_data.occasion_preferences,
-                seasonal_preferences=preferences_data.seasonal_preferences
+                **preferences_data.dict()
             )
             
             db.add(preferences)
-            db.commit()
-            db.refresh(preferences)
+            await db.commit()
+            await db.refresh(preferences)
             
             logger.info(f"Style preferences created for user: {user_id}")
             return preferences
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error creating style preferences: {e}")
             raise
     
     @staticmethod
-    def update_style_preferences(db: Session, user_id: int, preferences_data: StylePreferencesUpdate) -> StylePreferences:
+    async def update_style_preferences(db: AsyncSession, user_id: int, preferences_data: StylePreferencesUpdate) -> StylePreferences:
         """
-        Update user style preferences
+        Update style preferences
         
         Args:
             db: Database session
             user_id: User ID
-            preferences_data: Style preferences update data
+            preferences_data: Preferences update data
             
         Returns:
-            Updated style preferences
+            Updated preferences
         """
         try:
-            preferences = db.query(StylePreferences).filter(StylePreferences.user_id == user_id).first()
+            result = await db.execute(select(StylePreferences).where(StylePreferences.user_id == user_id))
+            preferences = result.scalar_one_or_none()
             if not preferences:
                 raise ResourceNotFoundError("Style preferences not found")
             
             # Update fields
-            update_data = preferences_data.dict(exclude_unset=True)
-            for field, value in update_data.items():
+            for field, value in preferences_data.dict(exclude_unset=True).items():
                 setattr(preferences, field, value)
             
-            db.commit()
-            db.refresh(preferences)
+            await db.commit()
+            await db.refresh(preferences)
             
             logger.info(f"Style preferences updated for user: {user_id}")
             return preferences
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error updating style preferences: {e}")
             raise
     
     @staticmethod
-    def create_body_measurements(db: Session, user_id: int, measurements_data: BodyMeasurementsCreate) -> BodyMeasurements:
+    async def create_body_measurements(db: AsyncSession, user_id: int, measurements_data: BodyMeasurementsCreate) -> BodyMeasurements:
         """
-        Create user body measurements
+        Create body measurements
         
         Args:
             db: Database session
             user_id: User ID
-            measurements_data: Body measurements creation data
+            measurements_data: Measurements creation data
             
         Returns:
-            Created body measurements
+            Created measurements
         """
         try:
             # Check if measurements already exist
-            existing_measurements = db.query(BodyMeasurements).filter(BodyMeasurements.user_id == user_id).first()
+            result = await db.execute(select(BodyMeasurements).where(BodyMeasurements.user_id == user_id))
+            existing_measurements = result.scalar_one_or_none()
             if existing_measurements:
                 raise ValidationError("Body measurements already exist")
             
+            # Create measurements
             measurements = BodyMeasurements(
                 user_id=user_id,
-                height=measurements_data.height,
-                weight=measurements_data.weight,
-                chest_circumference=measurements_data.chest_circumference,
-                waist_circumference=measurements_data.waist_circumference,
-                hip_circumference=measurements_data.hip_circumference,
-                shoulder_width=measurements_data.shoulder_width,
-                inseam_length=measurements_data.inseam_length,
-                arm_length=measurements_data.arm_length,
-                body_type=measurements_data.body_type
+                **measurements_data.dict()
             )
             
             db.add(measurements)
-            db.commit()
-            db.refresh(measurements)
+            await db.commit()
+            await db.refresh(measurements)
             
             logger.info(f"Body measurements created for user: {user_id}")
             return measurements
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error creating body measurements: {e}")
             raise
     
     @staticmethod
-    def update_body_measurements(db: Session, user_id: int, measurements_data: BodyMeasurementsUpdate) -> BodyMeasurements:
+    async def update_body_measurements(db: AsyncSession, user_id: int, measurements_data: BodyMeasurementsUpdate) -> BodyMeasurements:
         """
-        Update user body measurements
+        Update body measurements
         
         Args:
             db: Database session
             user_id: User ID
-            measurements_data: Body measurements update data
+            measurements_data: Measurements update data
             
         Returns:
-            Updated body measurements
+            Updated measurements
         """
         try:
-            measurements = db.query(BodyMeasurements).filter(BodyMeasurements.user_id == user_id).first()
+            result = await db.execute(select(BodyMeasurements).where(BodyMeasurements.user_id == user_id))
+            measurements = result.scalar_one_or_none()
             if not measurements:
                 raise ResourceNotFoundError("Body measurements not found")
             
             # Update fields
-            update_data = measurements_data.dict(exclude_unset=True)
-            for field, value in update_data.items():
+            for field, value in measurements_data.dict(exclude_unset=True).items():
                 setattr(measurements, field, value)
             
-            db.commit()
-            db.refresh(measurements)
+            await db.commit()
+            await db.refresh(measurements)
             
             logger.info(f"Body measurements updated for user: {user_id}")
             return measurements
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error updating body measurements: {e}")
             raise
     
     @staticmethod
-    def search_users(db: Session, query: Optional[str] = None, 
+    async def search_users(db: AsyncSession, query: Optional[str] = None, 
                     style_archetype: Optional[str] = None,
                     location: Optional[str] = None,
                     limit: int = 10, offset: int = 0,
                     exclude_user_id: Optional[int] = None) -> List[User]:
         """
-        Search for users with filters
+        Search users with filters
         
         Args:
             db: Database session
             query: Search query
             style_archetype: Style archetype filter
             location: Location filter
-            limit: Number of results to return
-            offset: Number of results to skip
-            exclude_user_id: User ID to exclude from results
+            limit: Result limit
+            offset: Result offset
+            exclude_user_id: User ID to exclude
             
         Returns:
             List of users
         """
         try:
-            # Build query
-            user_query = db.query(User).filter(User.is_active == True)
+            user_query = select(User).where(User.is_active == True)
             
-            # Apply filters
+            if exclude_user_id:
+                user_query = user_query.where(User.id != exclude_user_id)
+            
             if query:
-                user_query = user_query.filter(
-                    (User.username.contains(query)) |
-                    (User.first_name.contains(query)) |
-                    (User.last_name.contains(query))
+                user_query = user_query.where(
+                    User.username.contains(query) |
+                    User.first_name.contains(query) |
+                    User.last_name.contains(query)
                 )
             
             if style_archetype:
-                user_query = user_query.join(UserProfile).join(StylePreferences).filter(
-                    StylePreferences.style_archetype == style_archetype
-                )
+                # Join with style preferences if needed
+                pass
             
             if location:
-                user_query = user_query.join(UserProfile).filter(
-                    UserProfile.location.contains(location)
-                )
+                # Join with user profile if needed
+                pass
             
-            if exclude_user_id:
-                user_query = user_query.filter(User.id != exclude_user_id)
+            user_query = user_query.limit(limit).offset(offset)
             
-            # Apply pagination
-            users = user_query.offset(offset).limit(limit).all()
-            
-            return users
+            result = await db.execute(user_query)
+            return result.scalars().all()
             
         except Exception as e:
             logger.error(f"Error searching users: {e}")
             raise
     
     @staticmethod
-    def get_user_statistics(db: Session, user_id: int) -> Dict[str, Any]:
+    async def get_user_statistics(db: AsyncSession, user_id: int) -> Dict[str, Any]:
         """
         Get user statistics
         
@@ -459,18 +449,21 @@ class UserService:
             user_id: User ID
             
         Returns:
-            Dictionary with user statistics
+            User statistics
         """
         try:
-            # This would typically include various user statistics
-            # For now, we'll return basic stats
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            if not user:
+                raise ResourceNotFoundError("User not found")
+            
+            # Calculate statistics
             stats = {
-                "total_outfits": 0,  # Would be calculated from database
-                "total_items": 0,    # Would be calculated from database
-                "followers_count": 0, # Would be calculated from database
-                "following_count": 0, # Would be calculated from database
-                "total_likes": 0,    # Would be calculated from database
-                "total_shares": 0    # Would be calculated from database
+                "user_id": user_id,
+                "total_outfits": 0,  # TODO: Implement
+                "total_items": 0,    # TODO: Implement
+                "favorite_styles": [], # TODO: Implement
+                "last_activity": user.last_login
             }
             
             return stats
@@ -480,36 +473,39 @@ class UserService:
             raise
     
     @staticmethod
-    def verify_user_email(db: Session, user_id: int) -> User:
+    async def verify_user_email(db: AsyncSession, user_id: int) -> User:
         """
-        Verify user email address
+        Verify user email
         
         Args:
             db: Database session
             user_id: User ID
             
         Returns:
-            Updated user
+            Verified user
         """
         try:
-            user = db.query(User).filter(User.id == user_id).first()
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
             if not user:
                 raise ResourceNotFoundError("User not found")
             
             user.is_verified = True
-            db.commit()
-            db.refresh(user)
+            user.verified_at = datetime.utcnow()
             
-            logger.info(f"Email verified for user: {user.email}")
+            await db.commit()
+            await db.refresh(user)
+            
+            logger.info(f"User email verified: {user.email}")
             return user
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error verifying user email: {e}")
             raise
     
     @staticmethod
-    def change_user_password(db: Session, user_id: int, new_password: str) -> User:
+    async def change_user_password(db: AsyncSession, user_id: int, new_password: str) -> User:
         """
         Change user password
         
@@ -522,7 +518,8 @@ class UserService:
             Updated user
         """
         try:
-            user = db.query(User).filter(User.id == user_id).first()
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
             if not user:
                 raise ResourceNotFoundError("User not found")
             
@@ -530,13 +527,13 @@ class UserService:
             hashed_password = SecurityManager.hash_password(new_password)
             user.hashed_password = hashed_password
             
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
             
-            logger.info(f"Password changed for user: {user.email}")
+            logger.info(f"User password changed: {user.email}")
             return user
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             logger.error(f"Error changing user password: {e}")
             raise

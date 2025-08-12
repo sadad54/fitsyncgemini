@@ -5,6 +5,8 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 import secrets
 import hashlib
 import logging
@@ -98,27 +100,27 @@ class SecurityManager:
         except JWTError as e:
             logger.warning(f"JWT verification failed: {e}")
             return None
-        except Exception as e:
-            logger.error(f"Token verification error: {e}")
-            return None
-    
+
     @staticmethod
     def generate_api_key() -> str:
-        """Generate secure API key"""
-        return f"fitsync_{secrets.token_urlsafe(32)}"
+        """Generate a secure API key"""
+        return secrets.token_urlsafe(32)
     
     @staticmethod
     def hash_api_key(api_key: str) -> str:
-        """Hash API key for storage"""
+        """Hash an API key for storage"""
         return hashlib.sha256(api_key.encode()).hexdigest()
     
     @staticmethod
     def validate_password_strength(password: str) -> Dict[str, Any]:
         """Validate password strength"""
         errors = []
+        warnings = []
         
         if len(password) < 8:
             errors.append("Password must be at least 8 characters long")
+        elif len(password) < 12:
+            warnings.append("Consider using a longer password (12+ characters)")
         
         if not any(c.isupper() for c in password):
             errors.append("Password must contain at least one uppercase letter")
@@ -132,16 +134,22 @@ class SecurityManager:
         if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
             errors.append("Password must contain at least one special character")
         
+        # Check for common patterns
+        common_patterns = ["password", "123456", "qwerty", "admin"]
+        if password.lower() in common_patterns:
+            errors.append("Password is too common")
+        
         return {
             "is_valid": len(errors) == 0,
             "errors": errors,
-            "strength_score": max(0, 10 - len(errors) * 2)
+            "warnings": warnings,
+            "strength_score": max(0, 10 - len(errors) - len(warnings))
         }
 
 # Dependency functions
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> User:
     """Get current authenticated user"""
     credentials_exception = HTTPException(
@@ -170,7 +178,8 @@ async def get_current_user(
         raise credentials_exception
     
     # Get user from database
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    result = await db.execute(select(User).where(User.id == int(user_id)))
+    user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
     
@@ -259,5 +268,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return SecurityManager.create_access_token(data, expires_delta)
 
 def verify_token(token: str) -> Optional[str]:
+    """Legacy function - returns username from token"""
     payload = SecurityManager.verify_token(token)
-    return payload.get("sub") if payload else None
+    if payload:
+        return payload.get("sub")
+    return None

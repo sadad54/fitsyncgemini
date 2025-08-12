@@ -6,6 +6,8 @@ import sys
 import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
+from jose import jwt, JWTError
+from datetime import datetime, timedelta
 
 import structlog
 from app.config import settings
@@ -163,3 +165,52 @@ class LoggingMiddleware:
                 bytes_sent=bytes_sent_holder["bytes"],
                 user_agent=user_agent,
             )
+def verify_refresh_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify refresh token specifically"""
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        if payload.get("type") != "refresh":
+            return None
+        return payload
+    except JWTError:
+        return None
+
+def create_password_reset_token(data: dict) -> str:
+    """Create password reset token"""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(hours=1)  # 1 hour expiry
+    to_encode.update({
+        "exp": expire,
+        "type": "password_reset"
+    })
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+def verify_password_reset_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify password reset token"""
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        if payload.get("type") != "password_reset":
+            return None
+        return payload
+    except JWTError:
+        return None
+
+def create_email_verification_token(data: dict) -> str:
+    """Create email verification token"""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=1)  # 1 day expiry
+    to_encode.update({
+        "exp": expire,
+        "type": "email_verification"
+    })
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+def verify_email_verification_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify email verification token"""
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        if payload.get("type") != "email_verification":
+            return None
+        return payload
+    except JWTError:
+        return None

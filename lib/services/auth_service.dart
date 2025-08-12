@@ -1,13 +1,59 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
+import 'dart:convert';
 
 class AuthService {
   String? _currentUserId;
   Map<String, dynamic>? _currentUser;
+  String? _accessToken;
 
-  // Current user stream
-  Stream<String?> get authStateChanges {
-    return Stream.value(_currentUserId);
+  static const String _tokenKey = 'access_token';
+  static const String _userKey = 'user_data';
+
+  AuthService() {
+    _loadStoredAuth();
+  }
+
+  Future<void> _loadStoredAuth() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _accessToken = prefs.getString(_tokenKey);
+      final userJson = prefs.getString(_userKey);
+
+      if (_accessToken != null && userJson != null) {
+        _currentUser = json.decode(userJson);
+        _currentUserId = _currentUser!['id'].toString();
+        MLAPIService.setAuthToken(_accessToken!);
+
+        // Verify token is still valid by trying to get current user
+        try {
+          final userInfo = await MLAPIService.getCurrentUser();
+          _currentUser = userInfo;
+          await _saveAuth(_accessToken!, _currentUser!);
+        } catch (e) {
+          // Token expired or invalid, clear stored data
+          await _clearStoredAuth();
+        }
+      }
+    } catch (e) {
+      await _clearStoredAuth();
+    }
+  }
+
+  Future<void> _saveAuth(String token, Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+    await prefs.setString(_userKey, json.encode(user));
+  }
+
+  Future<void> _clearStoredAuth() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+    await prefs.remove(_userKey);
+    _accessToken = null;
+    _currentUser = null;
+    _currentUserId = null;
   }
 
   // Sign up with email and password
@@ -18,8 +64,9 @@ class AuthService {
     String lastName,
   ) async {
     try {
-      // Extract username from email (you can modify this logic)
-      final username = email.split('@')[0];
+      final username = email
+          .split('@')[0]
+          .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
 
       final result = await MLAPIService.registerUser(
         email: email,
@@ -32,36 +79,35 @@ class AuthService {
       _currentUserId = result['id'].toString();
       _currentUser = result;
 
-      return AuthResult.success(_currentUserId!);
+      // After registration, user needs to login to get token
+      return await signInWithEmail(email, password);
     } catch (e) {
-      return AuthResult.failure(e.toString());
+      return AuthResult.failure(_parseError(e.toString()));
     }
   }
 
   // Sign in with email and password
   Future<AuthResult> signInWithEmail(String email, String password) async {
     try {
-      await MLAPIService.loginUser(email: email, password: password);
+      final result = await MLAPIService.loginUser(
+        email: email,
+        password: password,
+      );
+
+      _accessToken = result['access_token'];
+      MLAPIService.setAuthToken(_accessToken!);
 
       // Get user info after successful login
       final userInfo = await MLAPIService.getCurrentUser();
       _currentUserId = userInfo['id'].toString();
       _currentUser = userInfo;
 
+      // Save to local storage
+      await _saveAuth(_accessToken!, _currentUser!);
+
       return AuthResult.success(_currentUserId!);
     } catch (e) {
-      return AuthResult.failure(e.toString());
-    }
-  }
-
-  // Sign in with Google
-  Future<AuthResult> signInWithGoogle() async {
-    try {
-      // For now, return a failure since Google Sign-In requires additional setup
-      // You can implement this later with Firebase Auth or Google OAuth
-      return AuthResult.failure('Google Sign-In not implemented yet');
-    } catch (e) {
-      return AuthResult.failure(e.toString());
+      return AuthResult.failure(_parseError(e.toString()));
     }
   }
 
@@ -69,40 +115,57 @@ class AuthService {
   Future<void> signOut() async {
     try {
       await MLAPIService.logout();
+    } catch (e) {
+      // Continue with logout even if API call fails
     } finally {
-      _currentUserId = null;
-      _currentUser = null;
+      await _clearStoredAuth();
     }
+  }
+
+  String _parseError(String error) {
+    // Extract meaningful error messages
+    if (error.contains('User with this email already exists')) {
+      return 'An account with this email already exists';
+    } else if (error.contains('Invalid email or password')) {
+      return 'Invalid email or password';
+    } else if (error.contains('Network error')) {
+      return 'Network connection failed. Please check your internet connection.';
+    } else if (error.contains('timeout')) {
+      return 'Request timed out. Please try again.';
+    }
+    return 'An unexpected error occurred. Please try again.';
   }
 
   // Get current user ID
-  String? getCurrentUserId() {
-    return _currentUserId;
-  }
+  String? getCurrentUserId() => _currentUserId;
 
   // Get current user info
-  Map<String, dynamic>? getCurrentUser() {
-    return _currentUser;
-  }
-
-  // Refresh current user info
-  Future<Map<String, dynamic>?> refreshUserInfo() async {
-    try {
-      if (_currentUserId != null) {
-        _currentUser = await MLAPIService.getCurrentUser();
-        return _currentUser;
-      }
-      return null;
-    } catch (e) {
-      // If refresh fails, user might need to re-login
-      _currentUserId = null;
-      _currentUser = null;
-      return null;
-    }
-  }
+  Map<String, dynamic>? getCurrentUser() => _currentUser;
 
   // Check if user is authenticated
-  bool get isAuthenticated => _currentUserId != null;
+  bool get isAuthenticated => _currentUserId != null && _accessToken != null;
+
+  // Get access token
+  String? get accessToken => _accessToken;
+
+  // Update onboarding status
+  Future<void> updateOnboardingStatus(bool hasCompleted) async {
+    try {
+      if (_currentUser != null && _accessToken != null) {
+        // Update the user data with onboarding status
+        _currentUser!['hasCompletedOnboarding'] = hasCompleted;
+
+        // Save updated user data to local storage
+        await _saveAuth(_accessToken!, _currentUser!);
+
+        // Optionally, you can also update this on the backend
+        // await MLAPIService.updateUserProfile({'hasCompletedOnboarding': hasCompleted});
+      }
+    } catch (e) {
+      print('Error updating onboarding status: $e');
+      // Don't throw error to avoid breaking the flow
+    }
+  }
 }
 
 class AuthResult {

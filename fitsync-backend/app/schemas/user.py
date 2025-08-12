@@ -36,6 +36,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=128)
     confirm_password: str
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
     
     @validator('confirm_password')
     def passwords_match(cls, v, values):
@@ -70,6 +72,8 @@ class UserResponse(BaseModel):
     id: int
     email: str
     username: str
+    first_name: Optional[str] = None  # Add these fields
+    last_name: Optional[str] = None   # Add these fields
     is_active: bool
     is_verified: bool
     created_at: datetime

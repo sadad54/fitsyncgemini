@@ -41,13 +41,17 @@ class DummyDataService {
   Future<void> _injectClothingItems(String userId) async {
     for (final item in DummyData.clothingItems) {
       try {
+        // Map category names to backend enum values
+        final category = _mapCategoryToEnum(item.category);
+        final subcategory = _mapSubcategoryToEnum(item.subCategory);
+        
         // Use the new create endpoint that doesn't require file upload
         await MLAPIService.createClothingItem(
           name: item.name,
-          category: item.category.toLowerCase(),
-          subcategory: item.subCategory.toLowerCase(),
-          color: item.colors.first,
-          colorHex: item.colors.first,
+          category: category,
+          subcategory: subcategory,
+          color: item.colors.first.toLowerCase(),
+          colorHex: _getColorHex(item.colors.first),
           brand: item.brand,
           price: item.price,
           imageUrl: item.image,
@@ -64,6 +68,139 @@ class DummyDataService {
     debugPrint(
       '✅ Attempted to inject ${DummyData.clothingItems.length} clothing items',
     );
+  }
+
+  /// Map frontend category names to backend enum values
+  String _mapCategoryToEnum(String category) {
+    switch (category.toLowerCase()) {
+      case 'tops':
+        return 'tops';
+      case 'bottoms':
+        return 'bottoms';
+      case 'dresses':
+        return 'dresses';
+      case 'outerwear':
+        return 'outerwear';
+      case 'shoes':
+        return 'shoes';
+      case 'accessories':
+        return 'accessories';
+      case 'underwear':
+        return 'underwear';
+      case 'swimwear':
+        return 'swimwear';
+      case 'activewear':
+        return 'activewear';
+      case 'formalwear':
+        return 'formalwear';
+      default:
+        return 'tops'; // Default fallback
+    }
+  }
+
+  /// Map frontend subcategory names to backend enum values
+  String _mapSubcategoryToEnum(String subcategory) {
+    switch (subcategory.toLowerCase()) {
+      case 't-shirts':
+      case 't_shirts':
+        return 't_shirts';
+      case 'shirts':
+        return 'shirts';
+      case 'blouses':
+        return 'blouses';
+      case 'sweaters':
+        return 'sweaters';
+      case 'hoodies':
+        return 'hoodies';
+      case 'tank tops':
+      case 'tank_tops':
+        return 'tank_tops';
+      case 'jeans':
+        return 'jeans';
+      case 'pants':
+        return 'pants';
+      case 'shorts':
+        return 'shorts';
+      case 'skirts':
+        return 'skirts';
+      case 'leggings':
+        return 'leggings';
+      case 'casual dresses':
+      case 'casual_dresses':
+        return 'casual_dresses';
+      case 'formal dresses':
+      case 'formal_dresses':
+        return 'formal_dresses';
+      case 'maxi dresses':
+      case 'maxi_dresses':
+        return 'maxi_dresses';
+      case 'mini dresses':
+      case 'mini_dresses':
+        return 'mini_dresses';
+      case 'jackets':
+        return 'jackets';
+      case 'coats':
+        return 'coats';
+      case 'blazers':
+        return 'blazers';
+      case 'cardigans':
+        return 'cardigans';
+      case 'sneakers':
+        return 'sneakers';
+      case 'boots':
+        return 'boots';
+      case 'heels':
+        return 'heels';
+      case 'flats':
+        return 'flats';
+      case 'sandals':
+        return 'sandals';
+      case 'bags':
+        return 'bags';
+      case 'jewelry':
+        return 'jewelry';
+      case 'scarves':
+        return 'scarves';
+      case 'belts':
+        return 'belts';
+      case 'hats':
+        return 'hats';
+      default:
+        return 't_shirts'; // Default fallback
+    }
+  }
+
+  /// Get hex color code for color name
+  String _getColorHex(String color) {
+    switch (color.toLowerCase()) {
+      case 'white':
+        return '#FFFFFF';
+      case 'black':
+        return '#000000';
+      case 'blue':
+        return '#0000FF';
+      case 'red':
+        return '#FF0000';
+      case 'green':
+        return '#00FF00';
+      case 'yellow':
+        return '#FFFF00';
+      case 'purple':
+        return '#800080';
+      case 'pink':
+        return '#FFC0CB';
+      case 'orange':
+        return '#FFA500';
+      case 'brown':
+        return '#A52A2A';
+      case 'gray':
+      case 'grey':
+        return '#808080';
+      case 'beige':
+        return '#F5F5DC';
+      default:
+        return '#000000'; // Default to black
+    }
   }
 
   /// Inject outfits into the backend

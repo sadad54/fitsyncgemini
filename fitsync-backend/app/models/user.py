@@ -83,9 +83,12 @@ class StylePreferences(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    style_archetype = Column(String(100))  # Primary style archetype
+    quiz_results = Column(JSON)  # Quiz answers and results
     preferred_colors = Column(JSON)  # List of color hex codes
     preferred_styles = Column(JSON)  # List of style archetypes
     preferred_brands = Column(JSON)  # List of brand names
+    fit_preferences = Column(JSON)  # {"tailored": 0.8, "regular": 0.6, "loose": 0.2}
     budget_range = Column(JSON)  # {"min": 0, "max": 1000}
     occasion_preferences = Column(JSON)  # {"casual": 0.8, "formal": 0.6, ...}
     sustainability_importance = Column(Float, default=0.5)  # 0-1 scale

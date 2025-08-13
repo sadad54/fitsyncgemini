@@ -20,6 +20,7 @@ from app.schemas.clothing import (
 from app.models.clothing import ClothingItem, OutfitCombination, OutfitItem
 from app.models.user import User
 from app.core.exceptions import ResourceNotFoundError, ValidationError
+from app.models.clothing import ClothingCategoryEnum, ClothingSubcategoryEnum
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ async def upload_clothing_item(
         
         # Create clothing item
         clothing_item = ClothingItem(
-            user_id=current_user.id,
+            owner_id=current_user.id,
             name=name,
             category=category,
             subcategory=subcategory,
@@ -97,6 +98,127 @@ async def upload_clothing_item(
         logger.error(f"Error uploading clothing item: {e}")
         raise
 
+@router.post("/create", response_model=ClothingItemResponse, status_code=status.HTTP_201_CREATED)
+async def create_clothing_item(
+    item_data: ClothingItemCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Create a new clothing item without file upload (for dummy data)
+    """
+    try:
+        # Create clothing item
+        clothing_item = ClothingItem(
+            owner_id=current_user.id,
+            name=item_data.name,
+            category=item_data.category,
+            subcategory=item_data.subcategory,
+            color=item_data.color,
+            color_hex=item_data.color_hex,
+            pattern=item_data.pattern,
+            material=item_data.material,
+            brand=item_data.brand,
+            size=item_data.size,
+            price=item_data.price,
+            purchase_date=item_data.purchase_date,
+            image_url=item_data.image_url or f"dummy_{current_user.id}_{item_data.name.lower().replace(' ', '_')}.jpg",
+            thumbnail_url=item_data.thumbnail_url,
+            seasons=item_data.seasons,
+            occasions=item_data.occasions,
+            style_tags=item_data.style_tags,
+            fit_type=item_data.fit_type,
+            neckline=item_data.neckline,
+            sleeve_type=item_data.sleeve_type,
+            length=item_data.length,
+            is_favorite=False,
+            is_active=True
+        )
+        
+        db.add(clothing_item)
+        await db.commit()
+        await db.refresh(clothing_item)
+        
+        logger.info(f"Clothing item created by user: {current_user.email}")
+        
+        return ClothingItemResponse(
+            id=clothing_item.id,
+            owner_id=clothing_item.owner_id,
+            name=clothing_item.name,
+            category=clothing_item.category,
+            subcategory=clothing_item.subcategory,
+            color=clothing_item.color,
+            color_hex=clothing_item.color_hex,
+            pattern=clothing_item.pattern,
+            material=clothing_item.material,
+            brand=clothing_item.brand,
+            size=clothing_item.size,
+            price=clothing_item.price,
+            purchase_date=clothing_item.purchase_date,
+            image_url=clothing_item.image_url,
+            thumbnail_url=clothing_item.thumbnail_url,
+            seasons=clothing_item.seasons,
+            occasions=clothing_item.occasions,
+            style_tags=clothing_item.style_tags,
+            fit_type=clothing_item.fit_type,
+            neckline=clothing_item.neckline,
+            sleeve_type=clothing_item.sleeve_type,
+            length=clothing_item.length,
+            detected_attributes=clothing_item.detected_attributes,
+            color_analysis=clothing_item.color_analysis,
+            style_classification=clothing_item.style_classification,
+            body_type_compatibility=clothing_item.body_type_compatibility,
+            is_favorite=clothing_item.is_favorite,
+            is_active=clothing_item.is_active,
+            created_at=clothing_item.created_at,
+            updated_at=clothing_item.updated_at
+        )
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating clothing item: {e}")
+        raise
+
+@router.post("/test-create", status_code=status.HTTP_201_CREATED)
+async def test_create_clothing_item(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Test endpoint to create a clothing item with hardcoded values
+    """
+    try:
+        # Create clothing item with hardcoded values
+        clothing_item = ClothingItem(
+            owner_id=current_user.id,
+            name="Test Item",
+            category=ClothingCategoryEnum.TOPS,
+            subcategory=ClothingSubcategoryEnum.T_SHIRTS,
+            color="white",
+            brand="Test Brand",
+            price=25.0,
+            image_url="test.jpg",
+            is_active=True
+        )
+        
+        db.add(clothing_item)
+        await db.commit()
+        await db.refresh(clothing_item)
+        
+        logger.info(f"Test clothing item created by user: {current_user.email}")
+        
+        return {
+            "id": clothing_item.id,
+            "name": clothing_item.name,
+            "category": clothing_item.category.value,
+            "message": "Test item created successfully"
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating test clothing item: {e}")
+        raise
+
 @router.get("/items", response_model=List[ClothingItemResponse])
 async def get_user_wardrobe(
     category: Optional[str] = Query(None, description="Filter by category"),
@@ -113,7 +235,7 @@ async def get_user_wardrobe(
     """
     try:
         query = select(ClothingItem).where(
-            ClothingItem.user_id == current_user.id,
+            ClothingItem.owner_id == current_user.id,
             ClothingItem.is_active == True
         )
         
@@ -149,7 +271,7 @@ async def get_clothing_item(
     try:
         result = await db.execute(select(ClothingItem).where(
             ClothingItem.id == item_id,
-            ClothingItem.user_id == current_user.id,
+            ClothingItem.owner_id == current_user.id,
             ClothingItem.is_active == True
         ))
         item = result.scalar_one_or_none()
@@ -176,7 +298,7 @@ async def update_clothing_item(
     try:
         result = await db.execute(select(ClothingItem).where(
             ClothingItem.id == item_id,
-            ClothingItem.user_id == current_user.id,
+            ClothingItem.owner_id == current_user.id,
             ClothingItem.is_active == True
         ))
         item = result.scalar_one_or_none()
@@ -442,29 +564,68 @@ async def get_wardrobe_stats(
     try:
         # Get total items
         result = await db.execute(select(ClothingItem).where(
-            ClothingItem.user_id == current_user.id,
+            ClothingItem.owner_id == current_user.id,
             ClothingItem.is_active == True
         ))
         total_items = len(result.scalars().all())
         
         # Get categories
         result = await db.execute(select(ClothingItem.category).where(
-            ClothingItem.user_id == current_user.id,
+            ClothingItem.owner_id == current_user.id,
             ClothingItem.is_active == True
         ))
         categories = [row[0] for row in result.fetchall()]
         
         # Get colors
         result = await db.execute(select(ClothingItem.color).where(
-            ClothingItem.user_id == current_user.id,
+            ClothingItem.owner_id == current_user.id,
             ClothingItem.is_active == True
         ))
         colors = [row[0] for row in result.fetchall()]
         
+        # Calculate additional stats
+        items_by_category = {}
+        items_by_color = {}
+        items_by_brand = {}
+        total_value = 0.0
+        prices = []
+        
+        # Get all items for detailed stats
+        result = await db.execute(select(ClothingItem).where(
+            ClothingItem.owner_id == current_user.id,
+            ClothingItem.is_active == True
+        ))
+        all_items = result.scalars().all()
+        
+        for item in all_items:
+            # Category stats
+            cat = item.category.value if item.category else 'unknown'
+            items_by_category[cat] = items_by_category.get(cat, 0) + 1
+            
+            # Color stats
+            if item.color:
+                items_by_color[item.color] = items_by_color.get(item.color, 0) + 1
+            
+            # Brand stats
+            if item.brand:
+                items_by_brand[item.brand] = items_by_brand.get(item.brand, 0) + 1
+            
+            # Price stats
+            if item.price:
+                total_value += item.price
+                prices.append(item.price)
+        
+        average_price = sum(prices) / len(prices) if prices else 0.0
+        
         return WardrobeStats(
             total_items=total_items,
-            categories=list(set(categories)),
-            colors=list(set(colors))
+            items_by_category=items_by_category,
+            items_by_color=items_by_color,
+            items_by_brand=items_by_brand,
+            total_value=total_value,
+            average_price=average_price,
+            most_used_items=[],  # TODO: Implement usage tracking
+            least_used_items=[]   # TODO: Implement usage tracking
         )
         
     except Exception as e:

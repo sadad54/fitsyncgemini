@@ -57,6 +57,7 @@ class MLAPIService {
 
   // Clothing / Wardrobe
   static String get epClothingUpload => "$apiBase/clothing/upload";
+  static String get epClothingCreate => "$apiBase/clothing/create";
   static String get epClothingItems => "$apiBase/clothing/items";
   static String get epWardrobeStats => "$apiBase/clothing/stats/wardrobe";
 
@@ -67,6 +68,10 @@ class MLAPIService {
   static String get epVirtualTryOn => "$apiBase/tryon/generate";
   static String get epRecommendations => "$apiBase/recommend/outfits";
   static String get epModelStatus => "$apiBase/analyze/models/status";
+
+  // Quiz and Style Preferences
+  static String get epQuizCompletion => "$apiBase/users/quiz-completion";
+  static String get epStylePreferences => "$apiBase/users/style-preferences";
 
   // Health
   static String get epHealth => "$baseRoot/health";
@@ -79,6 +84,8 @@ class MLAPIService {
   static void setAuthToken(String token) {
     _authToken = token;
   }
+
+  static String? get authToken => _authToken;
 
   static Map<String, String> get _headers {
     final headers = <String, String>{
@@ -153,6 +160,7 @@ class MLAPIService {
 
       if (r.statusCode == 200) {
         final result = json.decode(r.body);
+        print('🔍 MLAPIService: Login response: $result');
         if (result['access_token'] != null) {
           setAuthToken(result['access_token']);
         }
@@ -232,6 +240,66 @@ class MLAPIService {
     }
   }
 
+  static Future<Map<String, dynamic>> createClothingItem({
+    required String name,
+    required String category,
+    required String subcategory,
+    required String color,
+    String? colorHex,
+    String? pattern,
+    String? material,
+    String? brand,
+    String? size,
+    double? price,
+    String? imageUrl,
+    List<String>? seasons,
+    List<String>? occasions,
+    List<String>? styleTags,
+    String? fitType,
+    String? neckline,
+    String? sleeveType,
+    String? length,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'name': name,
+        'category': category,
+        'subcategory': subcategory,
+        'color': color,
+      };
+
+      if (colorHex != null) data['color_hex'] = colorHex;
+      if (pattern != null) data['pattern'] = pattern;
+      if (material != null) data['material'] = material;
+      if (brand != null) data['brand'] = brand;
+      if (size != null) data['size'] = size;
+      if (price != null) data['price'] = price;
+      if (imageUrl != null) data['image_url'] = imageUrl;
+      if (seasons != null) data['seasons'] = seasons;
+      if (occasions != null) data['occasions'] = occasions;
+      if (styleTags != null) data['style_tags'] = styleTags;
+      if (fitType != null) data['fit_type'] = fitType;
+      if (neckline != null) data['neckline'] = neckline;
+      if (sleeveType != null) data['sleeve_type'] = sleeveType;
+      if (length != null) data['length'] = length;
+
+      final r = await http
+          .post(
+            Uri.parse(epClothingCreate),
+            headers: _headers,
+            body: json.encode(data),
+          )
+          .timeout(_timeout);
+
+      if (r.statusCode == 201) {
+        return json.decode(r.body);
+      }
+      throw _httpException(r, fallback: 'Failed to create clothing item');
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getUserWardrobe({
     String? category,
     String? color,
@@ -288,6 +356,50 @@ class MLAPIService {
           fallback: 'Analysis failed',
         ),
       );
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  // ---------- Quiz and Style Preferences ----------
+  static Future<Map<String, dynamic>> completeQuiz(
+    Map<String, dynamic> quizAnswers,
+  ) async {
+    try {
+      print('🔍 MLAPIService: completeQuiz called with answers: $quizAnswers');
+      print(
+        '🔍 MLAPIService: Auth token: ${_authToken != null ? 'exists' : 'null'}',
+      );
+      print('🔍 MLAPIService: Headers: $_headers');
+
+      final r = await http
+          .post(
+            Uri.parse(epQuizCompletion),
+            headers: _headers,
+            body: json.encode(quizAnswers),
+          )
+          .timeout(_timeout);
+
+      print('🔍 MLAPIService: Response status: ${r.statusCode}');
+      print('🔍 MLAPIService: Response body: ${r.body}');
+
+      if (r.statusCode == 201) {
+        return json.decode(r.body);
+      }
+      throw _httpException(r, fallback: 'Quiz completion failed');
+    } catch (e) {
+      print('❌ MLAPIService: Error in completeQuiz: $e');
+      throw Exception('Network error: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getStylePreferences() async {
+    try {
+      final r = await http
+          .get(Uri.parse(epStylePreferences), headers: _headers)
+          .timeout(_timeout);
+      if (r.statusCode == 200) return json.decode(r.body);
+      throw _httpException(r, fallback: 'Failed to get style preferences');
     } catch (e) {
       throw Exception('Network error: $e');
     }

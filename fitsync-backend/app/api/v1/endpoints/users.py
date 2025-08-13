@@ -168,10 +168,10 @@ async def get_style_preferences(
             id=preferences.id,
             user_id=preferences.user_id,
             style_archetype=preferences.style_archetype,
-            color_preferences=preferences.color_preferences,
+            color_preferences=preferences.preferred_colors,
             fit_preferences=preferences.fit_preferences,
             occasion_preferences=preferences.occasion_preferences,
-            brand_preferences=preferences.brand_preferences,
+            brand_preferences=preferences.preferred_brands,
             budget_range=preferences.budget_range,
             created_at=preferences.created_at,
             updated_at=preferences.updated_at
@@ -217,10 +217,10 @@ async def create_style_preferences(
             id=preferences.id,
             user_id=preferences.user_id,
             style_archetype=preferences.style_archetype,
-            color_preferences=preferences.color_preferences,
+            color_preferences=preferences.preferred_colors,
             fit_preferences=preferences.fit_preferences,
             occasion_preferences=preferences.occasion_preferences,
-            brand_preferences=preferences.brand_preferences,
+            brand_preferences=preferences.preferred_brands,
             budget_range=preferences.budget_range,
             created_at=preferences.created_at,
             updated_at=preferences.updated_at
@@ -260,10 +260,10 @@ async def update_style_preferences(
             id=preferences.id,
             user_id=preferences.user_id,
             style_archetype=preferences.style_archetype,
-            color_preferences=preferences.color_preferences,
+            color_preferences=preferences.preferred_colors,
             fit_preferences=preferences.fit_preferences,
             occasion_preferences=preferences.occasion_preferences,
-            brand_preferences=preferences.brand_preferences,
+            brand_preferences=preferences.preferred_brands,
             budget_range=preferences.budget_range,
             created_at=preferences.created_at,
             updated_at=preferences.updated_at
@@ -515,3 +515,223 @@ async def get_user_stats(
     except Exception as e:
         logger.error(f"Error getting user stats: {e}")
         raise
+
+@router.post("/quiz-completion", response_model=StylePreferencesResponse, status_code=status.HTTP_201_CREATED)
+async def complete_quiz_and_assign_archetype(
+    quiz_data: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Complete quiz and assign style archetype based on answers
+    """
+    try:
+        # Analyze quiz answers to determine style archetype
+        style_archetype = _analyze_quiz_answers(quiz_data)
+        
+        # Check if preferences already exist
+        result = await db.execute(select(StylePreferences).where(StylePreferences.user_id == current_user.id))
+        existing_preferences = result.scalar_one_or_none()
+        
+        if existing_preferences:
+            # Update existing preferences
+            existing_preferences.style_archetype = style_archetype
+            existing_preferences.quiz_results = quiz_data
+            await db.commit()
+            await db.refresh(existing_preferences)
+            
+            logger.info(f"Style archetype updated for user: {current_user.email} -> {style_archetype}")
+            
+            return StylePreferencesResponse(
+                id=existing_preferences.id,
+                user_id=existing_preferences.user_id,
+                style_archetype=existing_preferences.style_archetype,
+                color_preferences=existing_preferences.preferred_colors,
+                fit_preferences=existing_preferences.fit_preferences,
+                occasion_preferences=existing_preferences.occasion_preferences,
+                brand_preferences=existing_preferences.preferred_brands,
+                budget_range=existing_preferences.budget_range,
+                created_at=existing_preferences.created_at,
+                updated_at=existing_preferences.updated_at
+            )
+        else:
+            # Create new preferences
+            preferences = StylePreferences(
+                user_id=current_user.id,
+                style_archetype=style_archetype,
+                quiz_results=quiz_data,
+                preferred_colors=_get_default_colors_for_archetype(style_archetype),
+                preferred_styles=[style_archetype],
+                fit_preferences=_get_default_fit_preferences(style_archetype),
+                occasion_preferences=_get_default_occasion_preferences(style_archetype),
+                preferred_brands=[],
+                budget_range={"min": 0, "max": 1000}
+            )
+            
+            db.add(preferences)
+            await db.commit()
+            await db.refresh(preferences)
+            
+            logger.info(f"Style archetype assigned for user: {current_user.email} -> {style_archetype}")
+            
+            return StylePreferencesResponse(
+                id=preferences.id,
+                user_id=preferences.user_id,
+                style_archetype=preferences.style_archetype,
+                color_preferences=preferences.preferred_colors,
+                fit_preferences=preferences.fit_preferences,
+                occasion_preferences=preferences.occasion_preferences,
+                brand_preferences=preferences.preferred_brands,
+                budget_range=preferences.budget_range,
+                created_at=preferences.created_at,
+                updated_at=preferences.updated_at
+            )
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error completing quiz for user {current_user.email}: {e}")
+        raise
+
+def _analyze_quiz_answers(quiz_data: dict) -> str:
+    """
+    Analyze quiz answers to determine style archetype
+    """
+    # Define scoring system for each archetype
+    archetype_scores = {
+        'minimalist': 0,
+        'classic': 0,
+        'bohemian': 0,
+        'streetwear': 0,
+        'elegant': 0,
+        'romantic': 0,
+        'natural': 0,
+        'dramatic': 0,
+        'gamine': 0,
+        'creative': 0
+    }
+    
+    # Question 1: Ideal weekend outfit
+    weekend_outfit = quiz_data.get('weekend_outfit', '')
+    if 'comfortable jeans' in weekend_outfit.lower():
+        archetype_scores['natural'] += 2
+        archetype_scores['minimalist'] += 1
+    elif 'flowy dress' in weekend_outfit.lower():
+        archetype_scores['romantic'] += 2
+        archetype_scores['bohemian'] += 1
+    elif 'tailored pants' in weekend_outfit.lower():
+        archetype_scores['classic'] += 2
+        archetype_scores['elegant'] += 1
+    elif 'athleisure' in weekend_outfit.lower():
+        archetype_scores['streetwear'] += 2
+        archetype_scores['natural'] += 1
+    
+    # Question 2: Color palette preference
+    color_palette = quiz_data.get('color_palette', '')
+    if 'neutral tones' in color_palette.lower():
+        archetype_scores['minimalist'] += 2
+        archetype_scores['classic'] += 1
+    elif 'earthy and warm' in color_palette.lower():
+        archetype_scores['natural'] += 2
+        archetype_scores['bohemian'] += 1
+    elif 'bright and bold' in color_palette.lower():
+        archetype_scores['dramatic'] += 2
+        archetype_scores['creative'] += 1
+    elif 'pastels and soft' in color_palette.lower():
+        archetype_scores['romantic'] += 2
+        archetype_scores['elegant'] += 1
+    
+    # Question 3: Shoe style preference
+    shoe_style = quiz_data.get('shoe_style', '')
+    if 'classic leather' in shoe_style.lower():
+        archetype_scores['classic'] += 2
+        archetype_scores['elegant'] += 1
+    elif 'strappy sandals' in shoe_style.lower():
+        archetype_scores['romantic'] += 2
+        archetype_scores['bohemian'] += 1
+    elif 'minimalist sneakers' in shoe_style.lower():
+        archetype_scores['minimalist'] += 2
+        archetype_scores['streetwear'] += 1
+    elif 'statement heels' in shoe_style.lower():
+        archetype_scores['dramatic'] += 2
+        archetype_scores['creative'] += 1
+    
+    # Question 4: Accessories approach
+    accessories = quiz_data.get('accessories', '')
+    if 'less is more' in accessories.lower():
+        archetype_scores['minimalist'] += 2
+        archetype_scores['classic'] += 1
+    elif 'layered and eclectic' in accessories.lower():
+        archetype_scores['bohemian'] += 2
+        archetype_scores['creative'] += 1
+    elif 'bold architectural' in accessories.lower():
+        archetype_scores['dramatic'] += 2
+        archetype_scores['elegant'] += 1
+    elif 'no accessories' in accessories.lower():
+        archetype_scores['minimalist'] += 2
+        archetype_scores['natural'] += 1
+    
+    # Question 5: Print preference
+    print_preference = quiz_data.get('print_preference', '')
+    if 'solid colors' in print_preference.lower():
+        archetype_scores['minimalist'] += 2
+        archetype_scores['classic'] += 1
+    elif 'floral or paisley' in print_preference.lower():
+        archetype_scores['romantic'] += 2
+        archetype_scores['bohemian'] += 1
+    elif 'geometric or abstract' in print_preference.lower():
+        archetype_scores['creative'] += 2
+        archetype_scores['dramatic'] += 1
+    elif 'animal print' in print_preference.lower():
+        archetype_scores['dramatic'] += 2
+        archetype_scores['streetwear'] += 1
+    
+    # Return the archetype with the highest score
+    return max(archetype_scores.items(), key=lambda x: x[1])[0]
+
+def _get_default_colors_for_archetype(archetype: str) -> List[str]:
+    """Get default color preferences for each archetype"""
+    color_mapping = {
+        'minimalist': ['#000000', '#FFFFFF', '#808080', '#F5F5F5'],
+        'classic': ['#000080', '#FFFFFF', '#000000', '#8B4513'],
+        'bohemian': ['#8B4513', '#228B22', '#FF4500', '#4B0082'],
+        'streetwear': ['#000000', '#FF0000', '#0000FF', '#FFFF00'],
+        'elegant': ['#000000', '#FFFFFF', '#C0C0C0', '#800080'],
+        'romantic': ['#FFB6C1', '#DDA0DD', '#F0E68C', '#FF69B4'],
+        'natural': ['#228B22', '#8B4513', '#F4A460', '#DEB887'],
+        'dramatic': ['#FF0000', '#000000', '#FFD700', '#800080'],
+        'gamine': ['#000000', '#FFFFFF', '#FF69B4', '#00CED1'],
+        'creative': ['#FF4500', '#00CED1', '#FF69B4', '#32CD32']
+    }
+    return color_mapping.get(archetype, ['#000000', '#FFFFFF'])
+
+def _get_default_fit_preferences(archetype: str) -> dict:
+    """Get default fit preferences for each archetype"""
+    fit_mapping = {
+        'minimalist': {'tailored': 0.8, 'regular': 0.6, 'loose': 0.2},
+        'classic': {'tailored': 0.9, 'regular': 0.7, 'loose': 0.1},
+        'bohemian': {'loose': 0.9, 'regular': 0.5, 'tailored': 0.2},
+        'streetwear': {'regular': 0.8, 'loose': 0.6, 'tailored': 0.3},
+        'elegant': {'tailored': 0.9, 'regular': 0.6, 'loose': 0.1},
+        'romantic': {'regular': 0.7, 'loose': 0.6, 'tailored': 0.4},
+        'natural': {'regular': 0.8, 'loose': 0.7, 'tailored': 0.3},
+        'dramatic': {'tailored': 0.7, 'regular': 0.6, 'loose': 0.4},
+        'gamine': {'tailored': 0.6, 'regular': 0.8, 'loose': 0.3},
+        'creative': {'regular': 0.7, 'loose': 0.6, 'tailored': 0.5}
+    }
+    return fit_mapping.get(archetype, {'regular': 0.7, 'tailored': 0.5, 'loose': 0.3})
+
+def _get_default_occasion_preferences(archetype: str) -> dict:
+    """Get default occasion preferences for each archetype"""
+    occasion_mapping = {
+        'minimalist': {'casual': 0.8, 'business': 0.7, 'formal': 0.6, 'party': 0.4},
+        'classic': {'business': 0.9, 'formal': 0.8, 'casual': 0.6, 'party': 0.5},
+        'bohemian': {'casual': 0.9, 'party': 0.7, 'business': 0.3, 'formal': 0.2},
+        'streetwear': {'casual': 0.9, 'party': 0.8, 'business': 0.2, 'formal': 0.1},
+        'elegant': {'formal': 0.9, 'business': 0.8, 'party': 0.7, 'casual': 0.5},
+        'romantic': {'party': 0.8, 'casual': 0.7, 'formal': 0.6, 'business': 0.4},
+        'natural': {'casual': 0.9, 'business': 0.5, 'formal': 0.4, 'party': 0.6},
+        'dramatic': {'party': 0.9, 'formal': 0.7, 'casual': 0.6, 'business': 0.5},
+        'gamine': {'casual': 0.8, 'party': 0.7, 'business': 0.5, 'formal': 0.4},
+        'creative': {'party': 0.8, 'casual': 0.7, 'business': 0.5, 'formal': 0.5}
+    }
+    return occasion_mapping.get(archetype, {'casual': 0.7, 'business': 0.5, 'formal': 0.5, 'party': 0.6})

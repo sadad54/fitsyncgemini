@@ -77,7 +77,7 @@
 //                       context,
 //                       icon: LucideIcons.shoppingBag,
 //                       title: 'My Closet',
-//                       subtitle: '${sampleCloset.length} items',
+//                       subtitle: '${_closetItems.length} items',
 //                       gradient: const LinearGradient(
 //                         colors: [AppColors.pink, AppColors.purple],
 //                       ),
@@ -171,7 +171,8 @@
 //   }
 
 //   Widget _buildSuggestionCard(BuildContext context) {
-//     final outfit = sampleOutfits.first;
+//     // Use first outfit from backend data if available, otherwise show empty state
+//     final outfit = _outfits.isNotEmpty ? _outfits.first : null;
 //     return Card(
 //       color: AppColors.pink.withOpacity(0.05),
 //       elevation: 0,
@@ -361,11 +362,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
-import 'package:fitsyncgemini/constants/app_data.dart';
-import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
+import 'package:fitsyncgemini/services/personalization_service.dart';
+import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart'
+    hide authViewModelProvider;
 import 'package:fitsyncgemini/widgets/dashboard/stats_overview_widget.dart';
 import 'package:fitsyncgemini/widgets/dashboard/quick_actions_widget.dart';
 import 'package:fitsyncgemini/widgets/dashboard/recent_activity_widget.dart';
+import 'package:fitsyncgemini/providers/providers.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -378,20 +382,151 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String _greeting = '';
 
+  // Backend data variables
+  List<Map<String, dynamic>> _closetItems = [];
+  List<Map<String, dynamic>> _outfits = [];
+  Map<String, dynamic> _wardrobeStats = {};
+  bool _isLoadingCloset = false;
+  bool _isLoadingOutfits = false;
+  bool _isLoadingStats = false;
+
+  // Personalization variables
+  String _userArchetype = 'minimalist';
+  Map<String, dynamic> _styleRecommendations = {};
+  List<Map<String, dynamic>> _personalizedOutfits = [];
+  bool _isLoadingPersonalization = false;
+
   @override
   void initState() {
     super.initState();
     _updateGreeting();
+    _loadDashboardData();
+    _loadPersonalizationData();
+  }
+
+  // Load dashboard data from backend
+  Future<void> _loadDashboardData() async {
+    await Future.wait([
+      _loadClosetItems(),
+      _loadOutfits(),
+      _loadWardrobeStats(),
+    ]);
+  }
+
+  // Load personalization data
+  Future<void> _loadPersonalizationData() async {
+    if (_isLoadingPersonalization) return;
+
+    setState(() {
+      _isLoadingPersonalization = true;
+    });
+
+    try {
+      // Get user's style preferences from backend
+      await PersonalizationService.getStylePreferences();
+
+      // Get current archetype
+      _userArchetype = PersonalizationService.getCurrentArchetype();
+
+      // Get personalized recommendations
+      _styleRecommendations = PersonalizationService.getStyleRecommendations();
+
+      // Get personalized outfit suggestions
+      _personalizedOutfits =
+          PersonalizationService.getPersonalizedOutfitSuggestions();
+
+      print('✅ Personalization data loaded for archetype: $_userArchetype');
+    } catch (e) {
+      print('❌ Failed to load personalization data: $e');
+      // Use default values if backend fails
+    } finally {
+      setState(() {
+        _isLoadingPersonalization = false;
+      });
+    }
   }
 
   void _updateGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
-      _greeting = 'Good Morning';
+      _greeting = 'Good morning';
     } else if (hour < 17) {
-      _greeting = 'Good Afternoon';
+      _greeting = 'Good afternoon';
     } else {
-      _greeting = 'Good Evening';
+      _greeting = 'Good evening';
+    }
+  }
+
+  Future<void> _loadClosetItems() async {
+    if (_isLoadingCloset) return;
+
+    setState(() {
+      _isLoadingCloset = true;
+    });
+
+    try {
+      final items = await MLAPIService.getUserWardrobe(limit: 10);
+      setState(() {
+        _closetItems = items;
+      });
+    } catch (e) {
+      print('❌ Failed to load closet items: $e');
+      // Keep empty list if backend fails
+    } finally {
+      setState(() {
+        _isLoadingCloset = false;
+      });
+    }
+  }
+
+  Future<void> _loadOutfits() async {
+    if (_isLoadingOutfits) return;
+
+    setState(() {
+      _isLoadingOutfits = true;
+    });
+
+    try {
+      // Note: Outfits endpoint might not be implemented yet
+      // For now, we'll use an empty list
+      setState(() {
+        _outfits = [];
+      });
+    } catch (e) {
+      print('❌ Failed to load outfits: $e');
+    } finally {
+      setState(() {
+        _isLoadingOutfits = false;
+      });
+    }
+  }
+
+  Future<void> _loadWardrobeStats() async {
+    if (_isLoadingStats) return;
+
+    setState(() {
+      _isLoadingStats = true;
+    });
+
+    try {
+      final stats = await MLAPIService.getWardrobeStats();
+      setState(() {
+        _wardrobeStats = stats;
+      });
+    } catch (e) {
+      print('❌ Failed to load wardrobe stats: $e');
+      // Use default stats if backend fails
+      setState(() {
+        _wardrobeStats = {
+          'total_items': 0,
+          'total_value': 0,
+          'recently_added': 0,
+        };
+      });
+    } finally {
+      setState(() {
+        _isLoadingStats = false;
+      });
     }
   }
 
@@ -428,6 +563,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             onPressed: () => _showSearchBottomSheet(),
           ),
           IconButton(
+            icon: const Icon(LucideIcons.refreshCw, size: 20),
+            onPressed: () => _loadDashboardData(),
+            tooltip: 'Refresh Data',
+          ),
+          // Dev button for injecting dummy data
+          IconButton(
+            icon: const Icon(LucideIcons.database, size: 20),
+            onPressed: () => _showDevOptions(),
+            tooltip: 'Dev Options',
+          ),
+          IconButton(
             icon: const Icon(LucideIcons.bell, size: 20),
             onPressed: () => _showNotifications(),
           ),
@@ -453,8 +599,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // TODO: Implement refresh logic
-          await Future.delayed(const Duration(seconds: 1));
+          await _loadDashboardData();
         },
         child: CustomScrollView(
           slivers: [
@@ -472,7 +617,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     const SizedBox(height: 24),
                     _buildFeaturesGrid(),
                     const SizedBox(height: 24),
-                    _buildTodaysSuggestion(),
+                    if (_isLoadingOutfits)
+                      const Center(child: CircularProgressIndicator())
+                    else
+                      _buildTodaysSuggestion(),
                     const SizedBox(height: 24),
                     _buildStyleInsights(),
                     const SizedBox(height: 24),
@@ -509,7 +657,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const Icon(LucideIcons.sparkles, size: 16, color: AppColors.pink),
               const SizedBox(width: 6),
               Text(
-                'Minimalist Style • ${sampleCloset.length} items in closet',
+                '$_userArchetype Style • ${_closetItems.length} items in closet',
                 style: const TextStyle(
                   color: AppColors.pink,
                   fontWeight: FontWeight.w600,
@@ -535,7 +683,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _buildFeatureCard(
           icon: LucideIcons.shoppingBag,
           title: 'My Closet',
-          subtitle: '${sampleCloset.length} items',
+          subtitle: '${_closetItems.length} items',
           gradient: const LinearGradient(
             colors: [AppColors.pink, AppColors.purple],
           ),
@@ -614,7 +762,81 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildTodaysSuggestion() {
-    final outfit = sampleOutfits.first;
+    // Use first outfit from backend data if available, otherwise show empty state
+    final outfit = _outfits.isNotEmpty ? _outfits.first : null;
+
+    // If no outfit available, show empty state
+    if (outfit == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Today\'s Pick',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              TextButton.icon(
+                onPressed: () => context.go('/outfit-suggestions'),
+                icon: const Icon(LucideIcons.refreshCw, size: 16),
+                label: const Text('New'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Card(
+            color: AppColors.pink.withOpacity(0.05),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide.none,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          gradient: AppColors.fitsyncGradient,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          LucideIcons.zap,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'No outfit suggestions yet',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Complete your wardrobe to get personalized outfit suggestions!',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -704,24 +926,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       height: 48,
                       child: Stack(
                         children:
-                            outfit.itemIds.take(3).toList().asMap().entries.map(
-                              (entry) {
-                                final index = entry.key;
-                                final item = entry.value;
-                                return Positioned(
-                                  left: (index * 25).toDouble(),
-                                  child: CircleAvatar(
-                                    radius: 24,
-                                    backgroundColor:
-                                        Theme.of(context).cardColor,
+                            (outfit['item_ids'] as List<dynamic>?)
+                                ?.take(3)
+                                .toList()
+                                .asMap()
+                                .entries
+                                .map((entry) {
+                                  final index = entry.key;
+                                  final item = entry.value;
+                                  return Positioned(
+                                    left: (index * 25).toDouble(),
                                     child: CircleAvatar(
-                                      radius: 22,
-                                      backgroundImage: NetworkImage(item),
+                                      radius: 24,
+                                      backgroundColor:
+                                          Theme.of(context).cardColor,
+                                      child: CircleAvatar(
+                                        radius: 22,
+                                        backgroundImage: NetworkImage(
+                                          item.toString(),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ).toList(),
+                                  );
+                                })
+                                .toList() ??
+                            [],
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -730,11 +959,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            outfit.name,
+                            outfit['name'] ?? 'Outfit',
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           Text(
-                            'Perfect for ${outfit.occasion}',
+                            'Perfect for ${outfit['occasion'] ?? 'any occasion'}',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: Colors.grey.shade600),
                           ),
@@ -1037,5 +1266,167 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => const AddItemModal(),
     );
+  }
+
+  void _showDevOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (context) => Container(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Developer Options',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.x),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Inject dummy data for testing and showcasing the app',
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _injectDummyData();
+                    },
+                    icon: const Icon(LucideIcons.database),
+                    label: const Text('Inject Dummy Data'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.pink,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _showDummyDataStats();
+                    },
+                    icon: const Icon(LucideIcons.barChart3),
+                    label: const Text('View Data Stats'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Future<void> _injectDummyData() async {
+    try {
+      final dummyDataService = ref.read(dummyDataServiceProvider);
+
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => const AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Injecting dummy data...'),
+                ],
+              ),
+            ),
+      );
+
+      await dummyDataService.injectDummyData();
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Dummy data injected successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error injecting dummy data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showDummyDataStats() async {
+    try {
+      final dummyDataService = ref.read(dummyDataServiceProvider);
+      final stats = dummyDataService.getDummyDataStats();
+
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: const Text('Dummy Data Statistics'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children:
+                    stats.entries
+                        .map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              '${entry.key.replaceAll('_', ' ').toUpperCase()}: ${entry.value}',
+                            ),
+                          ),
+                        )
+                        .toList(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error getting stats: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

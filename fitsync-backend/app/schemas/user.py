@@ -115,9 +115,13 @@ class UserProfileResponse(UserProfileBase):
 
 # Style preferences schemas
 class StylePreferencesBase(BaseModel):
+    style_archetype: Optional[str] = Field(None, max_length=100)
     preferred_colors: Optional[List[str]] = Field(None, max_items=20)
     preferred_styles: Optional[List[StyleArchetypeEnum]] = Field(None, max_items=10)
     preferred_brands: Optional[List[str]] = Field(None, max_items=50)
+    color_preferences: Optional[List[str]] = Field(None, max_items=20)  # Alias for preferred_colors
+    fit_preferences: Optional[Dict[str, float]] = None
+    brand_preferences: Optional[List[str]] = Field(None, max_items=50)  # Alias for preferred_brands
     budget_range: Optional[Dict[str, float]] = None
     occasion_preferences: Optional[Dict[str, float]] = None
     sustainability_importance: Optional[float] = Field(None, ge=0, le=1)

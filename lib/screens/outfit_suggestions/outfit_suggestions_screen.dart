@@ -26,36 +26,6 @@ class _OutfitSuggestionsScreenState
   final List<String> _categories = ['Today', 'Work', 'Casual', 'Event'];
   List<Map<String, dynamic>> _backendRecommendations = [];
 
-  final List<Map<String, dynamic>> _todayOutfits = [
-    {
-      'id': '1',
-      'name': 'Perfect for Today\'s Weather',
-      'temperature': '24°C',
-      'weather': 'Sunny',
-      'matchPercentage': 95,
-      'items': [
-        {'name': 'White Cotton Tee', 'category': 'comfortable'},
-        {'name': 'Light Blue Jeans', 'category': 'breathable'},
-        {'name': 'White Sneakers', 'category': 'casual'},
-      ],
-      'description':
-          'Based on weather forecast and your minimalist style preference',
-    },
-    {
-      'id': '2',
-      'name': 'Professional Power Look',
-      'temperature': '24°C',
-      'weather': 'Meeting Ready',
-      'matchPercentage': 89,
-      'items': [
-        {'name': 'Navy Blazer', 'category': 'Professional'},
-        {'name': 'White Button Shirt', 'category': 'Classic'},
-        {'name': 'Tailored Trousers', 'category': 'Business'},
-      ],
-      'description': 'Perfect for important meetings and presentations',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -103,7 +73,7 @@ class _OutfitSuggestionsScreenState
       });
     } catch (e) {
       _showErrorSnackBar('Failed to load recommendations: ${e.toString()}');
-      // Continue with sample data if backend fails
+      // Keep empty list if backend fails
     } finally {
       setState(() {
         _isLoadingRecommendations = false;
@@ -363,12 +333,6 @@ class _OutfitSuggestionsScreenState
   }
 
   Widget _buildTodayView() {
-    // Use backend recommendations if available, otherwise use sample data
-    final outfitsToShow =
-        _backendRecommendations.isNotEmpty
-            ? _backendRecommendations
-            : _todayOutfits;
-
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -376,10 +340,52 @@ class _OutfitSuggestionsScreenState
           SizedBox(height: 16),
           if (_isLoadingRecommendations)
             _buildLoadingCard()
+          else if (_backendRecommendations.isEmpty)
+            _buildEmptyStateCard()
           else
-            ...outfitsToShow.map((outfit) => _buildOutfitCard(outfit)).toList(),
+            ..._backendRecommendations
+                .map((outfit) => _buildOutfitCard(outfit))
+                .toList(),
           _buildGenerateMoreCard(),
           SizedBox(height: 100), // Bottom padding for any floating elements
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyStateCard() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(LucideIcons.sparkles, size: 48, color: Colors.grey.shade400),
+          SizedBox(height: 16),
+          Text(
+            'No outfit suggestions yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Add more items to your closet to get personalized outfit recommendations',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -520,7 +526,7 @@ class _OutfitSuggestionsScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          outfit['name'],
+                          outfit['name'] ?? 'Outfit Suggestion',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -528,8 +534,8 @@ class _OutfitSuggestionsScreenState
                           ),
                         ),
                         SizedBox(height: 4),
-                        // Show weather info only for weather-related outfits
-                        if (outfit['weather'] != 'Meeting Ready')
+                        // Show weather info if available
+                        if (outfit['weather'] != null)
                           Row(
                             children: [
                               Text(
@@ -539,17 +545,18 @@ class _OutfitSuggestionsScreenState
                                   color: Colors.grey.shade600,
                                 ),
                               ),
-                              Text(
-                                ', ${outfit['temperature']}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
+                              if (outfit['temperature'] != null)
+                                Text(
+                                  ', ${outfit['temperature']}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
-                              ),
                             ],
                           )
                         else
-                          // For professional outfits, show occasion-specific subtitle
+                          // Show occasion-specific subtitle
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 8,
@@ -560,7 +567,7 @@ class _OutfitSuggestionsScreenState
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              'Meeting Ready',
+                              outfit['occasion'] ?? 'Casual',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -578,7 +585,7 @@ class _OutfitSuggestionsScreenState
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${outfit['matchPercentage']}% match',
+                      '${outfit['matchPercentage'] ?? 85}% match',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -596,31 +603,50 @@ class _OutfitSuggestionsScreenState
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  // First item (main clothing)
-                  Expanded(
-                    flex: 2,
-                    child: _buildClothingItemCard(
-                      outfit['items'][0],
-                      'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
-                      isMain: true,
+                  // Display items from backend data
+                  if (outfit['items'] != null &&
+                      (outfit['items'] as List).isNotEmpty)
+                    ...(outfit['items'] as List).take(3).map((item) {
+                      final index = (outfit['items'] as List).indexOf(item);
+                      return Expanded(
+                        flex: index == 0 ? 2 : 1,
+                        child: Padding(
+                          padding: EdgeInsets.only(right: index < 2 ? 12 : 0),
+                          child: _buildClothingItemCard(
+                            item,
+                            item['imageUrl'] ??
+                                'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
+                            isMain: index == 0,
+                          ),
+                        ),
+                      );
+                    }).toList()
+                  else
+                  // Fallback to placeholder items
+                  ...[
+                    Expanded(
+                      flex: 2,
+                      child: _buildClothingItemCard(
+                        {'name': 'Main Item'},
+                        'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
+                        isMain: true,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 12),
-                  // Second item
-                  Expanded(
-                    child: _buildClothingItemCard(
-                      outfit['items'][1],
-                      'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: _buildClothingItemCard(
+                        {'name': 'Accessory'},
+                        'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 12),
-                  // Third item
-                  Expanded(
-                    child: _buildClothingItemCard(
-                      outfit['items'][2],
-                      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: _buildClothingItemCard(
+                        {'name': 'Shoes'},
+                        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -632,7 +658,7 @@ class _OutfitSuggestionsScreenState
                 spacing: 8,
                 runSpacing: 8,
                 children:
-                    outfit['items'].map<Widget>((item) {
+                    (outfit['items'] as List?)?.map<Widget>((item) {
                       return Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: 10,
@@ -643,7 +669,7 @@ class _OutfitSuggestionsScreenState
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          item['category'],
+                          item['category'] ?? 'item',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade700,
@@ -651,7 +677,27 @@ class _OutfitSuggestionsScreenState
                           ),
                         ),
                       );
-                    }).toList(),
+                    }).toList() ??
+                    [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'casual',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
               ),
             ),
 
@@ -664,7 +710,8 @@ class _OutfitSuggestionsScreenState
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      outfit['description'],
+                      outfit['description'] ??
+                          'Personalized outfit suggestion based on your style preferences',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -809,7 +856,7 @@ class _OutfitSuggestionsScreenState
                   ),
                 ),
                 child: Text(
-                  item['name'],
+                  item['name'] ?? 'Item',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: isMain ? 10 : 9,

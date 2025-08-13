@@ -30,12 +30,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isGoingToQuiz = state.uri.toString() == '/quiz';
       final isGoingToDashboard = state.uri.toString() == '/dashboard';
 
+      // Debug prints
+      print('🔍 Router Debug:');
+      print('  - Current location: ${state.uri}');
+      print('  - isAuthenticated: $isAuthenticated');
+      print('  - hasCompletedOnboarding: $hasCompletedOnboarding');
+      print('  - isGoingToAuth: $isGoingToAuth');
+      print('  - isGoingToSplash: $isGoingToSplash');
+      print('  - isGoingToOnboarding: $isGoingToOnboarding');
+      print('  - isGoingToQuiz: $isGoingToQuiz');
+      print('  - isGoingToDashboard: $isGoingToDashboard');
+
+      // Special handling for splash screen - if authenticated and completed onboarding, go to dashboard
+      if (isGoingToSplash && isAuthenticated && hasCompletedOnboarding) {
+        print(
+          '  ➡️ Redirecting from splash to dashboard (authenticated and completed onboarding)',
+        );
+        return '/dashboard';
+      }
+
       // If not authenticated and not going to auth/splash/onboarding/quiz, redirect to auth
       if (!isAuthenticated &&
           !isGoingToAuth &&
           !isGoingToSplash &&
           !isGoingToOnboarding &&
           !isGoingToQuiz) {
+        print('  ➡️ Redirecting to /auth (not authenticated)');
         return '/auth';
       }
 
@@ -45,19 +65,24 @@ final routerProvider = Provider<GoRouter>((ref) {
           !isGoingToOnboarding &&
           !isGoingToQuiz &&
           !isGoingToSplash) {
+        print('  ➡️ Redirecting to /onboarding (not completed onboarding)');
         return '/onboarding';
       }
 
-      // If authenticated and has completed onboarding and going to auth/splash/onboarding/quiz, redirect to dashboard
+      // If authenticated and has completed onboarding and going to auth/splash/onboarding, redirect to dashboard
+      // But don't redirect if they're already going to dashboard or quiz (quiz completion flow)
       if (isAuthenticated &&
           hasCompletedOnboarding &&
-          (isGoingToAuth ||
-              isGoingToSplash ||
-              isGoingToOnboarding ||
-              isGoingToQuiz)) {
+          (isGoingToAuth || isGoingToSplash || isGoingToOnboarding) &&
+          !isGoingToDashboard &&
+          !isGoingToQuiz) {
+        print(
+          '  ➡️ Redirecting to /dashboard (authenticated and completed onboarding)',
+        );
         return '/dashboard';
       }
 
+      print('  ✅ No redirect needed');
       return null; // No redirect
     },
     routes: [

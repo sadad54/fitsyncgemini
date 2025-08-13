@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/constants/app_constants.dart';
-import 'package:fitsyncgemini/constants/app_data.dart';
 import 'package:fitsyncgemini/models/clothing_item.dart';
 import 'package:fitsyncgemini/widgets/closet/add_item_modal.dart';
 import 'package:fitsyncgemini/widgets/closet/closet_filter_widget.dart';
@@ -137,11 +136,8 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   }
 
   void _updateCategoryCounts() {
-    // Update category counts based on backend data or fallback to sample data
-    final itemsToCount =
-        _backendItems.isNotEmpty
-            ? _backendItems
-            : sampleCloset.map((item) => {'category': item.category}).toList();
+    // Update category counts based on backend data only
+    final itemsToCount = _backendItems;
 
     _categories[0]['count'] = itemsToCount.length;
     _categories[1]['count'] =
@@ -199,34 +195,18 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   }
 
   List<dynamic> get _filteredItems {
-    // Use backend items if available, otherwise fall back to sample data
-    final sourceItems = _backendItems.isNotEmpty ? _backendItems : sampleCloset;
-
-    if (_backendItems.isNotEmpty) {
-      // Filter backend items
-      return _backendItems.where((item) {
-        final matchesSearch = (item['name'] ?? '').toLowerCase().contains(
-          _searchController.text.toLowerCase(),
-        );
-        final itemCategory = (item['category'] ?? '').toLowerCase();
-        final matchesCategory =
-            _selectedCategory == 'all' ||
-            itemCategory == _selectedCategory.toLowerCase() ||
-            itemCategory.contains(_selectedCategory.toLowerCase());
-        return matchesSearch && matchesCategory;
-      }).toList();
-    } else {
-      // Filter sample data
-      return sampleCloset.where((item) {
-        final matchesSearch = item.name.toLowerCase().contains(
-          _searchController.text.toLowerCase(),
-        );
-        final matchesCategory =
-            _selectedCategory == 'all' ||
-            item.category.toLowerCase() == _selectedCategory.toLowerCase();
-        return matchesSearch && matchesCategory;
-      }).toList();
-    }
+    // Only use backend items - no fallback to hardcoded data
+    return _backendItems.where((item) {
+      final matchesSearch = (item['name'] ?? '').toLowerCase().contains(
+        _searchController.text.toLowerCase(),
+      );
+      final itemCategory = (item['category'] ?? '').toLowerCase();
+      final matchesCategory =
+          _selectedCategory == 'all' ||
+          itemCategory == _selectedCategory.toLowerCase() ||
+          itemCategory.contains(_selectedCategory.toLowerCase());
+      return matchesSearch && matchesCategory;
+    }).toList();
   }
 
   void _toggleItemSelection(String itemId) {

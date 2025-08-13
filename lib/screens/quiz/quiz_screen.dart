@@ -1,5 +1,4 @@
 // lib/screens/quiz/quiz_screen.dart
-import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +7,8 @@ import 'package:fitsyncgemini/constants/app_data.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/widgets/common/gradient_button.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fitsyncgemini/providers/providers.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key});
@@ -18,6 +19,7 @@ class QuizScreen extends StatefulWidget {
 
 class _QuizScreenState extends State<QuizScreen> {
   int _quizStep = 0;
+  Map<String, String> _quizAnswers = {};
 
   void _nextStep() {
     setState(() {
@@ -33,6 +35,190 @@ class _QuizScreenState extends State<QuizScreen> {
     } else {
       context.go('/onboarding');
     }
+  }
+
+  void _selectAnswer(String answer) {
+    // Store the answer based on current question
+    // _quizStep is 1-based for questions, so subtract 1 to get 0-based index
+    final question = quizQuestions[_quizStep - 1];
+    final questionKey = _getQuestionKey(question.question);
+    _quizAnswers[questionKey] = answer;
+
+    // Move to next question
+    _nextStep();
+  }
+
+  String _getQuestionKey(String question) {
+    // Map questions to backend keys
+    if (question.contains('weekend outfit')) return 'weekend_outfit';
+    if (question.contains('color palette')) return 'color_palette';
+    if (question.contains('shoe style')) return 'shoe_style';
+    if (question.contains('accessories')) return 'accessories';
+    if (question.contains('print')) return 'print_preference';
+    return 'question_${_quizStep + 1}';
+  }
+
+  String _getAssignedArchetype() {
+    // Simple logic to determine archetype based on answers
+    // This is a simplified version - the backend will do the actual analysis
+    int minimalistScore = 0;
+    int classicScore = 0;
+    int bohemianScore = 0;
+    int streetwearScore = 0;
+    int romanticScore = 0;
+    int naturalScore = 0;
+    int dramaticScore = 0;
+    int elegantScore = 0;
+    int gamineScore = 0;
+    int creativeScore = 0;
+
+    // Analyze answers
+    _quizAnswers.forEach((key, value) {
+      if (value.toLowerCase().contains('comfortable jeans')) {
+        naturalScore += 2;
+        minimalistScore += 1;
+      } else if (value.toLowerCase().contains('flowy dress')) {
+        romanticScore += 2;
+        bohemianScore += 1;
+      } else if (value.toLowerCase().contains('tailored pants')) {
+        classicScore += 2;
+        elegantScore += 1;
+      } else if (value.toLowerCase().contains('athleisure')) {
+        streetwearScore += 2;
+        naturalScore += 1;
+      } else if (value.toLowerCase().contains('neutral tones')) {
+        minimalistScore += 2;
+        classicScore += 1;
+      } else if (value.toLowerCase().contains('earthy and warm')) {
+        naturalScore += 2;
+        bohemianScore += 1;
+      } else if (value.toLowerCase().contains('bright and bold')) {
+        dramaticScore += 2;
+        creativeScore += 1;
+      } else if (value.toLowerCase().contains('pastels and soft')) {
+        romanticScore += 2;
+        elegantScore += 1;
+      } else if (value.toLowerCase().contains('classic leather')) {
+        classicScore += 2;
+        elegantScore += 1;
+      } else if (value.toLowerCase().contains('strappy sandals')) {
+        romanticScore += 2;
+        bohemianScore += 1;
+      } else if (value.toLowerCase().contains('minimalist sneakers')) {
+        minimalistScore += 2;
+        streetwearScore += 1;
+      } else if (value.toLowerCase().contains('statement heels')) {
+        dramaticScore += 2;
+        creativeScore += 1;
+      } else if (value.toLowerCase().contains('less is more')) {
+        minimalistScore += 2;
+        classicScore += 1;
+      } else if (value.toLowerCase().contains('layered and eclectic')) {
+        bohemianScore += 2;
+        creativeScore += 1;
+      } else if (value.toLowerCase().contains('bold architectural')) {
+        dramaticScore += 2;
+        elegantScore += 1;
+      } else if (value.toLowerCase().contains('no accessories')) {
+        minimalistScore += 2;
+        naturalScore += 1;
+      } else if (value.toLowerCase().contains('solid colors')) {
+        minimalistScore += 2;
+        classicScore += 1;
+      } else if (value.toLowerCase().contains('floral or paisley')) {
+        romanticScore += 2;
+        bohemianScore += 1;
+      } else if (value.toLowerCase().contains('geometric or abstract')) {
+        creativeScore += 2;
+        dramaticScore += 1;
+      } else if (value.toLowerCase().contains('animal print')) {
+        dramaticScore += 2;
+        streetwearScore += 1;
+      }
+    });
+
+    // Find the archetype with the highest score
+    final scores = {
+      'minimalist': minimalistScore,
+      'classic': classicScore,
+      'bohemian': bohemianScore,
+      'streetwear': streetwearScore,
+      'romantic': romanticScore,
+      'natural': naturalScore,
+      'dramatic': dramaticScore,
+      'elegant': elegantScore,
+      'gamine': gamineScore,
+      'creative': creativeScore,
+    };
+
+    return scores.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+  }
+
+  Map<String, dynamic> _getArchetypeInfo(String archetype) {
+    final archetypeData = {
+      'minimalist': {
+        'name': 'Minimalist',
+        'description':
+            'You appreciate clean lines, neutral colors, and timeless pieces that never go out of style.',
+        'traits': ['Timeless', 'Clean', 'Neutral'],
+      },
+      'classic': {
+        'name': 'Classic',
+        'description':
+            'You prefer sophisticated, well-tailored pieces that exude elegance and professionalism.',
+        'traits': ['Sophisticated', 'Tailored', 'Elegant'],
+      },
+      'bohemian': {
+        'name': 'Bohemian',
+        'description':
+            'You love free-spirited, artistic pieces with rich textures and eclectic patterns.',
+        'traits': ['Free-spirited', 'Artistic', 'Eclectic'],
+      },
+      'streetwear': {
+        'name': 'Streetwear',
+        'description':
+            'You embrace urban culture with comfortable, trendy pieces that make a statement.',
+        'traits': ['Urban', 'Trendy', 'Comfortable'],
+      },
+      'romantic': {
+        'name': 'Romantic',
+        'description':
+            'You gravitate toward soft, feminine pieces with delicate details and flowing silhouettes.',
+        'traits': ['Feminine', 'Soft', 'Delicate'],
+      },
+      'natural': {
+        'name': 'Natural',
+        'description':
+            'You prefer comfortable, earthy pieces that reflect your relaxed and down-to-earth personality.',
+        'traits': ['Comfortable', 'Earthy', 'Relaxed'],
+      },
+      'dramatic': {
+        'name': 'Dramatic',
+        'description':
+            'You love bold, statement-making pieces that command attention and express confidence.',
+        'traits': ['Bold', 'Confident', 'Statement'],
+      },
+      'elegant': {
+        'name': 'Elegant',
+        'description':
+            'You choose refined, sophisticated pieces that showcase your polished and refined taste.',
+        'traits': ['Refined', 'Sophisticated', 'Polished'],
+      },
+      'gamine': {
+        'name': 'Gamine',
+        'description':
+            'You prefer playful, youthful pieces with a mix of classic and trendy elements.',
+        'traits': ['Playful', 'Youthful', 'Versatile'],
+      },
+      'creative': {
+        'name': 'Creative',
+        'description':
+            'You love unique, artistic pieces that showcase your individuality and creative spirit.',
+        'traits': ['Unique', 'Artistic', 'Individual'],
+      },
+    };
+
+    return archetypeData[archetype] ?? archetypeData['minimalist']!;
   }
 
   @override
@@ -75,13 +261,15 @@ class _QuizScreenState extends State<QuizScreen> {
               Text(
                 _quizStep == 0
                     ? 'Style Quiz'
-                    : 'Question $_quizStep of ${quizQuestions.length}',
+                    : _quizStep > 0 && _quizStep <= quizQuestions.length
+                    ? 'Question $_quizStep of ${quizQuestions.length}'
+                    : 'Quiz Complete',
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(width: 48), // For alignment
             ],
           ),
-          if (_quizStep > 0 && _quizStep <= quizQuestions.length)
+          if (_quizStep > 0 && _quizStep < quizQuestions.length + 1)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: LinearProgressIndicator(
@@ -100,7 +288,7 @@ class _QuizScreenState extends State<QuizScreen> {
   Widget _buildQuizContent() {
     if (_quizStep == 0) {
       return _buildIntroCard();
-    } else if (_quizStep > 0 && _quizStep <= quizQuestions.length) {
+    } else if (_quizStep > 0 && _quizStep < quizQuestions.length + 1) {
       return _buildQuestionCard();
     } else {
       return _buildResultCard();
@@ -198,7 +386,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     (option) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6.0),
                       child: OutlinedButton(
-                        onPressed: _nextStep,
+                        onPressed: () => _selectAnswer(option),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
                           side: BorderSide(
@@ -228,6 +416,10 @@ class _QuizScreenState extends State<QuizScreen> {
   Widget _buildResultCard() {
     return Consumer(
       builder: (context, ref, child) {
+        // Get the assigned archetype from quiz answers (default to minimalist)
+        final assignedArchetype = _getAssignedArchetype();
+        final archetypeInfo = _getArchetypeInfo(assignedArchetype);
+
         return Center(
           child: Card(
             color: Colors.white.withOpacity(0.1),
@@ -259,9 +451,9 @@ class _QuizScreenState extends State<QuizScreen> {
                     ),
                     child: Column(
                       children: [
-                        const Text(
-                          'Minimalist',
-                          style: TextStyle(
+                        Text(
+                          archetypeInfo['name'],
+                          style: const TextStyle(
                             color: AppColors.gold,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -269,7 +461,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'You appreciate clean lines, neutral colors, and timeless pieces that never go out of style.',
+                          archetypeInfo['description'],
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
@@ -281,25 +473,22 @@ class _QuizScreenState extends State<QuizScreen> {
                           spacing: 8,
                           runSpacing: 8,
                           alignment: WrapAlignment.center,
-                          children:
-                              ['Timeless', 'Clean', 'Neutral']
-                                  .map(
-                                    (trait) => Chip(
-                                      label: Text(
-                                        trait,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      backgroundColor: Colors.transparent,
-                                      shape: StadiumBorder(
-                                        side: BorderSide(
-                                          color: Colors.white.withOpacity(0.5),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                          children: List<Widget>.from(
+                            (archetypeInfo['traits'] as List).map(
+                              (trait) => Chip(
+                                label: Text(
+                                  trait.toString(),
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Colors.transparent,
+                                shape: StadiumBorder(
+                                  side: BorderSide(
+                                    color: Colors.white.withOpacity(0.5),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -307,23 +496,165 @@ class _QuizScreenState extends State<QuizScreen> {
                   const SizedBox(height: 24),
                   GradientButton(
                     onPressed: () async {
+                      print('🎯 Quiz completion button pressed');
+
                       // ✅ Get the auth view model
                       final authVM = ref.read(authViewModelProvider.notifier);
+                      final authService = ref.read(authServiceProvider);
 
-                      // 🔐 Mark onboarding as completed
-                      await authVM.completeOnboarding();
+                      // Debug: Check current status
+                      print(
+                        '🔍 Debug: Checking current authentication status...',
+                      );
+                      await authService.debugOnboardingStatus();
 
-                      // ✅ Navigate to dashboard
-                      context.go('/dashboard');
+                      // Debug: Check MLAPIService token
+                      print('🔍 Debug: MLAPIService auth token check...');
+                      // We can't directly access _authToken since it's private, but we can test it
+                      try {
+                        final testResponse =
+                            await MLAPIService.getCurrentUser();
+                        print(
+                          '✅ MLAPIService authentication test successful: $testResponse',
+                        );
+                      } catch (e) {
+                        print('❌ MLAPIService authentication test failed: $e');
+                      }
+
+                      // Check if user is authenticated - try to force refresh first
+                      if (!authService.isAuthenticated) {
+                        print(
+                          '🔄 Attempting to force refresh authentication...',
+                        );
+                        final refreshSuccess =
+                            await authService.forceRefreshAuthState();
+
+                        if (!refreshSuccess) {
+                          // Try the regular refresh as fallback
+                          await authVM.refreshAuthState();
+                        }
+
+                        // Check again after refresh
+                        if (!authService.isAuthenticated) {
+                          print(
+                            '❌ User is not authenticated! Cannot complete onboarding.',
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                '❌ Authentication error. Please sign in again.',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+                      }
+
+                      try {
+                        // Send quiz answers to backend for style archetype assignment
+                        print('📝 Sending quiz answers to backend...');
+                        final quizResult = await MLAPIService.completeQuiz(
+                          _quizAnswers,
+                        );
+                        print('✅ Quiz completed successfully: $quizResult');
+
+                        // Get the assigned style archetype
+                        final styleArchetype =
+                            quizResult['style_archetype'] ?? 'minimalist';
+                        print('🎨 Assigned style archetype: $styleArchetype');
+
+                        // Show success message with archetype
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '✨ You\'re a $styleArchetype! Your style preferences have been saved.',
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+
+                        // 🔐 Mark onboarding as completed
+                        print('📝 Marking onboarding as completed...');
+                        await authVM.completeOnboarding();
+                        print('✅ Onboarding marked as completed');
+
+                        // Debug: Check status after completion
+                        print('🔍 Debug: Checking status after completion...');
+                        await authService.debugOnboardingStatus();
+
+                        // Refresh auth state to ensure it's up to date
+                        print('🔄 Refreshing auth state...');
+                        await authVM.refreshAuthState();
+
+                        // Wait a moment for state to propagate
+                        print('⏳ Waiting for state propagation...');
+                        await Future.delayed(const Duration(milliseconds: 500));
+
+                        // Double-check the final state (only if widget is still mounted)
+                        if (mounted) {
+                          final finalState = ref.read(authViewModelProvider);
+                          print('🔍 Final state check:');
+                          print(
+                            '  - isAuthenticated: ${finalState.isAuthenticated}',
+                          );
+                          print(
+                            '  - hasCompletedOnboarding: ${finalState.hasCompletedOnboarding}',
+                          );
+
+                          // ✅ Navigate to dashboard
+                          print('🚀 Navigating to dashboard...');
+                          context.go('/dashboard');
+                        }
+                      } catch (e) {
+                        print('❌ Error completing quiz: $e');
+
+                        // If backend fails, still complete onboarding locally
+                        print(
+                          '📝 Completing onboarding locally due to backend error...',
+                        );
+                        await authVM.completeOnboarding();
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '⚠️ Quiz completed locally. Some features may be limited until you sign in again.',
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+
+                        // Navigate to dashboard anyway
+                        if (mounted) {
+                          context.go('/dashboard');
+                        }
+                      }
                     },
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Continue to FitSync'),
+                        Text('Complete Quiz'),
                         SizedBox(width: 8),
                         Icon(LucideIcons.check, size: 16),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Debug button to check auth state
+                  ElevatedButton(
+                    onPressed: () async {
+                      final authService = ref.read(authServiceProvider);
+                      final authState = ref.read(authViewModelProvider);
+                      print('🔍 Manual Debug Check:');
+                      print(
+                        '  - AuthState isAuthenticated: ${authState.isAuthenticated}',
+                      );
+                      print(
+                        '  - AuthState hasCompletedOnboarding: ${authState.hasCompletedOnboarding}',
+                      );
+                      await authService.debugOnboardingStatus();
+                    },
+                    child: const Text('Debug Auth State'),
                   ),
                 ],
               ),

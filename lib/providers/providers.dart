@@ -4,6 +4,8 @@ import 'package:fitsyncgemini/services/firestore_service.dart';
 import 'package:fitsyncgemini/services/ml_service.dart';
 import 'package:fitsyncgemini/services/storage_service.dart';
 import 'package:fitsyncgemini/services/auth_service.dart';
+import 'package:fitsyncgemini/services/dummy_data_service.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:fitsyncgemini/models/dashboard_model.dart';
 import 'package:fitsyncgemini/models/closet_model.dart';
 import 'package:fitsyncgemini/models/outfit_suggestions_model.dart';
@@ -35,6 +37,11 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
+});
+
+final dummyDataServiceProvider = Provider<DummyDataService>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return DummyDataService(authService);
 });
 
 // ViewModel Providers

@@ -53,6 +53,15 @@ dependencies:
   image_picker: ^1.1.2
   image: ^4.1.7
   shared_preferences: ^2.5.2
+  
+  # Camera & Media
+  camera: ^0.10.5+5
+  
+  # Maps & Location
+  google_maps_flutter: ^2.5.0
+  location: ^5.0.3
+  permission_handler: ^11.0.1
+  geolocator: ^10.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

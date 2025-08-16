@@ -45,5 +45,21 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Camera usage description -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera for virtual try-on features, allowing you to see how clothes look on you.</string>
+	
+	<!-- Location usage descriptions -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location to show nearby fashion content, style influencers, and fashion events around you.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to location to show nearby fashion content, style influencers, and fashion events around you.</string>
+	
+	<!-- Photo library usage (for saving try-on results) -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app can save your virtual try-on results to your photo library.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app can save your virtual try-on results to your photo library.</string>
 </dict>
 </plist>

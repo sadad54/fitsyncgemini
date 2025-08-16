@@ -364,13 +364,12 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:fitsyncgemini/services/personalization_service.dart';
-import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart'
-    hide authViewModelProvider;
 import 'package:fitsyncgemini/widgets/dashboard/stats_overview_widget.dart';
 import 'package:fitsyncgemini/widgets/dashboard/quick_actions_widget.dart';
 import 'package:fitsyncgemini/widgets/dashboard/recent_activity_widget.dart';
 import 'package:fitsyncgemini/providers/providers.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -385,6 +384,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // Backend data variables
   List<Map<String, dynamic>> _closetItems = [];
   List<Map<String, dynamic>> _outfits = [];
+  // ignore: unused_field
   Map<String, dynamic> _wardrobeStats = {};
   bool _isLoadingCloset = false;
   bool _isLoadingOutfits = false;
@@ -392,7 +392,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   // Personalization variables
   String _userArchetype = 'minimalist';
+  // ignore: unused_field
   Map<String, dynamic> _styleRecommendations = {};
+  // ignore: unused_field
   List<Map<String, dynamic>> _personalizedOutfits = [];
   bool _isLoadingPersonalization = false;
 
@@ -532,7 +534,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authViewModelProvider);
+    // final authState = ref.watch(authViewModelProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -654,7 +656,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.sparkles, size: 16, color: AppColors.pink),
+              const FitSyncFeatureIcon(type: 'ai', size: 14, container: 24),
               const SizedBox(width: 6),
               Text(
                 '$_userArchetype Style • ${_closetItems.length} items in closet',
@@ -681,7 +683,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       childAspectRatio: 1.2,
       children: [
         _buildFeatureCard(
-          icon: LucideIcons.shoppingBag,
+          iconWidget: const FitSyncFeatureIcon(
+            type: 'wardrobe',
+            size: 22,
+            container: 48,
+          ),
           title: 'My Closet',
           subtitle: '${_closetItems.length} items',
           gradient: const LinearGradient(
@@ -690,7 +696,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           onTap: () => context.go('/closet'),
         ),
         _buildFeatureCard(
-          icon: LucideIcons.sparkles,
+          iconWidget: const FitSyncFeatureIcon(
+            type: 'ai',
+            size: 22,
+            container: 48,
+          ),
           title: 'Outfit AI',
           subtitle: 'Get suggestions',
           gradient: const LinearGradient(
@@ -699,7 +709,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           onTap: () => context.go('/outfit-suggestions'),
         ),
         _buildFeatureCard(
-          icon: LucideIcons.trendingUp,
+          iconWidget: const FitSyncFeatureIcon(
+            type: 'trends',
+            size: 22,
+            container: 48,
+          ),
           title: 'Trends',
           subtitle: 'What\'s hot now',
           gradient: const LinearGradient(
@@ -708,7 +722,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           onTap: () => context.go('/trends'),
         ),
         _buildFeatureCard(
-          icon: LucideIcons.mapPin,
+          iconWidget: const FitSyncFeatureIcon(
+            type: 'virtual',
+            size: 22,
+            container: 48,
+          ),
           title: 'Nearby',
           subtitle: 'Local inspiration',
           gradient: const LinearGradient(
@@ -721,7 +739,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildFeatureCard({
-    required IconData icon,
+    IconData? icon,
+    Widget? iconWidget,
     required String title,
     required String subtitle,
     required Gradient gradient,
@@ -741,7 +760,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 gradient: gradient,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: Colors.white, size: 24),
+              child: iconWidget ?? Icon(icon, color: Colors.white, size: 24),
             ),
             const SizedBox(height: 12),
             Text(
@@ -1071,7 +1090,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         color: AppColors.teal,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: _buildInsightCard(
                         icon: LucideIcons.heart,

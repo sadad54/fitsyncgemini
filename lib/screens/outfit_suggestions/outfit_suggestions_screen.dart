@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
-import 'package:fitsyncgemini/constants/app_constants.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 
 class OutfitSuggestionsScreen extends ConsumerStatefulWidget {
   const OutfitSuggestionsScreen({super.key});
@@ -148,7 +148,13 @@ class _OutfitSuggestionsScreenState
         elevation: 0,
         leading: IconButton(
           icon: const Icon(LucideIcons.chevronLeft, color: Colors.black87),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
+          },
         ),
         actions: [
           IconButton(
@@ -184,13 +190,10 @@ class _OutfitSuggestionsScreenState
                             if (category == 'Today')
                               Container(
                                 margin: EdgeInsets.only(right: 4),
-                                child: Icon(
-                                  LucideIcons.sparkles,
-                                  size: 16,
-                                  color:
-                                      category == 'Today'
-                                          ? AppColors.pink
-                                          : Colors.grey.shade600,
+                                child: FitSyncFeatureIcon(
+                                  type: 'ai',
+                                  size: 14,
+                                  container: 24,
                                 ),
                               ),
                             Text(category),
@@ -244,7 +247,7 @@ class _OutfitSuggestionsScreenState
               shape: BoxShape.circle,
               color: AppColors.pink.withOpacity(0.1),
             ),
-            child: Icon(LucideIcons.sparkles, size: 28, color: AppColors.pink),
+            child: FitSyncFeatureIcon(type: 'ai', size: 24, container: 60),
           ),
           SizedBox(height: 16),
           Text(
@@ -370,7 +373,7 @@ class _OutfitSuggestionsScreenState
       ),
       child: Column(
         children: [
-          Icon(LucideIcons.sparkles, size: 48, color: Colors.grey.shade400),
+          FitSyncFeatureIcon(type: 'ai', size: 32, container: 60),
           SizedBox(height: 16),
           Text(
             'No outfit suggestions yet',

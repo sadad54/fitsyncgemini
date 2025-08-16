@@ -48,6 +48,7 @@ class LocationInfo {
   final bool isLive;
   final double latitude;
   final double longitude;
+  final String? _fullLocation;
 
   const LocationInfo({
     required this.city,
@@ -56,9 +57,10 @@ class LocationInfo {
     this.isLive = true,
     required this.latitude,
     required this.longitude,
-  });
+    String? fullLocation,
+  }) : _fullLocation = fullLocation;
 
-  String get fullLocation => '$city, $state';
+  String get fullLocation => _fullLocation ?? '$city, $state';
 }
 
 class NearbyPerson {

@@ -8,7 +8,6 @@ import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/widgets/common/gradient_button.dart';
 import 'package:fitsyncgemini/widgets/common/social_button.dart';
 import 'package:fitsyncgemini/widgets/common/custom_text_field.dart';
-import 'package:fitsyncgemini/services/auth_service.dart';
 
 enum AuthMode { login, signup }
 
@@ -139,7 +138,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final isLogin = _authMode == AuthMode.login;
-    final authState = ref.watch(authViewModelProvider);
+    ref.watch(authViewModelProvider);
     ref.listen<AuthState>(authViewModelProvider, (previous, next) {
       if (next.isAuthenticated && mounted) {
         // Check if user has completed onboarding
@@ -159,6 +158,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 1,
         shadowColor: Colors.black.withOpacity(0.1),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/onboarding');
+            }
+          },
+        ),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

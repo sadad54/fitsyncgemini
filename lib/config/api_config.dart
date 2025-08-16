@@ -1,7 +1,7 @@
 // lib/config/api_config.dart
 class ApiConfig {
   // Base URL - make this configurable for different environments
-  static const String _baseUrl = 'http://127.0.0.1:8000/api/v1';
+  static const String _baseUrl = 'http://127.0.0.1:8000';
 
   // Development/Production URL switching
   static String get baseUrl {

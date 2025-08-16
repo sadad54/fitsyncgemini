@@ -1,11 +1,7 @@
-"""
-Clothing management endpoints for wardrobe and outfit operations
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Any, List, Optional
 import logging
 

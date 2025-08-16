@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
-import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
 class BackendStatusWidget extends StatefulWidget {
   const BackendStatusWidget({super.key});
@@ -59,15 +59,7 @@ class _BackendStatusWidgetState extends State<BackendStatusWidget> {
           children: [
             Row(
               children: [
-                Icon(
-                  LucideIcons.server,
-                  color:
-                      _isChecking
-                          ? Colors.grey
-                          : _isConnected == true
-                          ? Colors.green
-                          : Colors.red,
-                ),
+                FitSyncFeatureIcon(type: 'trends', size: 16, container: 28),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -105,7 +97,7 @@ class _BackendStatusWidgetState extends State<BackendStatusWidget> {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         LucideIcons.checkCircle,
                         color: Colors.green,
                         size: 16,
@@ -145,7 +137,11 @@ class _BackendStatusWidgetState extends State<BackendStatusWidget> {
                 children: [
                   Row(
                     children: [
-                      Icon(LucideIcons.xCircle, color: Colors.red, size: 16),
+                      const Icon(
+                        LucideIcons.xCircle,
+                        color: Colors.red,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'Disconnected',

@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/widgets/closet/add_item_modal.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
 class QuickActionsWidget extends ConsumerWidget {
   const QuickActionsWidget({super.key});
@@ -26,7 +26,7 @@ class QuickActionsWidget extends ConsumerWidget {
             children: [
               _buildQuickActionCard(
                 context,
-                icon: LucideIcons.camera,
+                iconWidget: const FitSyncFeatureIcon(type: 'camera'),
                 label: 'Add Item',
                 subtitle: 'Upload new clothing',
                 color: AppColors.pink,
@@ -35,7 +35,7 @@ class QuickActionsWidget extends ConsumerWidget {
               const SizedBox(width: 12),
               _buildQuickActionCard(
                 context,
-                icon: LucideIcons.sparkles,
+                iconWidget: const FitSyncFeatureIcon(type: 'ai'),
                 label: 'Get Outfit',
                 subtitle: 'AI suggestions',
                 color: AppColors.purple,
@@ -44,7 +44,7 @@ class QuickActionsWidget extends ConsumerWidget {
               const SizedBox(width: 12),
               _buildQuickActionCard(
                 context,
-                icon: LucideIcons.play,
+                iconWidget: const FitSyncFeatureIcon(type: 'virtual'),
                 label: 'Try On',
                 subtitle: 'Virtual fitting',
                 color: AppColors.teal,
@@ -53,7 +53,7 @@ class QuickActionsWidget extends ConsumerWidget {
               const SizedBox(width: 12),
               _buildQuickActionCard(
                 context,
-                icon: LucideIcons.trendingUp,
+                iconWidget: const FitSyncFeatureIcon(type: 'trends'),
                 label: 'Trends',
                 subtitle: 'What\'s hot now',
                 color: AppColors.blue,
@@ -62,7 +62,7 @@ class QuickActionsWidget extends ConsumerWidget {
               const SizedBox(width: 12),
               _buildQuickActionCard(
                 context,
-                icon: LucideIcons.users,
+                iconWidget: const FitSyncFeatureIcon(type: 'social'),
                 label: 'Social',
                 subtitle: 'Share & discover',
                 color: AppColors.gold,
@@ -77,7 +77,8 @@ class QuickActionsWidget extends ConsumerWidget {
 
   Widget _buildQuickActionCard(
     BuildContext context, {
-    required IconData icon,
+    IconData? icon,
+    Widget? iconWidget,
     required String label,
     required String subtitle,
     required Color color,
@@ -103,15 +104,16 @@ class QuickActionsWidget extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
+            iconWidget ??
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
             const SizedBox(height: 12),
             Text(
               label,

@@ -2,13 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
-import 'package:fitsyncgemini/constants/app_constants.dart';
 import 'package:fitsyncgemini/models/clothing_item.dart';
 import 'package:fitsyncgemini/widgets/closet/add_item_modal.dart';
 import 'package:fitsyncgemini/widgets/closet/closet_filter_widget.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
 class ClosetScreen extends ConsumerStatefulWidget {
   const ClosetScreen({super.key});
@@ -567,10 +567,10 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                 ),
                 child: TextButton.icon(
                   onPressed: () {},
-                  icon: const Icon(
-                    LucideIcons.sparkles,
-                    size: 16,
-                    color: AppColors.pink,
+                  icon: const FitSyncFeatureIcon(
+                    type: 'outfit',
+                    size: 14,
+                    container: 24,
                   ),
                   label: const Text(
                     'Create Outfit',
@@ -594,10 +594,10 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                 ),
                 child: IconButton(
                   onPressed: () {},
-                  icon: const Icon(
-                    LucideIcons.heart,
-                    size: 16,
-                    color: AppColors.pink,
+                  icon: const FitSyncFeatureIcon(
+                    type: 'social',
+                    size: 14,
+                    container: 24,
                   ),
                 ),
               ),
@@ -611,10 +611,10 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                 ),
                 child: IconButton(
                   onPressed: () {},
-                  icon: const Icon(
-                    LucideIcons.moreHorizontal,
-                    size: 16,
-                    color: AppColors.pink,
+                  icon: const FitSyncFeatureIcon(
+                    type: 'virtual',
+                    size: 14,
+                    container: 24,
                   ),
                 ),
               ),

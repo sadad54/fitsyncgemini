@@ -1,10 +1,10 @@
 import 'package:fitsyncgemini/models/category.dart';
 import 'package:fitsyncgemini/models/explore_item.dart';
 import 'package:fitsyncgemini/models/trending_style.dart';
-import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
 const Color kPrimaryPink = Color(0xFFFF6B9D);
 const Color kAvatarBg = Color(0xFF4ECDC4);
@@ -223,6 +223,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
         title: Text(
           'Explore',
           style: TextStyle(
@@ -234,17 +244,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(LucideIcons.search, color: kDarkText),
-            onPressed: () {
-              // Implement search functionality
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: FitSyncFeatureIcon(type: 'trends', size: 18, container: 36),
           ),
-          IconButton(
-            icon: Icon(LucideIcons.bell, color: kDarkText),
-            onPressed: () {
-              // Implement notifications
-            },
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FitSyncFeatureIcon(type: 'social', size: 18, container: 36),
           ),
         ],
       ),
@@ -280,7 +286,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search styles, trends, or creators...',
                     border: InputBorder.none,
-                    icon: Icon(LucideIcons.search, color: Colors.grey.shade600),
+                    icon: const Icon(LucideIcons.search, color: Colors.black54),
                     suffixIcon:
                         _searchController.text.isNotEmpty
                             ? IconButton(

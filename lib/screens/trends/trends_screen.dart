@@ -1,10 +1,9 @@
 // lib/screens/trends/trends_screen_new.dart
 import 'package:flutter/material.dart';
-import 'package:fitsyncgemini/services/MLAPI_service.dart';
-import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});
@@ -126,45 +125,27 @@ class _TrendsScreenState extends State<TrendsScreen> {
     });
 
     try {
-      // Note: Fashion insights endpoint might not be implemented yet
-      // For now, we'll use default insights data
-      setState(() {
-        _fashionInsights = [
-          {
-            'id': 1,
-            'title': 'Sustainable Fashion on the Rise',
-            'description':
-                'Consumers are increasingly choosing eco-friendly clothing options',
-            'percentage': 67,
-            'trend': 'up',
-            'icon': LucideIcons.leaf,
-            'color': Colors.green,
-          },
-          {
-            'id': 2,
-            'title': 'Minimalist Wardrobes',
-            'description':
-                'Capsule wardrobes and versatile pieces gaining popularity',
-            'percentage': 45,
-            'trend': 'up',
-            'icon': LucideIcons.minimize2,
-            'color': Colors.blue,
-          },
-          {
-            'id': 3,
-            'title': 'Second-Hand Shopping',
-            'description':
-                'Thrift stores and vintage shopping becoming mainstream',
-            'percentage': 78,
-            'trend': 'up',
-            'icon': LucideIcons.repeat,
-            'color': Colors.orange,
-          },
-        ];
-      });
+      final resp = await MLAPIService.getFashionInsights();
+      final insights = resp['insights'] as List<dynamic>?;
+      if (insights != null) {
+        setState(() {
+          _fashionInsights =
+              insights
+                  .map(
+                    (e) => {
+                      'category': e['category'] ?? '',
+                      'trending': List<String>.from(e['trending'] ?? const []),
+                      'declining': List<String>.from(
+                        e['declining'] ?? const [],
+                      ),
+                    },
+                  )
+                  .toList();
+        });
+      }
     } catch (e) {
-      print('❌ Failed to load fashion insights: $e');
       // Keep empty list if backend fails
+      debugPrint('❌ Failed to load fashion insights: $e');
     } finally {
       setState(() {
         _isLoadingFashionInsights = false;
@@ -228,6 +209,23 @@ class _TrendsScreenState extends State<TrendsScreen> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              // Fallback to dashboard route
+              // ignore: use_build_context_synchronously
+              // Using WidgetsBinding to ensure context is valid
+              Future.microtask(() {
+                if (mounted) {
+                  Navigator.of(context).pushReplacementNamed('/dashboard');
+                }
+              });
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.refreshCw),
@@ -330,41 +328,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
               const SizedBox(height: 24),
 
-              // Fashion Insights Section
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Fashion Insights',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '${_fashionInsights.length} insights',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              if (_isLoadingFashionInsights)
-                const Center(child: CircularProgressIndicator())
-              else if (_fashionInsights.isEmpty)
-                _buildEmptyState('No fashion insights available')
-              else
-                ..._fashionInsights
-                    .map((insight) => _buildInsightCard(insight))
-                    .toList(),
+              // Fashion Insights Section (React parity)
+              _buildFashionInsightsSection(),
 
               const SizedBox(height: 24),
 
@@ -429,7 +394,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
       ),
       child: Column(
         children: [
-          Icon(LucideIcons.trendingUp, size: 48, color: Colors.grey.shade400),
+          FitSyncFeatureIcon(type: 'trends', size: 32, container: 60),
           const SizedBox(height: 16),
           Text(
             message,
@@ -634,79 +599,164 @@ class _TrendsScreenState extends State<TrendsScreen> {
     );
   }
 
-  Widget _buildInsightCard(Map<String, dynamic> insight) {
-    final isUpTrend = insight['trend'] == 'up';
+  // Old card builder removed; replaced by React-styled section
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
+  Widget _buildFashionInsightsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: insight['color'].withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(insight['icon'], color: insight['color'], size: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Fashion Insights',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${_fashionInsights.length} insights',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              ),
+            ],
           ),
-
-          const SizedBox(width: 16),
-
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  insight['title'],
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  insight['description'],
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 8),
-                Row(
+          const SizedBox(height: 8),
+          if (_isLoadingFashionInsights)
+            const Center(child: CircularProgressIndicator())
+          else if (_fashionInsights.isEmpty)
+            _buildEmptyState('No fashion insights available')
+          else
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      isUpTrend
-                          ? LucideIcons.trendingUp
-                          : LucideIcons.trendingDown,
-                      size: 16,
-                      color: isUpTrend ? Colors.green : Colors.red,
+                    Row(
+                      children: const [
+                        Icon(
+                          LucideIcons.trendingUp,
+                          color: AppColors.teal,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Fashion Insights',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${insight['percentage']}% of users',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    const SizedBox(height: 12),
+                    ..._fashionInsights.asMap().entries.map((entry) {
+                      final insight = entry.value;
+                      final category = (insight['category'] ?? '').toString();
+                      final trending =
+                          (insight['trending'] as List).cast<String>();
+                      final declining =
+                          (insight['declining'] as List).cast<String>();
+                      return Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            left: BorderSide(color: AppColors.pink, width: 4),
+                          ),
+                        ),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _capitalize(category),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Trending
+                            const Text(
+                              'Trending:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children:
+                                  trending
+                                      .map(
+                                        (t) => _chip(
+                                          t,
+                                          bg: const Color(0xFFE6F4EA),
+                                          fg: const Color(0xFF166534),
+                                          icon: LucideIcons.trendingUp,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                            const SizedBox(height: 8),
+                            // Declining
+                            const Text(
+                              'Declining:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children:
+                                  declining
+                                      .map(
+                                        (d) => _chip(
+                                          d,
+                                          bg: const Color(0xFFFEE2E2),
+                                          fg: const Color(0xFF991B1B),
+                                          icon: LucideIcons.trendingDown,
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+        ],
+      ),
+    );
+  }
+
+  String _capitalize(String v) {
+    if (v.isEmpty) return v;
+    return v[0].toUpperCase() + v.substring(1);
+  }
+
+  Widget _chip(
+    String text, {
+    required Color bg,
+    required Color fg,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(fontSize: 12, color: fg)),
         ],
       ),
     );

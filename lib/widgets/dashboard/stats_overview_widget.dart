@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
 class StatsOverviewWidget extends ConsumerWidget {
   const StatsOverviewWidget({super.key});
@@ -29,11 +30,7 @@ class StatsOverviewWidget extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                LucideIcons.barChart3,
-                color: AppColors.pink,
-                size: 20,
-              ),
+              const FitSyncFeatureIcon(type: 'trends', size: 18, container: 32),
               const SizedBox(width: 8),
               const Text(
                 'Your Style Stats',
@@ -71,7 +68,11 @@ class StatsOverviewWidget extends ConsumerWidget {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  icon: LucideIcons.shoppingBag,
+                  iconWidget: const FitSyncFeatureIcon(
+                    type: 'wardrobe',
+                    size: 16,
+                    container: 32,
+                  ),
                   label: 'Total Items',
                   value: '127',
                   color: AppColors.pink,
@@ -81,7 +82,11 @@ class StatsOverviewWidget extends ConsumerWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildStatCard(
-                  icon: LucideIcons.heart,
+                  iconWidget: const FitSyncFeatureIcon(
+                    type: 'social',
+                    size: 16,
+                    container: 32,
+                  ),
                   label: 'Favorites',
                   value: '23',
                   color: AppColors.purple,
@@ -97,7 +102,11 @@ class StatsOverviewWidget extends ConsumerWidget {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  icon: LucideIcons.sparkles,
+                  iconWidget: const FitSyncFeatureIcon(
+                    type: 'outfit',
+                    size: 16,
+                    container: 32,
+                  ),
                   label: 'Outfits Created',
                   value: '45',
                   color: AppColors.teal,
@@ -107,7 +116,11 @@ class StatsOverviewWidget extends ConsumerWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildStatCard(
-                  icon: LucideIcons.dollarSign,
+                  iconWidget: const FitSyncFeatureIcon(
+                    type: 'trends',
+                    size: 16,
+                    container: 32,
+                  ),
                   label: 'Total Value',
                   value: '\$2.8K',
                   color: AppColors.blue,
@@ -160,7 +173,8 @@ class StatsOverviewWidget extends ConsumerWidget {
   }
 
   Widget _buildStatCard({
-    required IconData icon,
+    IconData? icon,
+    Widget? iconWidget,
     required String label,
     required String value,
     required Color color,
@@ -178,15 +192,16 @@ class StatsOverviewWidget extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
+              iconWidget ??
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, color: color, size: 16),
+                  ),
               const Spacer(),
               Text(
                 value,

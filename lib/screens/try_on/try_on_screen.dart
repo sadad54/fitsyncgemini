@@ -1,458 +1,945 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import 'package:fitsyncgemini/constants/app_colors.dart';
-import 'package:fitsyncgemini/services/MLAPI_service.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+// lib/screens/try_on/try_on_screen.dart
 
-class TryOnScreen extends StatefulWidget {
-  const TryOnScreen({super.key});
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:fitsyncgemini/constants/app_colors.dart';
+import 'package:fitsyncgemini/models/virtual_tryon_model.dart';
+import 'package:fitsyncgemini/viewmodels/virtual_tryon_viewmodel.dart';
+import 'package:fitsyncgemini/widgets/common/loading_indicator.dart';
+import 'package:fitsyncgemini/widgets/common/gradient_button.dart';
+
+class TryOnScreen extends ConsumerStatefulWidget {
+  const TryOnScreen({Key? key}) : super(key: key);
 
   @override
-  State<TryOnScreen> createState() => _TryOnScreenState();
+  ConsumerState<TryOnScreen> createState() => _TryOnScreenState();
 }
 
-class _TryOnScreenState extends State<TryOnScreen> {
-  bool _hasUserPhoto = false;
-  bool _isProcessing = false;
-  File? _userPhoto;
-  File? _selectedClothingImage;
-  Map<String, dynamic>? _poseAnalysis;
-  List<Map<String, dynamic>> _availableClothing = [];
+class _TryOnScreenState extends ConsumerState<TryOnScreen> {
+  CameraController? _cameraController;
+  bool _isCameraInitialized = false;
 
-  final ImagePicker _picker = ImagePicker();
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      // Check camera permission first
+      final cameraPermission = await Permission.camera.request();
+      if (cameraPermission != PermissionStatus.granted) {
+        debugPrint('Camera permission denied');
+        return;
+      }
+
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        final frontCamera = cameras.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.front,
+          orElse: () => cameras.first,
+        );
+
+        _cameraController = CameraController(
+          frontCamera,
+          ResolutionPreset.high,
+          enableAudio: false,
+          imageFormatGroup: ImageFormatGroup.jpeg,
+        );
+
+        await _cameraController!.initialize();
+        if (mounted) {
+          setState(() {
+            _isCameraInitialized = true;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(virtualTryOnViewModelProvider);
+    final viewModel = ref.read(virtualTryOnViewModelProvider.notifier);
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        elevation: 1,
-        shadowColor: Colors.black.withOpacity(0.1),
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: const Text(
-          'Virtual Try-On',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.bell),
-            onPressed: () => _showHelpDialog(),
+      backgroundColor: Colors.grey[50],
+      body: Column(
+        children: [
+          // Header
+          _buildHeader(context, state, viewModel),
+
+          // Content
+          Expanded(
+            child:
+                state.isLoading
+                    ? const Center(child: LoadingIndicator())
+                    : SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Virtual Mirror/Camera View
+                          _buildCameraView(context, state, viewModel),
+
+                          const SizedBox(height: 24),
+
+                          // Outfit Selection
+                          _buildOutfitSelection(context, state, viewModel),
+
+                          const SizedBox(height: 24),
+
+                          // Smart Features
+                          _buildSmartFeatures(context, state, viewModel),
+
+                          const SizedBox(height: 24),
+
+                          // Action Buttons
+                          _buildActionButtons(context, state, viewModel),
+
+                          const SizedBox(height: 24),
+
+                          // Pro Tips
+                          _buildProTips(context),
+                        ],
+                      ),
+                    ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    VirtualTryOnState state,
+    VirtualTryOnViewModel viewModel,
+  ) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
+      ),
+      child: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            if (!_hasUserPhoto) _buildUploadPhotoCard(),
-            if (_hasUserPhoto) _buildTryOnInterface(),
-            const SizedBox(height: 20),
-            _buildFeaturesInfo(),
+            // Top header with title and actions
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        Future.microtask(
+                          () => Navigator.of(
+                            context,
+                          ).pushReplacementNamed('/dashboard'),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.arrow_back),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Virtual Try-On',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'AI-powered fitting room',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _showSettings(context, viewModel),
+                    icon: const Icon(Icons.settings),
+                  ),
+                  IconButton(
+                    onPressed: () => _shareResult(context, viewModel),
+                    icon: const Icon(Icons.share),
+                  ),
+                ],
+              ),
+            ),
+
+            // View Mode Toggle
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Row(
+                children: [
+                  _buildViewModeButton(
+                    context,
+                    'AR View',
+                    Icons.camera_alt,
+                    ViewMode.ar,
+                    state.currentViewMode == ViewMode.ar,
+                    AppColors.pink,
+                    () => viewModel.switchViewMode(ViewMode.ar),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildViewModeButton(
+                    context,
+                    'Mirror Mode',
+                    Icons.visibility,
+                    ViewMode.mirror,
+                    state.currentViewMode == ViewMode.mirror,
+                    AppColors.teal,
+                    () => viewModel.switchViewMode(ViewMode.mirror),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUploadPhotoCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                shape: BoxShape.circle,
+  Widget _buildViewModeButton(
+    BuildContext context,
+    String text,
+    IconData icon,
+    ViewMode mode,
+    bool isSelected,
+    Color selectedColor,
+    VoidCallback onTap,
+  ) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: isSelected ? selectedColor : Colors.transparent,
+            border: Border.all(
+              color: isSelected ? selectedColor : Colors.grey[300]!,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? Colors.white : Colors.grey[600],
               ),
-              child: const Icon(
-                LucideIcons.user,
-                color: Colors.white,
-                size: 48,
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Upload Your Photo',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Take or upload a full-body photo to start trying on outfits',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _uploadPhoto('camera'),
-                    icon: const Icon(LucideIcons.camera),
-                    label: const Text('Take Photo'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _uploadPhoto('gallery'),
-                    icon: const Icon(LucideIcons.upload),
-                    label: const Text('Upload'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.pink,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ).animate().fadeIn();
+    );
   }
 
-  Widget _buildTryOnInterface() {
-    return Column(
-      children: [
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Container(
-            height: 400,
-            width: double.infinity,
-            color: Colors.grey.shade100,
-            child: Stack(
-              children: [
-                const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(LucideIcons.user, size: 80, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text('Your Photo', style: TextStyle(color: Colors.grey)),
-                    ],
+  Widget _buildCameraView(
+    BuildContext context,
+    VirtualTryOnState state,
+    VirtualTryOnViewModel viewModel,
+  ) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: AspectRatio(
+        aspectRatio: 3 / 4,
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF2D3748), Color(0xFF1A202C)],
+            ),
+          ),
+          child: Stack(
+            children: [
+              // Camera preview or placeholder
+              if (_isCameraInitialized &&
+                  _cameraController != null &&
+                  state.currentViewMode == ViewMode.mirror)
+                Positioned.fill(child: CameraPreview(_cameraController!))
+              else
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Color(0x33000000),
+                        Color(0x66000000),
+                      ],
+                    ),
                   ),
                 ),
-                if (_isProcessing)
-                  Container(
-                    color: Colors.black54,
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+
+              // Processing overlay
+              if (state.isProcessing)
+                Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Processing outfit...',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: Colors.white),
+                        ),
+                        if (state.processingProgress > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '${(state.processingProgress * 100).round()}%',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: Colors.white70),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Top indicators
+              Positioned(
+                top: 16,
+                left: 16,
+                right: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.pink,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          CircularProgressIndicator(color: Colors.white),
-                          SizedBox(height: 16),
+                          const Icon(Icons.bolt, color: Colors.white, size: 12),
+                          const SizedBox(width: 4),
                           Text(
-                            'Processing outfit...',
-                            style: TextStyle(color: Colors.white),
+                            'AI Active',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
                     ),
+                    if (viewModel.currentConfidenceScore != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: Text(
+                          '${(viewModel.currentConfidenceScore! * 100).round()}% Fit',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Center placeholder for user positioning
+              if (!state.isProcessing)
+                Center(
+                  child: Container(
+                    width: 200,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                        style:
+                            BorderStyle
+                                .values[1], // Dashed would need custom painter
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.camera_alt,
+                          color: Colors.white.withOpacity(0.7),
+                          size: 32,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Position yourself in frame',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.white.withOpacity(0.7)),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Select Outfit to Try',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 100,
-                  child:
-                      _availableClothing.isEmpty
-                          ? Center(
-                            child: Text(
-                              'No clothing items available',
-                              style: TextStyle(color: Colors.grey.shade600),
+
+              // Bottom controls
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Try-on button
+                    GestureDetector(
+                      onTap:
+                          state.isProcessing
+                              ? null
+                              : () => _startTryOn(viewModel),
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color:
+                              state.isProcessing
+                                  ? Colors.grey[400]
+                                  : AppColors.pink,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.pink.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
                             ),
-                          )
-                          : ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _availableClothing.length,
-                            separatorBuilder:
-                                (context, index) => const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              final item = _availableClothing[index];
-                              return _buildOutfitOption(item, index);
-                            },
-                          ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => setState(() => _hasUserPhoto = false),
-                icon: const Icon(LucideIcons.rotateCcw),
-                label: const Text('New Photo'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _tryOnOutfit(),
-                icon: const Icon(LucideIcons.play),
-                label: const Text('Try On'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.pink,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    ).animate().fadeIn();
-  }
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
 
-  Widget _buildOutfitOption(Map<String, dynamic> item, int index) {
-    final isSelected =
-        _selectedClothingImage != null; // You can make this more specific
+                    const SizedBox(width: 12),
 
-    return GestureDetector(
-      onTap: () {
-        // For demo purposes, we'll simulate selecting this clothing item
-        // In a real app, you'd need the actual image file from the server
-        setState(() {
-          // You'd need to download or get the image file here
-          // _selectedClothingImage = File(item['image_url']);
-        });
-        _showSuccessSnackBar('Selected: ${item['name']}');
-      },
-      child: Container(
-        width: 80,
-        height: 100,
-        decoration: BoxDecoration(
-          color:
-              isSelected
-                  ? AppColors.pink.withOpacity(0.2)
-                  : AppColors.pink.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color:
-                isSelected ? AppColors.pink : AppColors.pink.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              LucideIcons.shirt,
-              color: AppColors.pink,
-              size: isSelected ? 24 : 20,
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                item['name'] ?? 'Item',
-                style: TextStyle(
-                  fontSize: 9,
-                  color: AppColors.pink,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    // Rotate button
+                    _buildControlButton(
+                      icon: Icons.rotate_right,
+                      onTap: () => _rotateCamera(),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Download button
+                    _buildControlButton(
+                      icon: Icons.download,
+                      onTap: () => _downloadResult(viewModel),
+                    ),
+                  ],
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFeaturesInfo() {
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.grey[700], size: 20),
+      ),
+    );
+  }
+
+  Widget _buildOutfitSelection(
+    BuildContext context,
+    VirtualTryOnState state,
+    VirtualTryOnViewModel viewModel,
+  ) {
     return Card(
-      color: AppColors.teal.withOpacity(0.05),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(LucideIcons.sparkles, color: AppColors.teal),
+                const Icon(
+                  Icons.auto_awesome,
+                  color: AppColors.purple,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                const Text(
-                  'AI-Powered Try-On',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Text(
+                  'Try These Outfits',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Text('• Realistic outfit visualization'),
-            const SizedBox(height: 4),
-            const Text('• Size and fit prediction'),
-            const SizedBox(height: 4),
-            const Text('• Color matching analysis'),
-            const SizedBox(height: 4),
-            const Text('• Save and share your looks'),
+            const SizedBox(height: 16),
+            ...state.outfitSuggestions.asMap().entries.map((entry) {
+              final index = entry.key;
+              final outfit = entry.value;
+              final isSelected = state.selectedOutfitIndex == index;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
+                  onTap: () => viewModel.selectOutfit(index),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isSelected ? AppColors.pink : Colors.grey[300]!,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color:
+                          isSelected ? AppColors.pink.withOpacity(0.05) : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    outfit.name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.grey[400]!,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      outfit.occasion,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                outfit.items.join(' • '),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${(outfit.confidence * 100).round()}%',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleSmall?.copyWith(
+                                color: AppColors.teal,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'match',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ],
         ),
       ),
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadAvailableClothing();
-  }
-
-  Future<void> _loadAvailableClothing() async {
-    try {
-      final items = await MLAPIService.getUserWardrobe(limit: 20);
-      setState(() {
-        _availableClothing = items;
-      });
-    } catch (e) {
-      print('Failed to load clothing: $e');
-    }
-  }
-
-  Future<void> _uploadPhoto(String source) async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        final file = File(image.path);
-        setState(() {
-          _userPhoto = file;
-          _hasUserPhoto = true;
-        });
-
-        // Analyze pose when user uploads photo
-        await _analyzePose(file);
-      }
-    } catch (e) {
-      _showErrorSnackBar('Failed to select photo: ${e.toString()}');
-    }
-  }
-
-  Future<void> _analyzePose(File imageFile) async {
-    try {
-      setState(() {
-        _isProcessing = true;
-      });
-
-      final analysis = await MLAPIService.estimateBodyPose(imageFile);
-      setState(() {
-        _poseAnalysis = analysis;
-      });
-    } catch (e) {
-      _showErrorSnackBar('Failed to analyze pose: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isProcessing = false;
-      });
-    }
-  }
-
-  Future<void> _tryOnOutfit() async {
-    if (_userPhoto == null || _selectedClothingImage == null) {
-      _showErrorSnackBar('Please select both a photo and clothing item');
-      return;
-    }
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      final result = await MLAPIService.generateVirtualTryOn(
-        _userPhoto!,
-        _selectedClothingImage!,
-      );
-
-      // Handle the virtual try-on result
-      _showSuccessSnackBar('Virtual try-on completed!');
-      // You can display the result image or save it
-    } catch (e) {
-      _showErrorSnackBar('Virtual try-on failed: ${e.toString()}');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
-    }
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  void _showSuccessSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  void _showHelpDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('How to use Virtual Try-On'),
-            content: const Text(
-              'Upload a clear, full-body photo with good lighting. '
-              'Select an outfit from your closet and let our AI show you how it looks!',
+  Widget _buildSmartFeatures(
+    BuildContext context,
+    VirtualTryOnState state,
+    VirtualTryOnViewModel viewModel,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Smart Features',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Got it'),
-              ),
+            const SizedBox(height: 16),
+            ...state.availableFeatures.map((feature) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            feature.name,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            feature.description,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap:
+                          () => viewModel.toggleFeature(
+                            feature.id,
+                            !feature.enabled,
+                          ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 40,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color:
+                              feature.enabled
+                                  ? AppColors.teal
+                                  : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: AnimatedAlign(
+                          duration: const Duration(milliseconds: 200),
+                          alignment:
+                              feature.enabled
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(
+    BuildContext context,
+    VirtualTryOnState state,
+    VirtualTryOnViewModel viewModel,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => _saveLook(viewModel),
+            icon: const Icon(Icons.favorite_border),
+            label: const Text('Save Look'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: GradientButton(
+            onPressed: () => _shareResult(context, viewModel),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.share, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text('Share Result'),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProTips(BuildContext context) {
+    return Card(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.teal.withOpacity(0.1),
+              AppColors.blue.withOpacity(0.1),
             ],
           ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '💡 Pro Tips',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ...[
+                    '• Stand 3-4 feet away from your camera for best results',
+                    '• Ensure good lighting for accurate color representation',
+                    '• Try different poses to see how clothes move and fit',
+                  ]
+                  .map(
+                    (tip) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        tip,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Action methods
+  void _startTryOn(VirtualTryOnViewModel viewModel) async {
+    // Take photo if camera is available
+    List<int>? imageBytes;
+    if (_isCameraInitialized && _cameraController != null) {
+      try {
+        final image = await _cameraController!.takePicture();
+        imageBytes = await image.readAsBytes();
+      } catch (e) {
+        debugPrint('Error taking photo: $e');
+      }
+    }
+
+    await viewModel.startTryOn(userImageBytes: imageBytes);
+  }
+
+  void _rotateCamera() {
+    // Switch between front and back camera
+    // Implementation would require re-initializing camera
+  }
+
+  void _downloadResult(VirtualTryOnViewModel viewModel) {
+    // Download the try-on result
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Download functionality coming soon!')),
+    );
+  }
+
+  void _saveLook(VirtualTryOnViewModel viewModel) {
+    viewModel.rateResult(rating: 5, isFavorite: true);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Look saved to favorites!')));
+  }
+
+  void _shareResult(
+    BuildContext context,
+    VirtualTryOnViewModel viewModel,
+  ) async {
+    final shareLink = await viewModel.shareResult();
+    if (shareLink != null) {
+      // Share the link using platform sharing
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Share link: $shareLink')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to generate share link')),
+      );
+    }
+  }
+
+  void _showSettings(BuildContext context, VirtualTryOnViewModel viewModel) {
+    // Show settings modal
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => const TryOnSettingsModal(),
+    );
+  }
+}
+
+class TryOnSettingsModal extends ConsumerWidget {
+  const TryOnSettingsModal({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(virtualTryOnViewModelProvider);
+    final viewModel = ref.read(virtualTryOnViewModelProvider.notifier);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Try-On Settings',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+
+          // Quality Settings
+          Text(
+            'Processing Quality',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<ProcessingQuality>(
+            segments: const [
+              ButtonSegment(value: ProcessingQuality.low, label: Text('Fast')),
+              ButtonSegment(
+                value: ProcessingQuality.medium,
+                label: Text('Balanced'),
+              ),
+              ButtonSegment(value: ProcessingQuality.high, label: Text('Best')),
+            ],
+            selected: {
+              state.userPreferences?.processingQuality ??
+                  ProcessingQuality.high,
+            },
+            onSelectionChanged: (Set<ProcessingQuality> selection) {
+              viewModel.updatePreferences(processingQuality: selection.first);
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          // Privacy Settings
+          SwitchListTile(
+            title: const Text('Store Images'),
+            subtitle: const Text('Save try-on images for future reference'),
+            value: state.userPreferences?.storeImages ?? true,
+            onChanged:
+                (value) => viewModel.updatePreferences(storeImages: value),
+          ),
+
+          SwitchListTile(
+            title: const Text('Auto-save Results'),
+            subtitle: const Text('Automatically save successful try-ons'),
+            value: state.userPreferences?.autoSaveResults ?? true,
+            onChanged:
+                (value) => viewModel.updatePreferences(autoSaveResults: value),
+          ),
+        ],
+      ),
     );
   }
 }

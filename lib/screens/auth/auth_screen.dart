@@ -161,8 +161,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
+            if (context.canPop()) {
+              context.pop();
             } else {
               context.go('/onboarding');
             }

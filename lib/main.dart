@@ -28,7 +28,17 @@ class FitSyncApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark, // Default to dark theme for futuristic look
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(
+              1.0,
+            ), // Prevent text scaling issues
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -21,18 +21,20 @@ from app.models.clothing import ClothingCategoryEnum, ClothingSubcategoryEnum
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+from app.services.enhanced_ml_service import enhanced_ml_service
 
 @router.post("/upload", response_model=ClothingItemResponse, status_code=status.HTTP_201_CREATED)
 async def upload_clothing_item(
-    name: str,
-    category: str,
-    subcategory: str,
-    color: str,
-    brand: Optional[str] = None,
-    size: Optional[str] = None,
-    price: Optional[float] = None,
-    season: Optional[str] = None,
-    occasion: Optional[str] = None,
+    name: str = Form(...),
+    category: str = Form(...),
+    subcategory: str = Form(...),
+    color: str = Form(...),
+    brand: Optional[str] = Form(None),
+    size: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    season: Optional[str] = Form(None),
+    occasion: Optional[str] = Form(None),
+    style_tags: Optional[str] = Form(None),  # JSON string from client
     image: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -45,11 +47,10 @@ async def upload_clothing_item(
         if not image.content_type.startswith('image/'):
             raise ValidationError("File must be an image")
         
-        # Save image (in production, you'd upload to cloud storage)
-        # For now, we'll just store the filename
+        # Save image filename (in production: upload to cloud storage)
         image_filename = f"{current_user.id}_{image.filename}"
-        
-        # Create clothing item
+
+        # Create clothing item (initial fields)
         clothing_item = ClothingItem(
             owner_id=current_user.id,
             name=name,
@@ -64,7 +65,45 @@ async def upload_clothing_item(
             image_url=image_filename,
             is_active=True
         )
-        
+
+        # Optional: parse style_tags JSON string
+        try:
+            if style_tags:
+                import json as _json
+                parsed_tags = _json.loads(style_tags)
+                if isinstance(parsed_tags, list):
+                    clothing_item.style_tags = parsed_tags
+        except Exception:
+            # ignore bad tags, keep creating item
+            pass
+
+        # Read image bytes and run ML analysis to enrich item
+        try:
+            image_bytes = await image.read()
+            analysis = await enhanced_ml_service.analyze_clothing_image(image_bytes, current_user.id)
+
+            first = None
+            if isinstance(analysis, dict):
+                items = analysis.get('items') or []
+                first = items[0] if items else None
+
+            # Map ML results into clothing fields if available
+            if first:
+                detected_type = first.get('type')
+                if detected_type:
+                    # Best-effort mapping to enums; fallback to string
+                    clothing_item.category = detected_type
+                palette = first.get('color_palette') or {}
+                colors = palette.get('colors') or []
+                if colors:
+                    clothing_item.color = colors[0]
+                # Persist detailed ML outputs
+                clothing_item.detected_attributes = first
+                clothing_item.color_analysis = palette
+                clothing_item.style_classification = first.get('style_classification')
+        except Exception as ml_err:
+            logger.warning(f"ML analysis failed during upload: {ml_err}")
+
         db.add(clothing_item)
         await db.commit()
         await db.refresh(clothing_item)
@@ -84,6 +123,9 @@ async def upload_clothing_item(
             season=clothing_item.season,
             occasion=clothing_item.occasion,
             image_url=clothing_item.image_url,
+            detected_attributes=clothing_item.detected_attributes,
+            color_analysis=clothing_item.color_analysis,
+            style_classification=clothing_item.style_classification,
             is_active=clothing_item.is_active,
             created_at=clothing_item.created_at,
             updated_at=clothing_item.updated_at

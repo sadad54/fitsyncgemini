@@ -1,9 +1,10 @@
 // lib/screens/trends/trends_screen_new.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
-import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
+import 'package:fitsyncgemini/services/location_service.dart';
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});
@@ -13,10 +14,13 @@ class TrendsScreen extends StatefulWidget {
 }
 
 class _TrendsScreenState extends State<TrendsScreen> {
+  String _selectedScope = 'global';
   String _selectedTimeframe = 'week';
   bool _isLoadingTrendingNow = false;
   bool _isLoadingFashionInsights = false;
   bool _isLoadingInfluencerSpotlight = false;
+  String _localLabel = 'New York';
+  final LocationService _locationService = LocationService();
 
   // Backend data
   List<Map<String, dynamic>> _trendingNow = [];
@@ -32,8 +36,142 @@ class _TrendsScreenState extends State<TrendsScreen> {
   void initState() {
     super.initState();
     _loadTrendsData();
+    _autoSetLocalScope();
   }
 
+  void _openFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Filters',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Scope',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildScopeButton('global', 'Global', LucideIcons.globe),
+                  const SizedBox(width: 8),
+                  _buildScopeButton('local', _localLabel, LucideIcons.mapPin),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Timeframe',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildTimeframeButton('day', 'Today'),
+                  const SizedBox(width: 8),
+                  _buildTimeframeButton('week', 'This Week'),
+                  const SizedBox(width: 8),
+                  _buildTimeframeButton('month', 'This Month'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6B9D),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: const Text('Apply'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _autoSetLocalScope() async {
+    try {
+      final hasPerm = await _locationService.hasLocationPermission();
+      if (!hasPerm) {
+        // Attempt quick request path
+        await _locationService.getCurrentLocationWithGeolocator();
+      }
+      final loc = await _locationService.getCurrentLocationWithGeolocator();
+      if (loc != null) {
+        setState(() {
+          _localLabel = loc.city.isNotEmpty ? loc.city : 'Local';
+          _selectedScope = 'local';
+        });
+        await _loadTrendsData();
+      }
+    } catch (_) {
+      // Keep global if permission denied
+    }
+  }
+
+  Widget _buildScopeButton(String id, String label, IconData icon) {
+    final bool isSelected = _selectedScope == id;
+    return ElevatedButton.icon(
+      onPressed: () {
+        setState(() => _selectedScope = id);
+        _loadTrendsData();
+      },
+      icon: Icon(icon, size: 14),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? const Color(0xFFFF6B9D) : Colors.white,
+        foregroundColor: isSelected ? Colors.white : Colors.black,
+        elevation: isSelected ? 2 : 0,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  Widget _buildTimeframeButton(String id, String label) {
+    final bool isSelected = _selectedTimeframe == id;
+    return ElevatedButton.icon(
+      onPressed: () {
+        setState(() => _selectedTimeframe = id);
+        _loadTrendsData();
+      },
+      icon: const Icon(LucideIcons.calendar, size: 14),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? const Color(0xFF4ECDC4) : Colors.white,
+        foregroundColor: isSelected ? Colors.white : Colors.black,
+        elevation: isSelected ? 2 : 0,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  // (removed duplicate)
   // Load all trends data from backend
   Future<void> _loadTrendsData() async {
     await Future.wait([
@@ -125,7 +263,10 @@ class _TrendsScreenState extends State<TrendsScreen> {
     });
 
     try {
-      final resp = await MLAPIService.getFashionInsights();
+      final resp = await MLAPIService.getFashionInsights(
+        scope: _selectedScope,
+        timeframe: _selectedTimeframe,
+      );
       final insights = resp['insights'] as List<dynamic>?;
       if (insights != null) {
         setState(() {
@@ -203,41 +344,68 @@ class _TrendsScreenState extends State<TrendsScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          'Trends',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
+            if (context.canPop()) {
+              context.pop();
             } else {
-              // Fallback to dashboard route
-              // ignore: use_build_context_synchronously
-              // Using WidgetsBinding to ensure context is valid
-              Future.microtask(() {
-                if (mounted) {
-                  Navigator.of(context).pushReplacementNamed('/dashboard');
-                }
-              });
+              context.go('/dashboard');
             }
           },
         ),
+        title: const Text(
+          'Trends',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(LucideIcons.refreshCw),
-            onPressed: () => _loadTrendsData(),
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.share2),
-            onPressed: () {
-              // Implement share functionality
-            },
+            icon: const Icon(LucideIcons.filter),
+            onPressed: _openFilterSheet,
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(78),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(left: 16, right: 16, bottom: 6),
+                child: Text(
+                  "What's hot in fashion",
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                child: Row(
+                  children: [
+                    _buildScopeButton('global', 'Global', LucideIcons.globe),
+                    const SizedBox(width: 8),
+                    _buildScopeButton('local', _localLabel, LucideIcons.mapPin),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+                child: Row(
+                  children: [
+                    _buildTimeframeButton('day', 'Today'),
+                    const SizedBox(width: 8),
+                    _buildTimeframeButton('week', 'This Week'),
+                    const SizedBox(width: 8),
+                    _buildTimeframeButton('month', 'This Month'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -329,7 +497,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
               const SizedBox(height: 24),
 
               // Fashion Insights Section (React parity)
-              _buildFashionInsightsSection(),
+              _buildFashionInsightsCard(),
 
               const SizedBox(height: 24),
 
@@ -601,7 +769,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   // Old card builder removed; replaced by React-styled section
 
-  Widget _buildFashionInsightsSection() {
+  Widget _buildFashionInsightsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -636,7 +804,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
                       children: const [
                         Icon(
                           LucideIcons.trendingUp,
-                          color: AppColors.teal,
+                          color: Color(0xFF4ECDC4),
                           size: 20,
                         ),
                         SizedBox(width: 8),
@@ -655,9 +823,12 @@ class _TrendsScreenState extends State<TrendsScreen> {
                       final declining =
                           (insight['declining'] as List).cast<String>();
                       return Container(
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           border: Border(
-                            left: BorderSide(color: AppColors.pink, width: 4),
+                            left: BorderSide(
+                              color: Color(0xFFFF6B9D),
+                              width: 4,
+                            ),
                           ),
                         ),
                         margin: const EdgeInsets.only(bottom: 12),
@@ -746,7 +917,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
     required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(8),
@@ -756,7 +927,14 @@ class _TrendsScreenState extends State<TrendsScreen> {
         children: [
           Icon(icon, size: 12, color: fg),
           const SizedBox(width: 4),
-          Text(text, style: TextStyle(fontSize: 12, color: fg)),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
         ],
       ),
     );

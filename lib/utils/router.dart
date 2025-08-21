@@ -14,6 +14,7 @@ import 'package:fitsyncgemini/screens/try_on/try_on_screen.dart';
 import 'package:fitsyncgemini/screens/explore/explore_screen.dart';
 import 'package:fitsyncgemini/screens/settings/settings_screen.dart';
 import 'package:fitsyncgemini/screens/outfit_suggestions/outfit_suggestions_screen.dart';
+import 'package:fitsyncgemini/screens/profile/profile_screen.dart';
 import 'package:fitsyncgemini/providers/providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -64,22 +65,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           !hasCompletedOnboarding &&
           !isGoingToOnboarding &&
           !isGoingToQuiz &&
-          !isGoingToSplash) {
+          !isGoingToSplash &&
+          !isGoingToDashboard) {
+        // Allow dashboard access even without onboarding
         print('  ➡️ Redirecting to /onboarding (not completed onboarding)');
         return '/onboarding';
       }
 
-      // If authenticated and has completed onboarding and going to auth/splash/onboarding, redirect to dashboard
-      // But don't redirect if they're already going to dashboard or quiz (quiz completion flow)
-      if (isAuthenticated &&
-          hasCompletedOnboarding &&
-          (isGoingToAuth || isGoingToSplash || isGoingToOnboarding) &&
-          !isGoingToDashboard &&
-          !isGoingToQuiz) {
+      // If authenticated and has completed onboarding, allow access to dashboard
+      if (isAuthenticated && hasCompletedOnboarding && isGoingToAuth) {
         print(
           '  ➡️ Redirecting to /dashboard (authenticated and completed onboarding)',
         );
         return '/dashboard';
+      }
+
+      // Special case: If user is going to dashboard and is authenticated with completed onboarding, allow it
+      if (isGoingToDashboard && isAuthenticated && hasCompletedOnboarding) {
+        print(
+          '  ✅ Allowing dashboard access (authenticated and completed onboarding)',
+        );
+        return null; // No redirect needed
       }
 
       print('  ✅ No redirect needed');
@@ -194,7 +200,13 @@ class OutfitDetailScreen extends StatelessWidget {
         title: const Text('Outfit Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
+          },
         ),
       ),
       body: Center(
@@ -225,7 +237,13 @@ class ClothingItemDetailScreen extends StatelessWidget {
         title: const Text('Item Details'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
+          },
         ),
       ),
       body: Center(
@@ -237,35 +255,6 @@ class ClothingItemDetailScreen extends StatelessWidget {
             Text('Item ID: $itemId'),
             const SizedBox(height: 8),
             const Text('Clothing item details will be displayed here'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person, size: 64),
-            SizedBox(height: 16),
-            Text('User Profile'),
-            SizedBox(height: 8),
-            Text('Profile details will be displayed here'),
           ],
         ),
       ),

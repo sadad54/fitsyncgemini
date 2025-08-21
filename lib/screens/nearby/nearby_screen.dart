@@ -1,6 +1,7 @@
 // lib/screens/nearby/nearby_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:fitsyncgemini/widgets/nearby/nearby_map_widget.dart';
 import 'package:fitsyncgemini/services/location_service.dart';
 import 'package:fitsyncgemini/models/nearby_model.dart';
@@ -148,15 +149,10 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
             children: [
               IconButton(
                 onPressed: () {
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
+                  if (context.canPop()) {
+                    context.pop();
                   } else {
-                    // Fallback to dashboard
-                    Future.microtask(
-                      () => Navigator.of(
-                        context,
-                      ).pushReplacementNamed('/dashboard'),
-                    );
+                    context.go('/dashboard');
                   }
                 },
                 icon: const Icon(Icons.arrow_back),

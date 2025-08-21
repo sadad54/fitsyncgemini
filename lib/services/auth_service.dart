@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'dart:convert';
 
 class AuthService {
@@ -26,81 +25,16 @@ class AuthService {
 
   Future<void> _loadStoredAuth() async {
     try {
-      // First, try to recover from MLAPIService if it has a token
-      print('🔄 AuthService: Attempting to recover from MLAPIService first...');
-      try {
-        // Test if MLAPIService has a working token
-        final userInfo = await MLAPIService.getCurrentUser();
-        _currentUser = userInfo;
-        _currentUserId = userInfo['id'].toString();
-
-        // Get the token from MLAPIService
-        _accessToken = MLAPIService.authToken;
-
-        if (_accessToken != null) {
-          print(
-            '✅ AuthService: Successfully recovered auth data from MLAPIService',
-          );
-          // Try to save to SharedPreferences for future use (but don't rely on it)
-          try {
-            await _saveAuth(_accessToken!, userInfo);
-          } catch (e) {
-            print('⚠️ AuthService: Failed to save to SharedPreferences: $e');
-          }
-          return; // Successfully recovered, no need to check SharedPreferences
-        } else {
-          print('⚠️ AuthService: MLAPIService has user data but no token');
-        }
-      } catch (e) {
-        print('❌ AuthService: Failed to recover from MLAPIService: $e');
-      }
-
-      // Fallback to SharedPreferences (mainly for mobile)
       final prefs = await SharedPreferences.getInstance();
       _accessToken = prefs.getString(_tokenKey);
       final userJson = prefs.getString(_userKey);
 
-      print('🔍 AuthService: Debug - Raw SharedPreferences data:');
-      print('  - Token key: $_tokenKey');
-      print('  - User key: $_userKey');
-      print(
-        '  - Stored token: ${_accessToken != null ? 'exists (${_accessToken!.substring(0, 20)}...)' : 'null'}',
-      );
-      print(
-        '  - Stored user JSON: ${userJson != null ? 'exists (${userJson.substring(0, 50)}...)' : 'null'}',
-      );
-
       if (_accessToken != null && userJson != null) {
         _currentUser = json.decode(userJson);
         _currentUserId = _currentUser!['id'].toString();
-        MLAPIService.setAuthToken(_accessToken!);
-
-        print(
-          '🔧 AuthService: Loaded stored auth from SharedPreferences - Token: ${_accessToken != null ? 'exists' : 'null'}, User: ${_currentUser != null ? 'exists' : 'null'}',
-        );
-      } else if (_accessToken != null && userJson == null) {
-        // Token exists but user data is missing - try to get user data from API
-        print(
-          '🔄 AuthService: Token exists but user data missing, attempting to fetch user data...',
-        );
-        try {
-          MLAPIService.setAuthToken(_accessToken!);
-          final userInfo = await MLAPIService.getCurrentUser();
-          _currentUser = userInfo;
-          _currentUserId = userInfo['id'].toString();
-
-          // Save the user data for future use
-          await _saveAuth(_accessToken!, userInfo);
-
-          print('✅ AuthService: Successfully recovered user data from API');
-        } catch (e) {
-          print('❌ AuthService: Failed to recover user data: $e');
-          await _clearStoredAuth();
-        }
+        print('✅ AuthService: Loaded stored auth data');
       } else {
-        print(
-          '⚠️ AuthService: No auth data found in SharedPreferences or MLAPIService',
-        );
+        print('⚠️ AuthService: No stored auth data found');
       }
     } catch (e) {
       print('❌ AuthService: Error loading stored auth: $e');
@@ -112,23 +46,20 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
     await prefs.setString(_userKey, json.encode(user));
-
-    print('💾 AuthService: Saved auth data:');
-    print('  - Token: ${token.substring(0, 20)}...');
-    print('  - User: ${json.encode(user).substring(0, 50)}...');
+    print('💾 AuthService: Saved auth data');
   }
 
   Future<void> _clearStoredAuth() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
-    await prefs.remove(_onboardingKey); // Clear onboarding status too
+    await prefs.remove(_onboardingKey);
     _accessToken = null;
     _currentUser = null;
     _currentUserId = null;
   }
 
-  // Sign up with email and password
+  // Sign up with email and password (placeholder)
   Future<AuthResult> signUpWithEmail(
     String email,
     String password,
@@ -136,100 +67,113 @@ class AuthService {
     String lastName,
   ) async {
     try {
+      // Simulate network delay
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Create placeholder user data
       final username = email
           .split('@')[0]
           .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      final userId = DateTime.now().millisecondsSinceEpoch.toString();
 
-      final result = await MLAPIService.registerUser(
-        email: email,
-        password: password,
-        username: username,
-        firstName: firstName,
-        lastName: lastName,
-      );
+      final userData = {
+        'id': userId,
+        'email': email,
+        'username': username,
+        'first_name': firstName,
+        'last_name': lastName,
+        'avatar':
+            'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        'hasCompletedOnboarding': false,
+        'style_preferences': {
+          'archetype': 'minimalist',
+          'favorite_colors': ['black', 'white', 'navy'],
+          'preferred_styles': ['minimalist', 'casual'],
+        },
+        'wardrobe_stats': {
+          'total_items': 0,
+          'total_value': 0,
+          'recently_added': 0,
+        },
+      };
 
-      _currentUserId = result['id'].toString();
-      _currentUser = result;
+      _currentUserId = userId;
+      _currentUser = userData;
+      _accessToken =
+          'placeholder_token_${DateTime.now().millisecondsSinceEpoch}';
 
-      // After registration, user needs to login to get token
-      return await signInWithEmail(email, password);
+      // Save to local storage
+      await _saveAuth(_accessToken!, userData);
+
+      print('✅ AuthService: Sign up successful');
+      return AuthResult.success(userId);
     } catch (e) {
-      return AuthResult.failure(_parseError(e.toString()));
+      print('❌ AuthService: Sign up failed - $e');
+      return AuthResult.failure('Registration failed. Please try again.');
     }
   }
 
-  // Sign in with email and password
+  // Sign in with email and password (placeholder)
   Future<AuthResult> signInWithEmail(String email, String password) async {
     try {
-      final result = await MLAPIService.loginUser(
-        email: email,
-        password: password,
-      );
+      // Simulate network delay
+      await Future.delayed(const Duration(milliseconds: 600));
 
-      _accessToken = result['access_token'];
-      MLAPIService.setAuthToken(_accessToken!);
-
-      // Try to get user info from the login response first
-      if (result['user'] != null) {
-        _currentUser = result['user'];
-        _currentUserId = _currentUser!['id'].toString();
-      } else {
-        // Fallback: try to get user info via API call
-        try {
-          final userInfo = await MLAPIService.getCurrentUser();
-          _currentUserId = userInfo['id'].toString();
-          _currentUser = userInfo;
-        } catch (apiError) {
-          print(
-            '⚠️ AuthService: Failed to get user info via API, using basic user data',
-          );
-          // Create basic user data from login response
-          _currentUser = {
-            'id': result['user_id'] ?? 'unknown',
-            'email': email,
-            'username': email.split('@')[0],
-          };
-          _currentUserId = _currentUser!['id'].toString();
-        }
+      // Check if user exists (in a real app, this would validate against backend)
+      if (email.isEmpty || password.isEmpty) {
+        return AuthResult.failure('Please enter both email and password.');
       }
 
+      // Create placeholder user data for demo
+      final username = email
+          .split('@')[0]
+          .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      final userId = 'demo_user_${DateTime.now().millisecondsSinceEpoch}';
+
+      final userData = {
+        'id': userId,
+        'email': email,
+        'username': username,
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'avatar':
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        'hasCompletedOnboarding': true,
+        'style_preferences': {
+          'archetype': 'minimalist',
+          'favorite_colors': ['black', 'white', 'navy', 'grey'],
+          'preferred_styles': ['minimalist', 'casual', 'professional'],
+        },
+        'wardrobe_stats': {
+          'total_items': 47,
+          'total_value': 2500,
+          'recently_added': 3,
+        },
+      };
+
+      _currentUserId = userId;
+      _currentUser = userData;
+      _accessToken = 'demo_token_${DateTime.now().millisecondsSinceEpoch}';
+
       // Save to local storage
-      await _saveAuth(_accessToken!, _currentUser!);
+      await _saveAuth(_accessToken!, userData);
 
-      print(
-        '✅ AuthService: Sign in successful - Token: ${_accessToken != null ? 'exists' : 'null'}, User: ${_currentUser != null ? 'exists' : 'null'}, UserID: $_currentUserId',
-      );
-
-      return AuthResult.success(_currentUserId!);
+      print('✅ AuthService: Sign in successful');
+      return AuthResult.success(userId);
     } catch (e) {
       print('❌ AuthService: Sign in failed - $e');
-      return AuthResult.failure(_parseError(e.toString()));
+      return AuthResult.failure('Invalid email or password.');
     }
   }
 
   // Sign out
   Future<void> signOut() async {
     try {
-      await MLAPIService.logout();
-    } catch (e) {
-      // Continue with logout even if API call fails
-    } finally {
       await _clearStoredAuth();
+      print('✅ AuthService: Sign out successful');
+    } catch (e) {
+      print('❌ AuthService: Sign out failed - $e');
     }
-  }
-
-  String _parseError(String error) {
-    // Extract meaningful error messages
-    if (error.contains('User with this email already exists')) {
-      return 'An account with this email already exists';
-    } else if (error.contains('Invalid email or password')) {
-      return 'Invalid email or password';
-    } else if (error.contains('Network error')) {
-      return 'Network connection failed. Please check your internet connection.';
-    } else if (error.contains('timeout')) {
-      return 'Request timed out. Please try again.';
-    }
-    return 'An unexpected error occurred. Please try again.';
   }
 
   // Get current user ID
@@ -240,18 +184,11 @@ class AuthService {
 
   // Check if user is authenticated
   bool get isAuthenticated {
-    // If still loading, return false to avoid premature redirects
     if (_isLoading) {
-      print(
-        '🔧 AuthService: Still loading, returning false for isAuthenticated',
-      );
       return false;
     }
-
     final isAuth = _currentUserId != null && _accessToken != null;
-    print(
-      '🔧 AuthService: isAuthenticated check - User: ${_currentUserId != null ? 'exists' : 'null'}, Token: ${_accessToken != null ? 'exists' : 'null'}, Result: $isAuth',
-    );
+    print('🔧 AuthService: isAuthenticated check - Result: $isAuth');
     return isAuth;
   }
 
@@ -272,17 +209,12 @@ class AuthService {
       await prefs.setBool(_onboardingKey, hasCompleted);
 
       if (_currentUser != null && _accessToken != null) {
-        // Update the user data with onboarding status
         _currentUser!['hasCompletedOnboarding'] = hasCompleted;
-
-        // Save updated user data to local storage
         await _saveAuth(_accessToken!, _currentUser!);
-
-        // Optionally, you can also update this on the backend
-        // await MLAPIService.updateUserProfile({'hasCompletedOnboarding': hasCompleted});
+        print('✅ AuthService: Updated onboarding status');
       }
     } catch (e) {
-      // Don't throw error to avoid breaking the flow
+      print('❌ AuthService: Failed to update onboarding status - $e');
     }
   }
 
@@ -297,54 +229,68 @@ class AuthService {
     }
   }
 
-  // Debug method to print current onboarding status
-  Future<void> debugOnboardingStatus() async {
+  // Debug method to print current auth status
+  Future<void> debugAuthStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final status = prefs.getBool(_onboardingKey);
-      print('🔍 AuthService: Debug - Current onboarding status:');
-      print('   - SharedPreferences value: $status');
-      print('   - User data value: ${_currentUser?['hasCompletedOnboarding']}');
-      print('   - isAuthenticated: $isAuthenticated');
-      print('   - Current user: ${_currentUser != null ? 'exists' : 'null'}');
+      final onboardingStatus = prefs.getBool(_onboardingKey);
+      print('🔍 AuthService: Debug - Current auth status:');
+      print('   - Onboarding status: $onboardingStatus');
+      print('   - User data: ${_currentUser != null ? 'exists' : 'null'}');
       print('   - Access token: ${_accessToken != null ? 'exists' : 'null'}');
       print('   - User ID: $_currentUserId');
+      print('   - Is authenticated: $isAuthenticated');
       print('   - Is initialized: $_isInitialized');
       print('   - Is loading: $_isLoading');
+
+      // Additional debug info
+      if (_currentUser != null) {
+        print('   - User email: ${_currentUser!['email']}');
+        print('   - User username: ${_currentUser!['username']}');
+        print(
+          '   - User hasCompletedOnboarding: ${_currentUser!['hasCompletedOnboarding']}',
+        );
+      }
     } catch (e) {
       print('   - Error: $e');
     }
   }
 
-  // Force refresh auth state from MLAPIService
-  Future<bool> forceRefreshAuthState() async {
+  // Create demo user for testing
+  Future<void> createDemoUser() async {
     try {
-      print('🔄 AuthService: Force refreshing auth state from MLAPIService...');
+      final userId = 'demo_user_${DateTime.now().millisecondsSinceEpoch}';
+      final userData = {
+        'id': userId,
+        'email': 'demo@fitsync.com',
+        'username': 'demo_user',
+        'first_name': 'Demo',
+        'last_name': 'User',
+        'avatar':
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        'hasCompletedOnboarding': true,
+        'style_preferences': {
+          'archetype': 'minimalist',
+          'favorite_colors': ['black', 'white', 'navy'],
+          'preferred_styles': ['minimalist', 'casual'],
+        },
+        'wardrobe_stats': {
+          'total_items': 47,
+          'total_value': 2500,
+          'recently_added': 3,
+        },
+      };
 
-      // Test if MLAPIService has a working token
-      final userInfo = await MLAPIService.getCurrentUser();
-      _currentUser = userInfo;
-      _currentUserId = userInfo['id'].toString();
+      _currentUserId = userId;
+      _currentUser = userData;
+      _accessToken = 'demo_token_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Get the token from MLAPIService
-      _accessToken = MLAPIService.authToken;
+      await _saveAuth(_accessToken!, userData);
+      await updateOnboardingStatus(true);
 
-      if (_accessToken != null) {
-        print('✅ AuthService: Force refresh successful');
-        // Try to save to SharedPreferences for future use
-        try {
-          await _saveAuth(_accessToken!, userInfo);
-        } catch (e) {
-          print('⚠️ AuthService: Failed to save to SharedPreferences: $e');
-        }
-        return true;
-      } else {
-        print('❌ AuthService: Force refresh failed - no token in MLAPIService');
-        return false;
-      }
+      print('✅ AuthService: Demo user created successfully');
     } catch (e) {
-      print('❌ AuthService: Force refresh failed: $e');
-      return false;
+      print('❌ AuthService: Failed to create demo user - $e');
     }
   }
 }

@@ -53,6 +53,10 @@ class User(Base):
     interactions = relationship("UserInteraction", back_populates="user")
     social_connections = relationship("UserConnection", foreign_keys="UserConnection.user_id", back_populates="user")
     followers = relationship("UserConnection", foreign_keys="UserConnection.followed_id", back_populates="followed")
+    
+    # Virtual Try-On relationships
+    tryon_sessions = relationship("TryOnSession", back_populates="user")
+    tryon_preferences = relationship("UserTryOnPreferences", back_populates="user", uselist=False)
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"

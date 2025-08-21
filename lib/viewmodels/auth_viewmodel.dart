@@ -170,9 +170,13 @@ class AuthViewModel extends StateNotifier<AuthState> {
       print('💾 AuthViewModel: Updating onboarding status in AuthService...');
       await _authService.updateOnboardingStatus(true);
 
-      // Update local state
+      // Update local state - preserve existing auth state
       print('📊 AuthViewModel: Updating local state...');
-      state = state.copyWith(hasCompletedOnboarding: true);
+      state = state.copyWith(
+        hasCompletedOnboarding: true,
+        // Ensure we preserve the authenticated state
+        isAuthenticated: true,
+      );
       print('✅ AuthViewModel: Onboarding completed successfully');
       print(
         '   - New state: isAuthenticated=${state.isAuthenticated}, hasCompletedOnboarding=${state.hasCompletedOnboarding}',

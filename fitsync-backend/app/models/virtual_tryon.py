@@ -3,13 +3,12 @@ Virtual Try-On Models
 """
 
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, JSON, ForeignKey, Enum as SQLEnum
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum
 import uuid
 
-Base = declarative_base()
+from app.database import Base
 
 class ViewModeEnum(str, Enum):
     AR = "ar"

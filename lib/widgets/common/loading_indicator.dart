@@ -1,6 +1,5 @@
 // lib/widgets/common/loading_indicator.dart
 import 'package:flutter/material.dart';
-import 'package:fitsyncgemini/constants/app_colors.dart';
 
 class LoadingIndicator extends StatelessWidget {
   final String? message;
@@ -16,6 +15,7 @@ class LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -26,7 +26,7 @@ class LoadingIndicator extends StatelessWidget {
             child: CircularProgressIndicator(
               strokeWidth: 3.0,
               valueColor: AlwaysStoppedAnimation<Color>(
-                color ?? AppColors.pink,
+                color ?? scheme.primary,
               ),
             ),
           ),
@@ -35,7 +35,7 @@ class LoadingIndicator extends StatelessWidget {
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: scheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -60,11 +60,12 @@ class SkeletonLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.grey[300],
+        color: scheme.surfaceVariant,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
@@ -75,26 +76,18 @@ class SkeletonCard extends StatelessWidget {
   final double height;
   final EdgeInsets? padding;
 
-  const SkeletonCard({
-    super.key,
-    this.height = 120.0,
-    this.padding,
-  });
+  const SkeletonCard({super.key, this.height = 120.0, this.padding});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Container(
       padding: padding ?? const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: scheme.outline, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,4 +101,4 @@ class SkeletonCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

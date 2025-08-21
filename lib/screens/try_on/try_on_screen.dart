@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
@@ -147,14 +148,10 @@ class _TryOnScreenState extends ConsumerState<TryOnScreen> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
+                      if (context.canPop()) {
+                        context.pop();
                       } else {
-                        Future.microtask(
-                          () => Navigator.of(
-                            context,
-                          ).pushReplacementNamed('/dashboard'),
-                        );
+                        context.go('/dashboard');
                       }
                     },
                     icon: const Icon(Icons.arrow_back),

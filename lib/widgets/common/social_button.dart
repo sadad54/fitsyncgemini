@@ -7,6 +7,7 @@ class SocialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     const String googleIcon = '''
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -22,10 +23,12 @@ class SocialButton extends StatelessWidget {
       icon: SvgPicture.string(googleIcon, width: 18, height: 18),
       label: const Text('Continue with Google'),
       style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.grey.shade800,
+        foregroundColor: scheme.onSurface,
         minimumSize: const Size(double.infinity, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-        side: BorderSide(color: Colors.grey.shade300),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        side: BorderSide(color: scheme.outline, width: 2),
       ),
     );
   }

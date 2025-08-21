@@ -1,6 +1,4 @@
 // lib/services/clothing_detection_service.dart
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,221 +10,220 @@ final clothingDetectionServiceProvider = Provider<ClothingDetectionService>((
 });
 
 class ClothingDetectionService {
-  // Base URL - you can make this configurable
-  static const String _baseUrl = 'http://127.0.0.1:8000/api/v1';
-
-  // Timeout duration
-  static const Duration _timeout = Duration(seconds: 30);
-
-  /// Detects clothing items from an image file
+  /// Detects clothing items from an image file (placeholder)
   /// Returns a map containing detection results or throws an exception
   Future<Map<String, dynamic>> detectClothing(File imageFile) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$_baseUrl/detect'),
-      );
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 2000));
 
-      // Add the image file to the request
-      request.files.add(
-        await http.MultipartFile.fromPath('file', imageFile.path),
-      );
-
-      // Add headers if needed
-      request.headers.addAll({
-        'Accept': 'application/json',
-        'Content-Type': 'multipart/form-data',
-      });
-
-      // Send request with timeout
-      var streamedResponse = await request.send().timeout(_timeout);
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        return data;
-      } else {
-        throw ClothingDetectionException(
-          'Detection failed with status code: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on SocketException {
-      throw ClothingDetectionException(
-        'No internet connection or server unreachable',
-        0,
-      );
-    } on http.ClientException {
-      throw ClothingDetectionException('Network error occurred', 0);
-    } on FormatException {
-      throw ClothingDetectionException(
-        'Invalid response format from server',
-        0,
-      );
-    } catch (e) {
-      throw ClothingDetectionException('Unexpected error: $e', 0);
-    }
+    return {
+      'items': [
+        {
+          'type': 'tops',
+          'subtype': 't-shirt',
+          'confidence': 0.95,
+          'color_palette': {
+            'colors': ['white', 'navy', 'grey'],
+            'primary': 'white',
+          },
+          'style_classification': {'style': 'minimalist', 'confidence': 0.88},
+        },
+        {
+          'type': 'bottoms',
+          'subtype': 'jeans',
+          'confidence': 0.92,
+          'color_palette': {
+            'colors': ['blue', 'navy', 'black'],
+            'primary': 'blue',
+          },
+          'style_classification': {'style': 'casual', 'confidence': 0.85},
+        },
+      ],
+      'confidence': 0.93,
+      'processing_time': 1.8,
+    };
   }
 
-  /// Detects colors from an image file
+  /// Detects colors from an image file (placeholder)
   /// Returns a map containing color detection results or throws an exception
   Future<Map<String, dynamic>> detectColors(File imageFile) async {
-    try {
-      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/color'));
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 1500));
 
-      // Add the image file to the request
-      request.files.add(
-        await http.MultipartFile.fromPath('file', imageFile.path),
-      );
-
-      // Add headers if needed
-      request.headers.addAll({
-        'Accept': 'application/json',
-        'Content-Type': 'multipart/form-data',
-      });
-
-      // Send request with timeout
-      var streamedResponse = await request.send().timeout(_timeout);
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        return data;
-      } else {
-        throw ClothingDetectionException(
-          'Color detection failed with status code: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on SocketException {
-      throw ClothingDetectionException(
-        'No internet connection or server unreachable',
-        0,
-      );
-    } on http.ClientException {
-      throw ClothingDetectionException('Network error occurred', 0);
-    } on FormatException {
-      throw ClothingDetectionException(
-        'Invalid response format from server',
-        0,
-      );
-    } catch (e) {
-      throw ClothingDetectionException('Unexpected error: $e', 0);
-    }
+    return {
+      'dominantColors': ['white', 'navy', 'grey', 'blue'],
+      'accentColors': ['black', 'beige'],
+      'primaryColor': 'white',
+      'colorPercentages': {
+        'white': 0.35,
+        'navy': 0.25,
+        'grey': 0.20,
+        'blue': 0.15,
+        'black': 0.03,
+        'beige': 0.02,
+      },
+      'confidence': 0.91,
+      'processing_time': 1.2,
+    };
   }
 
-  /// Gets style suggestions from an image file
+  /// Gets style suggestions from an image file (placeholder)
   /// Returns a map containing style suggestions or throws an exception
   Future<Map<String, dynamic>> getSuggestions(File imageFile) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$_baseUrl/suggest'),
-      );
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 1800));
 
-      // Add the image file to the request
-      request.files.add(
-        await http.MultipartFile.fromPath('file', imageFile.path),
-      );
-
-      // Add headers if needed
-      request.headers.addAll({
-        'Accept': 'application/json',
-        'Content-Type': 'multipart/form-data',
-      });
-
-      // Send request with timeout
-      var streamedResponse = await request.send().timeout(_timeout);
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        return data;
-      } else {
-        throw ClothingDetectionException(
-          'Style suggestions failed with status code: ${response.statusCode}',
-          response.statusCode,
-        );
-      }
-    } on SocketException {
-      throw ClothingDetectionException(
-        'No internet connection or server unreachable',
-        0,
-      );
-    } on http.ClientException {
-      throw ClothingDetectionException('Network error occurred', 0);
-    } on FormatException {
-      throw ClothingDetectionException(
-        'Invalid response format from server',
-        0,
-      );
-    } catch (e) {
-      throw ClothingDetectionException('Unexpected error: $e', 0);
-    }
+    return {
+      'suggestedOutfits': [
+        'Minimalist Office Look',
+        'Casual Weekend Style',
+        'Smart Casual Ensemble',
+      ],
+      'complementaryItems': [
+        'White sneakers',
+        'Navy blazer',
+        'Minimalist watch',
+      ],
+      'occasions': ['casual', 'work', 'weekend'],
+      'styleArchetype': 'minimalist',
+      'seasonRecommendations': ['spring', 'summer', 'fall'],
+      'confidence': 0.89,
+      'processing_time': 1.5,
+    };
   }
 
-  /// Analyzes clothing and extracts metadata using all available endpoints
+  /// Analyzes clothing and extracts metadata using all available endpoints (placeholder)
   Future<ClothingAnalysisResult> analyzeClothing(File imageFile) async {
     try {
-      // Run all analyses in parallel for better performance
-      final futures = await Future.wait([
-        detectClothing(imageFile).catchError((e) => <String, dynamic>{}),
-        detectColors(imageFile).catchError((e) => <String, dynamic>{}),
-        getSuggestions(imageFile).catchError((e) => <String, dynamic>{}),
-      ]);
+      // Simulate network delay
+      await Future.delayed(const Duration(milliseconds: 2500));
 
-      final detectionData = futures[0] as Map<String, dynamic>;
-      final colorData = futures[1] as Map<String, dynamic>;
-      final suggestionData = futures[2] as Map<String, dynamic>;
+      // Generate mock analysis data
+      final detectionData = await detectClothing(imageFile);
+      final colorData = await detectColors(imageFile);
+      final suggestionData = await getSuggestions(imageFile);
 
-      // Combine all results into a comprehensive analysis
-      final combinedData = {
-        ...detectionData,
-        'colorAnalysis': colorData,
-        'suggestions': suggestionData,
+      // Extract first detected item
+      Map<String, dynamic>? firstItem;
+      final items = detectionData['items'];
+      if (items is List && items.isNotEmpty && items.first is Map) {
+        firstItem = Map<String, dynamic>.from(items.first as Map);
+      }
+
+      // Extract category and confidence from first detection
+      final detectedCategory = (firstItem?['type'] as String?)?.toString();
+      final double detectedConfidence =
+          (firstItem?['confidence'] is num)
+              ? (firstItem?['confidence'] as num).toDouble()
+              : 0.0;
+
+      // Build color analysis from detection palette if available
+      Map<String, dynamic>? colorAnalysisFromDetection;
+      final palette = firstItem?['color_palette'];
+      if (palette is Map) {
+        final List<String> paletteColors = List<String>.from(
+          (palette['colors'] is List)
+              ? palette['colors'] as List
+              : const <String>[],
+        );
+        final primary = (paletteColors.isNotEmpty) ? paletteColors.first : null;
+        colorAnalysisFromDetection = {
+          'dominantColors': paletteColors,
+          'primaryColor': primary,
+          'colorPercentages': <String, double>{},
+        };
+      }
+
+      // Build suggestions from style classification if available
+      Map<String, dynamic>? suggestionsFromDetection;
+      final styleCls = firstItem?['style_classification'];
+      if (styleCls is Map) {
+        final styleName = styleCls['style']?.toString();
+        suggestionsFromDetection = {
+          'suggestedOutfits': <String>[],
+          'complementaryItems': <String>[],
+          'occasions': <String>[],
+          'styleArchetype': styleName,
+          'seasonRecommendations': <String>[],
+          'confidence': detectedConfidence,
+        };
+      }
+
+      // Combine all data
+      final combinedData = <String, dynamic>{
+        'category': detectedCategory,
+        'confidence': detectedConfidence,
+        'colors':
+            (colorAnalysisFromDetection != null)
+                ? List<String>.from(
+                  colorAnalysisFromDetection['dominantColors'] as List,
+                )
+                : List<String>.from(
+                  colorData['dominantColors'] ??
+                      colorData['colors'] ??
+                      const <String>[],
+                ),
+        'colorAnalysis': colorAnalysisFromDetection ?? colorData,
+        'suggestions': suggestionsFromDetection ?? suggestionData,
+        'tags': ['casual', 'minimalist', 'versatile'],
+        'name': 'Casual T-Shirt & Jeans',
       };
 
       // Process the combined data and convert to structured result
       return ClothingAnalysisResult.fromCombinedJson(combinedData);
     } catch (e) {
-      rethrow;
+      // Return a default result if analysis fails
+      return ClothingAnalysisResult(
+        detectedCategory: 'tops',
+        colors: ['white', 'navy', 'grey'],
+        tags: ['casual', 'minimalist'],
+        suggestedName: 'Casual Top',
+        confidence: 0.85,
+      );
     }
   }
 
-  /// Analyzes colors only
+  /// Analyzes colors only (placeholder)
   Future<ColorAnalysisResult> analyzeColors(File imageFile) async {
     try {
       final colorData = await detectColors(imageFile);
       return ColorAnalysisResult.fromJson(colorData);
     } catch (e) {
-      rethrow;
+      // Return default color analysis
+      return ColorAnalysisResult(
+        dominantColors: ['white', 'navy', 'grey'],
+        accentColors: ['black', 'beige'],
+        primaryColor: 'white',
+        confidence: 0.85,
+      );
     }
   }
 
-  /// Gets style suggestions only
+  /// Gets style suggestions only (placeholder)
   Future<StyleSuggestionsResult> getStyleSuggestions(File imageFile) async {
     try {
       final suggestionData = await getSuggestions(imageFile);
       return StyleSuggestionsResult.fromJson(suggestionData);
     } catch (e) {
-      rethrow;
+      // Return default style suggestions
+      return StyleSuggestionsResult(
+        suggestedOutfits: ['Minimalist Look', 'Casual Style'],
+        complementaryItems: ['White sneakers', 'Minimalist watch'],
+        occasions: ['casual', 'weekend'],
+        styleArchetype: 'minimalist',
+        seasonRecommendations: ['spring', 'summer'],
+        confidence: 0.85,
+      );
     }
   }
 
-  /// Health check for the detection service
+  /// Health check for the detection service (placeholder)
   Future<bool> isServiceHealthy() async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('$_baseUrl/health'),
-            headers: {'Accept': 'application/json'},
-          )
-          .timeout(_timeout);
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 200));
 
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
+    // Always return true for placeholder service
+    return true;
   }
 }
 

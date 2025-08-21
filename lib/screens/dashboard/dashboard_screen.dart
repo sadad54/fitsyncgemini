@@ -1,451 +1,113 @@
-// // lib/screens/dashboard/dashboard_screen.dart
-// import 'package:flutter/material.dart';
-// import 'package:go_router/go_router.dart';
-// import 'package:lucide_icons/lucide_icons.dart';
-// import 'package:fitsyncgemini/constants/app_colors.dart';
-// import 'package:fitsyncgemini/constants/app_data.dart';
-// import 'package:flutter_animate/flutter_animate.dart';
-
-// class DashboardScreen extends StatelessWidget {
-//   const DashboardScreen({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         backgroundColor: Theme.of(context).colorScheme.background,
-//         elevation: 1,
-//         shadowColor: Colors.black.withOpacity(0.1),
-//         title: Row(
-//           children: [
-//             Image.asset('assets/images/fitSyncLogo.png', width: 32, height: 32),
-//             const SizedBox(width: 8),
-//             Text(
-//               'FitSync',
-//               style: TextStyle(
-//                 fontSize: 24,
-//                 fontWeight: FontWeight.bold,
-//                 foreground:
-//                     Paint()
-//                       ..shader = AppColors.fitsyncGradient.createShader(
-//                         const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0),
-//                       ),
-//               ),
-//             ),
-//           ],
-//         ),
-//         actions: [
-//           IconButton(
-//             icon: const Icon(LucideIcons.smartphone, size: 20),
-//             onPressed: () => context.go('/mockups'),
-//           ),
-//           IconButton(
-//             icon: const Icon(LucideIcons.palette, size: 20),
-//             onPressed: () => context.go('/assets'),
-//           ),
-//           const Padding(
-//             padding: EdgeInsets.only(right: 16.0, left: 8.0),
-//             child: CircleAvatar(
-//               radius: 16,
-//               child: Text(
-//                 'JS',
-//                 style: TextStyle(
-//                   fontSize: 12,
-//                   color: Colors.white,
-//                   fontWeight: FontWeight.bold,
-//                 ),
-//               ),
-//               backgroundColor: AppColors.pink,
-//             ),
-//           ),
-//         ],
-//       ),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//                 GridView.count(
-//                   crossAxisCount: 2,
-//                   shrinkWrap: true,
-//                   physics: const NeverScrollableScrollPhysics(),
-//                   crossAxisSpacing: 16,
-//                   mainAxisSpacing: 16,
-//                   childAspectRatio: 1.2,
-//                   children: [
-//                     _buildFeatureCard(
-//                       context,
-//                       icon: LucideIcons.shoppingBag,
-//                       title: 'My Closet',
-//                       subtitle: '${_closetItems.length} items',
-//                       gradient: const LinearGradient(
-//                         colors: [AppColors.pink, AppColors.purple],
-//                       ),
-//                       onTap: () => context.go('/closet'),
-//                     ),
-//                     _buildFeatureCard(
-//                       context,
-//                       icon: LucideIcons.sparkles,
-//                       title: 'Outfit AI',
-//                       subtitle: 'Get suggestions',
-//                       gradient: const LinearGradient(
-//                         colors: [AppColors.purple, AppColors.teal],
-//                       ),
-//                       onTap: () {},
-//                     ),
-//                     _buildFeatureCard(
-//                       context,
-//                       icon: LucideIcons.trendingUp,
-//                       title: 'Trends',
-//                       subtitle: 'What\'s hot now',
-//                       gradient: const LinearGradient(
-//                         colors: [AppColors.teal, AppColors.blue],
-//                       ),
-//                       onTap: () {},
-//                     ),
-//                     _buildFeatureCard(
-//                       context,
-//                       icon: LucideIcons.mapPin,
-//                       title: 'Nearby',
-//                       subtitle: 'Local inspiration',
-//                       gradient: const LinearGradient(
-//                         colors: [AppColors.blue, AppColors.pink],
-//                       ),
-//                       onTap: () {},
-//                     ),
-//                   ],
-//                 ),
-//                 const SizedBox(height: 24),
-//                 _buildSuggestionCard(context),
-//                 const SizedBox(height: 16),
-//                 _buildStyleDnaCard(context),
-//               ]
-//               .animate(interval: 100.ms)
-//               .fadeIn(duration: 300.ms)
-//               .slideY(begin: 0.2),
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildFeatureCard(
-//     BuildContext context, {
-//     required IconData icon,
-//     required String title,
-//     required String subtitle,
-//     required Gradient gradient,
-//     required VoidCallback onTap,
-//   }) {
-//     return Card(
-//       clipBehavior: Clip.antiAlias,
-//       child: InkWell(
-//         onTap: onTap,
-//         child: Column(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             Container(
-//               width: 48,
-//               height: 48,
-//               decoration: BoxDecoration(
-//                 gradient: gradient,
-//                 shape: BoxShape.circle,
-//               ),
-//               child: Icon(icon, color: Colors.white, size: 24),
-//             ),
-//             const SizedBox(height: 12),
-//             Text(
-//               title,
-//               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-//             ),
-//             const SizedBox(height: 4),
-//             Text(
-//               subtitle,
-//               style: Theme.of(
-//                 context,
-//               ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildSuggestionCard(BuildContext context) {
-//     // Use first outfit from backend data if available, otherwise show empty state
-//     final outfit = _outfits.isNotEmpty ? _outfits.first : null;
-//     return Card(
-//       color: AppColors.pink.withOpacity(0.05),
-//       elevation: 0,
-//       shape: RoundedRectangleBorder(
-//         borderRadius: BorderRadius.circular(12),
-//         side: BorderSide.none,
-//       ),
-//       child: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               children: [
-//                 Container(
-//                   width: 32,
-//                   height: 32,
-//                   decoration: const BoxDecoration(
-//                     gradient: AppColors.fitsyncGradient,
-//                     shape: BoxShape.circle,
-//                   ),
-//                   child: const Icon(
-//                     LucideIcons.zap,
-//                     color: Colors.white,
-//                     size: 16,
-//                   ),
-//                 ),
-//                 const SizedBox(width: 12),
-//                 const Text(
-//                   'Today\'s Outfit Suggestion',
-//                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-//                 ),
-//               ],
-//             ),
-//             const SizedBox(height: 16),
-//             Row(
-//               children: [
-//                 SizedBox(
-//                   width: 80,
-//                   height: 48,
-//                   child: Stack(
-//                     children:
-//                         outfit.itemIds.take(3).toList().asMap().entries.map((
-//                           entry,
-//                         ) {
-//                           final index = entry.key;
-//                           final item = entry.value;
-//                           return Positioned(
-//                             left: (index * 20).toDouble(),
-//                             child: CircleAvatar(
-//                               radius: 24,
-//                               backgroundColor: Theme.of(context).cardColor,
-//                               child: CircleAvatar(
-//                                 radius: 22,
-//                                 backgroundImage: NetworkImage(item),
-//                               ),
-//                             ),
-//                           );
-//                         }).toList(),
-//                   ),
-//                 ),
-//                 const SizedBox(width: 16),
-//                 Expanded(
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Text(
-//                         outfit.name,
-//                         style: const TextStyle(fontWeight: FontWeight.w600),
-//                       ),
-//                       Text(
-//                         'Perfect for ${outfit.occasion}',
-//                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-//                           color: Colors.grey.shade600,
-//                         ),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//                 const SizedBox(width: 8),
-//                 ElevatedButton(
-//                   onPressed: () {},
-//                   style: ElevatedButton.styleFrom(
-//                     padding: const EdgeInsets.symmetric(horizontal: 16),
-//                     shape: RoundedRectangleBorder(
-//                       borderRadius: BorderRadius.circular(20),
-//                     ),
-//                     foregroundColor: Colors.white,
-//                     backgroundColor: AppColors.pink,
-//                   ),
-//                   child: const Text('Try On'),
-//                 ),
-//               ],
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildStyleDnaCard(BuildContext context) {
-//     return Card(
-//       child: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             const Row(
-//               children: [
-//                 Icon(LucideIcons.star, color: AppColors.gold, size: 20),
-//                 SizedBox(width: 8),
-//                 Text(
-//                   'Your Style DNA',
-//                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-//                 ),
-//               ],
-//             ),
-//             const SizedBox(height: 16),
-//             Row(
-//               children: [
-//                 Container(
-//                   width: 64,
-//                   height: 64,
-//                   decoration: const BoxDecoration(
-//                     gradient: AppColors.quizGradient,
-//                     shape: BoxShape.circle,
-//                   ),
-//                   child: const Center(
-//                     child: Text('✨', style: TextStyle(fontSize: 28)),
-//                   ),
-//                 ),
-//                 const SizedBox(width: 16),
-//                 Expanded(
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       const Text(
-//                         'Minimalist',
-//                         style: TextStyle(
-//                           fontWeight: FontWeight.bold,
-//                           fontSize: 18,
-//                         ),
-//                       ),
-//                       const SizedBox(height: 4),
-//                       Text(
-//                         'Clean lines, neutral colors, timeless pieces',
-//                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-//                           color: Colors.grey.shade600,
-//                         ),
-//                       ),
-//                       const SizedBox(height: 8),
-//                       Wrap(
-//                         spacing: 8,
-//                         children:
-//                             ['Neutral Colors', 'Clean Lines', 'Timeless']
-//                                 .map(
-//                                   (trait) => Chip(
-//                                     label: Text(trait),
-//                                     padding: const EdgeInsets.symmetric(
-//                                       horizontal: 4,
-//                                     ),
-//                                     labelStyle:
-//                                         Theme.of(context).textTheme.bodySmall,
-//                                     backgroundColor:
-//                                         Theme.of(
-//                                           context,
-//                                         ).scaffoldBackgroundColor,
-//                                   ),
-//                                 )
-//                                 .toList(),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//                 OutlinedButton(onPressed: () {}, child: const Text('Explore')),
-//               ],
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-import 'package:fitsyncgemini/widgets/closet/add_item_modal.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:fitsyncgemini/constants/app_colors.dart';
-import 'package:fitsyncgemini/services/MLAPI_service.dart';
-import 'package:fitsyncgemini/services/personalization_service.dart';
-import 'package:fitsyncgemini/widgets/dashboard/stats_overview_widget.dart';
-import 'package:fitsyncgemini/widgets/dashboard/quick_actions_widget.dart';
-import 'package:fitsyncgemini/widgets/dashboard/recent_activity_widget.dart';
-import 'package:fitsyncgemini/providers/providers.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
-class DashboardScreen extends ConsumerStatefulWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> {
   String _greeting = '';
+  int _selectedTabIndex = 0;
 
-  // Backend data variables
-  List<Map<String, dynamic>> _closetItems = [];
-  List<Map<String, dynamic>> _outfits = [];
-  // ignore: unused_field
-  Map<String, dynamic> _wardrobeStats = {};
-  bool _isLoadingCloset = false;
-  bool _isLoadingOutfits = false;
-  bool _isLoadingStats = false;
+  // Placeholder data
+  final List<Map<String, dynamic>> _stylePosts = [
+    {
+      'id': '1',
+      'username': 'style_sarah',
+      'avatar': 'https://picsum.photos/150/150?random=1',
+      'image': 'https://picsum.photos/400/300?random=2',
+      'caption': 'Minimalist vibes for the office ✨ #minimalist #officewear',
+      'likes': 234,
+      'comments': 12,
+      'timeAgo': '2h ago',
+      'style': 'minimalist',
+      'verified': true,
+    },
+    {
+      'id': '2',
+      'username': 'fashion_mike',
+      'avatar': 'https://picsum.photos/150/150?random=3',
+      'image': 'https://picsum.photos/400/300?random=4',
+      'caption': 'Streetwear essentials 🏙️ #streetwear #urban',
+      'likes': 567,
+      'comments': 28,
+      'timeAgo': '4h ago',
+      'style': 'streetwear',
+      'verified': true,
+    },
+    {
+      'id': '3',
+      'username': 'trendy_emma',
+      'avatar': 'https://picsum.photos/150/150?random=5',
+      'image': 'https://picsum.photos/400/300?random=6',
+      'caption': 'Boho chic for summer ☀️ #boho #summerstyle',
+      'likes': 189,
+      'comments': 8,
+      'timeAgo': '6h ago',
+      'style': 'boho',
+      'verified': false,
+    },
+  ];
 
-  // Personalization variables
-  String _userArchetype = 'minimalist';
-  // ignore: unused_field
-  Map<String, dynamic> _styleRecommendations = {};
-  // ignore: unused_field
-  List<Map<String, dynamic>> _personalizedOutfits = [];
-  bool _isLoadingPersonalization = false;
+  final List<Map<String, dynamic>> _trendingStyles = [
+    {'name': 'Minimalist', 'posts': 1247, 'growth': '+23%'},
+    {'name': 'Streetwear', 'posts': 892, 'growth': '+18%'},
+    {'name': 'Boho', 'posts': 567, 'growth': '+12%'},
+    {'name': 'Preppy', 'posts': 445, 'growth': '+8%'},
+  ];
+
+  // Core features prioritized
+  final List<Map<String, dynamic>> _coreFeatures = [
+    {
+      'icon': LucideIcons.camera,
+      'title': 'Virtual Try-On',
+      'subtitle': 'See how clothes look on you',
+      'color': Colors.blue,
+      'route': '/try-on',
+      'gradient': [Colors.blue, Colors.cyan],
+    },
+    {
+      'icon': LucideIcons.sparkles,
+      'title': 'AI Outfit Generator',
+      'subtitle': 'Get personalized outfit suggestions',
+      'color': Colors.purple,
+      'route': '/outfit-suggestions',
+      'gradient': [Colors.purple, Colors.pink],
+    },
+    {
+      'icon': LucideIcons.shirt,
+      'title': 'Wardrobe Manager',
+      'subtitle': 'Organize your clothing collection',
+      'color': Colors.green,
+      'route': '/closet',
+      'gradient': [Colors.green, Colors.teal],
+    },
+    {
+      'icon': LucideIcons.trendingUp,
+      'title': 'Style Analytics',
+      'subtitle': 'Track your fashion journey',
+      'color': Colors.orange,
+      'route': '/trends',
+      'gradient': [Colors.orange, Colors.red],
+    },
+  ];
+
+  final List<Map<String, dynamic>> _quickActions = [
+    {'icon': LucideIcons.search, 'title': 'Find Items', 'color': Colors.indigo},
+    {'icon': LucideIcons.users, 'title': 'Community', 'color': Colors.pink},
+    {'icon': LucideIcons.mapPin, 'title': 'Nearby', 'color': Colors.amber},
+    {'icon': LucideIcons.settings, 'title': 'Settings', 'color': Colors.grey},
+  ];
 
   @override
   void initState() {
     super.initState();
     _updateGreeting();
-    _loadDashboardData();
-    _loadPersonalizationData();
-  }
-
-  // Load dashboard data from backend
-  Future<void> _loadDashboardData() async {
-    await Future.wait([
-      _loadClosetItems(),
-      _loadOutfits(),
-      _loadWardrobeStats(),
-    ]);
-  }
-
-  // Load personalization data
-  Future<void> _loadPersonalizationData() async {
-    if (_isLoadingPersonalization) return;
-
-    setState(() {
-      _isLoadingPersonalization = true;
-    });
-
-    try {
-      // Get user's style preferences from backend
-      await PersonalizationService.getStylePreferences();
-
-      // Get current archetype
-      _userArchetype = PersonalizationService.getCurrentArchetype();
-
-      // Get personalized recommendations
-      _styleRecommendations = PersonalizationService.getStyleRecommendations();
-
-      // Get personalized outfit suggestions
-      _personalizedOutfits =
-          PersonalizationService.getPersonalizedOutfitSuggestions();
-
-      print('✅ Personalization data loaded for archetype: $_userArchetype');
-    } catch (e) {
-      print('❌ Failed to load personalization data: $e');
-      // Use default values if backend fails
-    } finally {
-      setState(() {
-        _isLoadingPersonalization = false;
-      });
-    }
   }
 
   void _updateGreeting() {
@@ -459,993 +121,763 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  Future<void> _loadClosetItems() async {
-    if (_isLoadingCloset) return;
-
-    setState(() {
-      _isLoadingCloset = true;
-    });
-
-    try {
-      final items = await MLAPIService.getUserWardrobe(limit: 10);
-      setState(() {
-        _closetItems = items;
-      });
-    } catch (e) {
-      print('❌ Failed to load closet items: $e');
-      // Keep empty list if backend fails
-    } finally {
-      setState(() {
-        _isLoadingCloset = false;
-      });
-    }
-  }
-
-  Future<void> _loadOutfits() async {
-    if (_isLoadingOutfits) return;
-
-    setState(() {
-      _isLoadingOutfits = true;
-    });
-
-    try {
-      // Note: Outfits endpoint might not be implemented yet
-      // For now, we'll use an empty list
-      setState(() {
-        _outfits = [];
-      });
-    } catch (e) {
-      print('❌ Failed to load outfits: $e');
-    } finally {
-      setState(() {
-        _isLoadingOutfits = false;
-      });
-    }
-  }
-
-  Future<void> _loadWardrobeStats() async {
-    if (_isLoadingStats) return;
-
-    setState(() {
-      _isLoadingStats = true;
-    });
-
-    try {
-      final stats = await MLAPIService.getWardrobeStats();
-      setState(() {
-        _wardrobeStats = stats;
-      });
-    } catch (e) {
-      print('❌ Failed to load wardrobe stats: $e');
-      // Use default stats if backend fails
-      setState(() {
-        _wardrobeStats = {
-          'total_items': 0,
-          'total_value': 0,
-          'recently_added': 0,
-        };
-      });
-    } finally {
-      setState(() {
-        _isLoadingStats = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    // final authState = ref.watch(authViewModelProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        elevation: 1,
-        shadowColor: Colors.black.withOpacity(0.1),
-        title: Row(
-          children: [
-            Image.asset('assets/images/fitSyncLogo.png', width: 32, height: 32),
-            const SizedBox(width: 8),
-            Text(
-              'FitSync',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                foreground:
-                    Paint()
-                      ..shader = AppColors.fitsyncGradient.createShader(
-                        const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0),
-                      ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.search, size: 20),
-            onPressed: () => _showSearchBottomSheet(),
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.refreshCw, size: 20),
-            onPressed: () => _loadDashboardData(),
-            tooltip: 'Refresh Data',
-          ),
-          // Dev button for injecting dummy data
-          IconButton(
-            icon: const Icon(LucideIcons.database, size: 20),
-            onPressed: () => _showDevOptions(),
-            tooltip: 'Dev Options',
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.bell, size: 20),
-            onPressed: () => _showNotifications(),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0, left: 8.0),
-            child: GestureDetector(
-              onTap: () => context.go('/profile'),
-              child: const CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.pink,
-                child: Text(
-                  'JS',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+      backgroundColor: scheme.background,
+      body: CustomScrollView(
+        slivers: [
+          // Futuristic App Bar
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: true,
+            pinned: true,
+            backgroundColor: scheme.surface,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [scheme.surface, scheme.surface.withOpacity(0.8)],
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadDashboardData();
-        },
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildGreetingSection(),
-                    const SizedBox(height: 24),
-                    const QuickActionsWidget(),
-                    const SizedBox(height: 24),
-                    const StatsOverviewWidget(),
-                    const SizedBox(height: 24),
-                    _buildFeaturesGrid(),
-                    const SizedBox(height: 24),
-                    if (_isLoadingOutfits)
-                      const Center(child: CircularProgressIndicator())
-                    else
-                      _buildTodaysSuggestion(),
-                    const SizedBox(height: 24),
-                    _buildStyleInsights(),
-                    const SizedBox(height: 24),
-                    const RecentActivityWidget(),
-                  ],
+            title: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [scheme.primary, scheme.tertiary],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    LucideIcons.sparkles,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Text(
+                  'FitSync',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: _buildFloatingActionButton(),
-    );
-  }
-
-  Widget _buildGreetingSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$_greeting, John! ✨',
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-        ).animate().fadeIn(duration: 600.ms),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.pink.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const FitSyncFeatureIcon(type: 'ai', size: 14, container: 24),
-              const SizedBox(width: 6),
-              Text(
-                '$_userArchetype Style • ${_closetItems.length} items in closet',
-                style: const TextStyle(
-                  color: AppColors.pink,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+            actions: [
+              IconButton(
+                icon: Icon(LucideIcons.search, color: scheme.onSurface),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: Icon(LucideIcons.bell, color: scheme.onSurface),
+                onPressed: () {},
+              ),
+              Container(
+                margin: const EdgeInsets.only(right: 16),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: scheme.primary,
+                  child: Text(
+                    'JS',
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-        ).animate().fadeIn(delay: 300.ms),
-      ],
-    );
-  }
 
-  Widget _buildFeaturesGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.2,
-      children: [
-        _buildFeatureCard(
-          iconWidget: const FitSyncFeatureIcon(
-            type: 'wardrobe',
-            size: 22,
-            container: 48,
-          ),
-          title: 'My Closet',
-          subtitle: '${_closetItems.length} items',
-          gradient: const LinearGradient(
-            colors: [AppColors.pink, AppColors.purple],
-          ),
-          onTap: () => context.go('/closet'),
-        ),
-        _buildFeatureCard(
-          iconWidget: const FitSyncFeatureIcon(
-            type: 'ai',
-            size: 22,
-            container: 48,
-          ),
-          title: 'Outfit AI',
-          subtitle: 'Get suggestions',
-          gradient: const LinearGradient(
-            colors: [AppColors.purple, AppColors.teal],
-          ),
-          onTap: () => context.go('/outfit-suggestions'),
-        ),
-        _buildFeatureCard(
-          iconWidget: const FitSyncFeatureIcon(
-            type: 'trends',
-            size: 22,
-            container: 48,
-          ),
-          title: 'Trends',
-          subtitle: 'What\'s hot now',
-          gradient: const LinearGradient(
-            colors: [AppColors.teal, AppColors.blue],
-          ),
-          onTap: () => context.go('/trends'),
-        ),
-        _buildFeatureCard(
-          iconWidget: const FitSyncFeatureIcon(
-            type: 'virtual',
-            size: 22,
-            container: 48,
-          ),
-          title: 'Nearby',
-          subtitle: 'Local inspiration',
-          gradient: const LinearGradient(
-            colors: [AppColors.blue, AppColors.pink],
-          ),
-          onTap: () => context.go('/nearby'),
-        ),
-      ],
-    ).animate().fadeIn(delay: 500.ms);
-  }
-
-  Widget _buildFeatureCard({
-    IconData? icon,
-    Widget? iconWidget,
-    required String title,
-    required String subtitle,
-    required Gradient gradient,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: gradient,
-                shape: BoxShape.circle,
-              ),
-              child: iconWidget ?? Icon(icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTodaysSuggestion() {
-    // Use first outfit from backend data if available, otherwise show empty state
-    final outfit = _outfits.isNotEmpty ? _outfits.first : null;
-
-    // If no outfit available, show empty state
-    if (outfit == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Today\'s Pick',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              TextButton.icon(
-                onPressed: () => context.go('/outfit-suggestions'),
-                icon: const Icon(LucideIcons.refreshCw, size: 16),
-                label: const Text('New'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Card(
-            color: AppColors.pink.withOpacity(0.05),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide.none,
-            ),
+          // Main Content
+          SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: const BoxDecoration(
-                          gradient: AppColors.fitsyncGradient,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          LucideIcons.zap,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'No outfit suggestions yet',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Complete your wardrobe to get personalized outfit suggestions!',
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  // Greeting Section
+                  _buildGreetingSection(theme, scheme),
+                  const SizedBox(height: 32),
+
+                  // Core Features - Prioritized
+                  _buildCoreFeatures(theme, scheme),
+                  const SizedBox(height: 32),
+
+                  // Quick Actions
+                  _buildQuickActions(theme, scheme),
+                  const SizedBox(height: 32),
+
+                  // Style Feed Tabs
+                  _buildStyleFeedTabs(theme, scheme),
+                  const SizedBox(height: 24),
+
+                  // Content based on selected tab
+                  _buildTabContent(theme, scheme),
                 ],
               ),
             ),
           ),
         ],
-      );
-    }
+      ),
+      floatingActionButton: _buildFloatingActionButton(theme, scheme),
+    );
+  }
+
+  Widget _buildGreetingSection(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$_greeting, John',
+          style: theme.textTheme.displayLarge?.copyWith(
+            color: scheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ).animate().fadeIn(duration: 600.ms).slideX(begin: -0.3),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: scheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: scheme.primary.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.sparkles, size: 16, color: scheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Minimalist Style • 47 items',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.2),
+      ],
+    );
+  }
+
+  Widget _buildCoreFeatures(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Core Features',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.2,
+          ),
+          itemCount: _coreFeatures.length,
+          itemBuilder: (context, index) {
+            final feature = _coreFeatures[index];
+            return _buildCoreFeatureCard(feature, theme, scheme, index);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCoreFeatureCard(
+    Map<String, dynamic> feature,
+    ThemeData theme,
+    ColorScheme scheme,
+    int index,
+  ) {
+    final List<Color> gradientColors =
+        (feature['gradient'] as List).cast<Color>();
+
+    return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: gradientColors[0].withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: () => context.go(feature['route']),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(feature['icon'], color: Colors.white, size: 24),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        feature['title'],
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        feature['subtitle'],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        )
+        .animate()
+        .fadeIn(delay: (100 * index).ms)
+        .scale(begin: const Offset(0.8, 0.8));
+  }
+
+  Widget _buildQuickActions(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1,
+          ),
+          itemCount: _quickActions.length,
+          itemBuilder: (context, index) {
+            final action = _quickActions[index];
+            return _buildQuickActionCard(action, theme, scheme, index);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionCard(
+    Map<String, dynamic> action,
+    ThemeData theme,
+    ColorScheme scheme,
+    int index,
+  ) {
+    return Container(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: scheme.outline.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: InkWell(
+            onTap: () {},
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: action['color'].withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      action['icon'],
+                      color: action['color'],
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    action['title'],
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        )
+        .animate()
+        .fadeIn(delay: (100 * index).ms)
+        .scale(begin: const Offset(0.8, 0.8));
+  }
+
+  Widget _buildStyleFeedTabs(ThemeData theme, ColorScheme scheme) {
+    final tabs = ['For You', 'Trending', 'Following', 'Nearby'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Today\'s Pick',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            TextButton.icon(
-              onPressed: () => context.go('/outfit-suggestions'),
-              icon: const Icon(LucideIcons.refreshCw, size: 16),
-              label: const Text('New'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Card(
-          color: AppColors.pink.withOpacity(0.05),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide.none,
+        Text(
+          'Style Feed',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: scheme.surfaceVariant,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: tabs.length,
+            itemBuilder: (context, index) {
+              final isSelected = _selectedTabIndex == index;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedTabIndex = index),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? scheme.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(
+                      tabs[index],
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color:
+                            isSelected
+                                ? scheme.onPrimary
+                                : scheme.onSurfaceVariant,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabContent(ThemeData theme, ColorScheme scheme) {
+    switch (_selectedTabIndex) {
+      case 0:
+        return _buildForYouFeed(theme, scheme);
+      case 1:
+        return _buildTrendingFeed(theme, scheme);
+      case 2:
+        return _buildFollowingFeed(theme, scheme);
+      case 3:
+        return _buildNearbyFeed(theme, scheme);
+      default:
+        return _buildForYouFeed(theme, scheme);
+    }
+  }
+
+  Widget _buildForYouFeed(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      children:
+          _stylePosts
+              .map((post) => _buildStylePost(post, theme, scheme))
+              .toList(),
+    );
+  }
+
+  Widget _buildTrendingFeed(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Trending Styles',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ..._trendingStyles.map(
+          (style) => _buildTrendingStyleCard(style, theme, scheme),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFollowingFeed(ThemeData theme, ColorScheme scheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            LucideIcons.users,
+            size: 64,
+            color: scheme.onSurface.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Follow your favorite stylists',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: scheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNearbyFeed(ThemeData theme, ColorScheme scheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            LucideIcons.mapPin,
+            size: 64,
+            color: scheme.onSurface.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Discover local style inspiration',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: scheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStylePost(
+    Map<String, dynamic> post,
+    ThemeData theme,
+    ColorScheme scheme,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outline.withOpacity(0.3), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundImage: NetworkImage(post['avatar']),
+                  onBackgroundImageError: (exception, stackTrace) {
+                    // Handle avatar loading error silently
+                  },
+                  child:
+                      post['avatar'] == null
+                          ? Text(
+                            post['username'][0].toUpperCase(),
+                            style: TextStyle(
+                              color: scheme.onPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                          : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            post['username'],
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          if (post['verified'] == true) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              LucideIcons.checkCircle,
+                              size: 16,
+                              color: scheme.primary,
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        post['timeAgo'],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    post['style'],
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Image.network(
+              post['image'],
+              width: double.infinity,
+              height: 300,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: double.infinity,
+                  height: 300,
+                  color: scheme.surfaceVariant,
+                  child: Icon(
+                    LucideIcons.image,
+                    size: 64,
+                    color: scheme.onSurface.withOpacity(0.5),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Actions
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        gradient: AppColors.fitsyncGradient,
-                        shape: BoxShape.circle,
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.heart,
+                        color: scheme.onSurface.withOpacity(0.8),
                       ),
-                      child: const Icon(
-                        LucideIcons.zap,
-                        color: Colors.white,
-                        size: 16,
-                      ),
+                      onPressed: () {},
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Perfect for today\'s weather',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.messageCircle,
+                        color: scheme.onSurface.withOpacity(0.8),
                       ),
+                      onPressed: () {},
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.share2,
+                        color: scheme.onSurface.withOpacity(0.8),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                      onPressed: () {},
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.bookmark,
+                        color: scheme.onSurface.withOpacity(0.8),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.sun, size: 12, color: Colors.orange),
-                          SizedBox(width: 4),
-                          Text(
-                            '24°C',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+                      onPressed: () {},
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 100,
-                      height: 48,
-                      child: Stack(
-                        children:
-                            (outfit['item_ids'] as List<dynamic>?)
-                                ?.take(3)
-                                .toList()
-                                .asMap()
-                                .entries
-                                .map((entry) {
-                                  final index = entry.key;
-                                  final item = entry.value;
-                                  return Positioned(
-                                    left: (index * 25).toDouble(),
-                                    child: CircleAvatar(
-                                      radius: 24,
-                                      backgroundColor:
-                                          Theme.of(context).cardColor,
-                                      child: CircleAvatar(
-                                        radius: 22,
-                                        backgroundImage: NetworkImage(
-                                          item.toString(),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                })
-                                .toList() ??
-                            [],
+                Text(
+                  '${post['likes']} likes',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                RichText(
+                  text: TextSpan(
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurface,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: post['username'],
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            outfit['name'] ?? 'Outfit',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            'Perfect for ${outfit['occasion'] ?? 'any occasion'}',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => context.go('/try-on'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            foregroundColor: Colors.white,
-                            backgroundColor: AppColors.pink,
-                          ),
-                          child: const Text('Try On'),
-                        ),
-                        const SizedBox(height: 4),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text(
-                            'Save',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      const TextSpan(text: ' '),
+                      TextSpan(text: post['caption']),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'View all ${post['comments']} comments',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
-    ).animate().fadeIn(delay: 600.ms);
-  }
-
-  Widget _buildStyleInsights() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Style Insights',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        gradient: AppColors.quizGradient,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Text('✨', style: TextStyle(fontSize: 24)),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Your Style DNA',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            'Minimalist',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: AppColors.gold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    OutlinedButton(
-                      onPressed: () => context.go('/explore'),
-                      child: const Text('Explore'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInsightCard(
-                        icon: LucideIcons.trendingUp,
-                        title: 'Most Worn',
-                        value: 'White Tees',
-                        color: AppColors.teal,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildInsightCard(
-                        icon: LucideIcons.heart,
-                        title: 'Favorite Color',
-                        value: 'Black',
-                        color: AppColors.purple,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ).animate().fadeIn(delay: 700.ms);
-  }
-
-  Widget _buildInsightCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        ],
       ),
-      child: Column(
+    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3);
+  }
+
+  Widget _buildTrendingStyleCard(
+    Map<String, dynamic> style,
+    ThemeData theme,
+    ColorScheme scheme,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: scheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              LucideIcons.trendingUp,
+              color: scheme.primary,
+              size: 24,
+            ),
           ),
-          Text(
-            value,
-            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  style['name'],
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                Text(
+                  '${style['posts']} posts',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: scheme.tertiary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              style['growth'],
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.tertiary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFloatingActionButton() {
+  Widget _buildFloatingActionButton(ThemeData theme, ColorScheme scheme) {
     return FloatingActionButton(
-      onPressed: () => _showAddItemModal(),
-      backgroundColor: AppColors.pink,
-      child: const Icon(LucideIcons.plus, color: Colors.white),
+      onPressed: () => context.go('/try-on'),
+      backgroundColor: scheme.primary,
+      foregroundColor: scheme.onPrimary,
+      elevation: 0,
+      child: const Icon(LucideIcons.camera, size: 24),
     );
-  }
-
-  void _showSearchBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder:
-          (context) => Container(
-            height: MediaQuery.of(context).size.height * 0.7,
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Search FitSync',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.x),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: 'Search outfits, items, styles...',
-                    prefixIcon: const Icon(LucideIcons.search),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Recent Searches',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      ...[
-                        'Black dress',
-                        'Summer outfits',
-                        'Minimalist style',
-                      ].map(
-                        (search) => ListTile(
-                          leading: const Icon(LucideIcons.clock, size: 16),
-                          title: Text(search),
-                          trailing: const Icon(
-                            LucideIcons.arrowUpLeft,
-                            size: 16,
-                          ),
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-
-  void _showNotifications() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder:
-          (context) => Container(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Notifications',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.x),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const ListTile(
-                  leading: Icon(LucideIcons.sparkles, color: AppColors.pink),
-                  title: Text('New outfit suggestion ready!'),
-                  subtitle: Text('Based on today\'s weather'),
-                  trailing: Text('5m ago'),
-                ),
-                const ListTile(
-                  leading: Icon(LucideIcons.trendingUp, color: AppColors.teal),
-                  title: Text('Trending: Oversized blazers'),
-                  subtitle: Text('See what\'s popular in your area'),
-                  trailing: Text('2h ago'),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('View All Notifications'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-
-  void _showAddItemModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const AddItemModal(),
-    );
-  }
-
-  void _showDevOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder:
-          (context) => Container(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Developer Options',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.x),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Inject dummy data for testing and showcasing the app',
-                  style: TextStyle(color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      await _injectDummyData();
-                    },
-                    icon: const Icon(LucideIcons.database),
-                    label: const Text('Inject Dummy Data'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.pink,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      await _showDummyDataStats();
-                    },
-                    icon: const Icon(LucideIcons.barChart3),
-                    label: const Text('View Data Stats'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-
-  Future<void> _injectDummyData() async {
-    try {
-      final dummyDataService = ref.read(dummyDataServiceProvider);
-
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder:
-            (context) => const AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Injecting dummy data...'),
-                ],
-              ),
-            ),
-      );
-
-      await dummyDataService.injectDummyData();
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Dummy data injected successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Error injecting dummy data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _showDummyDataStats() async {
-    try {
-      final dummyDataService = ref.read(dummyDataServiceProvider);
-      final stats = dummyDataService.getDummyDataStats();
-
-      showDialog(
-        context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('Dummy Data Statistics'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children:
-                    stats.entries
-                        .map(
-                          (entry) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Text(
-                              '${entry.key.replaceAll('_', ' ').toUpperCase()}: ${entry.value}',
-                            ),
-                          ),
-                        )
-                        .toList(),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Error getting stats: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }

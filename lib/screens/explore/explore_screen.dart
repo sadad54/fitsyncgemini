@@ -1,14 +1,7 @@
-import 'package:fitsyncgemini/models/category.dart';
-import 'package:fitsyncgemini/models/explore_item.dart';
-import 'package:fitsyncgemini/models/trending_style.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
-
-const Color kPrimaryPink = Color(0xFFFF6B9D);
-const Color kAvatarBg = Color(0xFF4ECDC4);
-const Color kDarkText = Color(0xFF2C3E50);
+import 'package:flutter_animate/flutter_animate.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -17,737 +10,658 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
-  // --- State Management (equivalent to React's useState) ---
-  String _selectedCategoryId = 'all';
-  final TextEditingController _searchController = TextEditingController();
-  bool _isLoadingCategories = false;
-  bool _isLoadingTrendingStyles = false;
-  bool _isLoadingExploreItems = false;
+class _ExploreScreenState extends State<ExploreScreen>
+    with TickerProviderStateMixin {
+  late TabController _tabController;
+  int _selectedCategoryIndex = 0;
 
-  // --- Backend data ---
-  List<Category> _categories = [];
-  List<TrendingStyle> _trendingStyles = [];
-  List<ExploreItem> _exploreItems = [];
+  // Placeholder data
+  final List<Map<String, dynamic>> _trendingPosts = [
+    {
+      'id': '1',
+      'username': 'fashion_forward',
+      'avatar':
+          'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+      'image':
+          'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
+      'caption':
+          'Minimalist office look that speaks volumes ✨ #minimalist #officewear #style',
+      'likes': 1247,
+      'comments': 89,
+      'timeAgo': '1h ago',
+      'style': 'minimalist',
+      'verified': true,
+    },
+    {
+      'id': '2',
+      'username': 'street_style_mike',
+      'avatar':
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      'image':
+          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400',
+      'caption':
+          'Urban vibes for the city streets 🏙️ #streetwear #urban #fashion',
+      'likes': 892,
+      'comments': 45,
+      'timeAgo': '3h ago',
+      'style': 'streetwear',
+      'verified': false,
+    },
+    {
+      'id': '3',
+      'username': 'boho_emma',
+      'avatar':
+          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+      'image':
+          'https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?w=400',
+      'caption': 'Summer boho vibes ☀️ #boho #summer #chic',
+      'likes': 567,
+      'comments': 23,
+      'timeAgo': '5h ago',
+      'style': 'boho',
+      'verified': true,
+    },
+  ];
+
+  final List<Map<String, dynamic>> _styleCategories = [
+    {'name': 'All', 'icon': LucideIcons.grid, 'color': Colors.blue},
+    {'name': 'Minimalist', 'icon': LucideIcons.minus, 'color': Colors.grey},
+    {'name': 'Streetwear', 'icon': LucideIcons.zap, 'color': Colors.orange},
+    {'name': 'Boho', 'icon': LucideIcons.flower, 'color': Colors.pink},
+    {'name': 'Preppy', 'icon': LucideIcons.bookOpen, 'color': Colors.green},
+    {'name': 'Grunge', 'icon': LucideIcons.music, 'color': Colors.purple},
+  ];
+
+  final List<Map<String, dynamic>> _featuredCreators = [
+    {
+      'username': 'style_sarah',
+      'avatar':
+          'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+      'followers': '12.5K',
+      'posts': 234,
+      'verified': true,
+      'style': 'minimalist',
+    },
+    {
+      'username': 'fashion_mike',
+      'avatar':
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      'followers': '8.9K',
+      'posts': 156,
+      'verified': false,
+      'style': 'streetwear',
+    },
+    {
+      'username': 'trendy_emma',
+      'avatar':
+          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+      'followers': '15.2K',
+      'posts': 312,
+      'verified': true,
+      'style': 'boho',
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadExploreData();
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
-  }
-
-  // Load all explore data from backend
-  Future<void> _loadExploreData() async {
-    await Future.wait([
-      _loadCategories(),
-      _loadTrendingStyles(),
-      _loadExploreItems(),
-    ]);
-  }
-
-  // Load categories from backend
-  Future<void> _loadCategories() async {
-    if (_isLoadingCategories) return;
-
-    setState(() {
-      _isLoadingCategories = true;
-    });
-
-    try {
-      // Note: Categories endpoint might not be implemented yet
-      // For now, we'll use default categories
-      setState(() {
-        _categories = [
-          const Category(id: 'all', name: 'All', count: 0),
-          const Category(id: 'trending', name: 'Trending', count: 0),
-          const Category(id: 'minimalist', name: 'Minimalist', count: 0),
-          const Category(id: 'bohemian', name: 'Bohemian', count: 0),
-          const Category(id: 'professional', name: 'Professional', count: 0),
-          const Category(id: 'casual', name: 'Casual', count: 0),
-        ];
-      });
-    } catch (e) {
-      print('❌ Failed to load categories: $e');
-      // Keep default categories if backend fails
-    } finally {
-      setState(() {
-        _isLoadingCategories = false;
-      });
-    }
-  }
-
-  // Load trending styles from backend
-  Future<void> _loadTrendingStyles() async {
-    if (_isLoadingTrendingStyles) return;
-
-    setState(() {
-      _isLoadingTrendingStyles = true;
-    });
-
-    try {
-      // Note: Trending styles endpoint might not be implemented yet
-      // For now, we'll use default trending styles
-      setState(() {
-        _trendingStyles = [
-          const TrendingStyle(
-            name: 'Y2K Revival',
-            growth: '+23%',
-            color: kPrimaryPink,
-          ),
-          const TrendingStyle(
-            name: 'Dark Academia',
-            growth: '+18%',
-            color: kDarkText,
-          ),
-          const TrendingStyle(
-            name: 'Cottagecore',
-            growth: '+15%',
-            color: Color(0xFF4ECDC4),
-          ),
-          const TrendingStyle(
-            name: 'Maximalist',
-            growth: '+12%',
-            color: Color(0xFFC44DC7),
-          ),
-        ];
-      });
-    } catch (e) {
-      print('❌ Failed to load trending styles: $e');
-      // Keep default trending styles if backend fails
-    } finally {
-      setState(() {
-        _isLoadingTrendingStyles = false;
-      });
-    }
-  }
-
-  // Load explore items from backend
-  Future<void> _loadExploreItems() async {
-    if (_isLoadingExploreItems) return;
-
-    setState(() {
-      _isLoadingExploreItems = true;
-    });
-
-    try {
-      // Note: Explore items endpoint might not be implemented yet
-      // For now, we'll use default explore items
-      setState(() {
-        _exploreItems = [
-          const ExploreItem(
-            id: 1,
-            title: 'Minimalist Spring Vibes',
-            author: 'Sarah M.',
-            authorAvatar: 'SM',
-            likes: 247,
-            views: 1200,
-            tags: ['minimalist', 'spring', 'neutral'],
-            image:
-                'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400',
-            trending: true,
-          ),
-          const ExploreItem(
-            id: 2,
-            title: 'Bohemian Summer Look',
-            author: 'Emma K.',
-            authorAvatar: 'EK',
-            likes: 189,
-            views: 890,
-            tags: ['bohemian', 'summer', 'flowing'],
-            image:
-                'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
-            trending: false,
-          ),
-          const ExploreItem(
-            id: 3,
-            title: 'Power Dressing Made Easy',
-            author: 'Alex R.',
-            authorAvatar: 'AR',
-            likes: 324,
-            views: 1650,
-            tags: ['professional', 'power', 'structured'],
-            image:
-                'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400',
-            trending: true,
-          ),
-          const ExploreItem(
-            id: 4,
-            title: 'Casual Weekend Comfort',
-            author: 'Mike L.',
-            authorAvatar: 'ML',
-            likes: 156,
-            views: 720,
-            tags: ['casual', 'weekend', 'comfort'],
-            image:
-                'https://images.unsplash.com/photo-1542272454315-7ad85f140fe2?w=400',
-            trending: false,
-          ),
-        ];
-      });
-    } catch (e) {
-      print('❌ Failed to load explore items: $e');
-      // Keep default explore items if backend fails
-    } finally {
-      setState(() {
-        _isLoadingExploreItems = false;
-      });
-    }
-  }
-
-  // Filter explore items based on selected category and search
-  List<ExploreItem> get _filteredItems {
-    return _exploreItems.where((item) {
-      final matchesSearch = item.title.toLowerCase().contains(
-        _searchController.text.toLowerCase(),
-      );
-
-      final matchesCategory =
-          _selectedCategoryId == 'all' ||
-          item.tags.any(
-            (tag) => tag.toLowerCase() == _selectedCategoryId.toLowerCase(),
-          ) ||
-          (_selectedCategoryId == 'trending' && item.trending);
-
-      return matchesSearch && matchesCategory;
-    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else {
-              context.go('/dashboard');
-            }
-          },
-        ),
-        title: Text(
-          'Explore',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: kDarkText,
+      backgroundColor: scheme.background,
+      body: CustomScrollView(
+        slivers: [
+          // Modern App Bar
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: true,
+            pinned: true,
+            backgroundColor: scheme.surface,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [scheme.surface, scheme.surface.withOpacity(0.8)],
+                  ),
+                ),
+              ),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [scheme.primary, scheme.tertiary],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    LucideIcons.compass,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Explore',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            leading: IconButton(
+              icon: Icon(LucideIcons.chevronLeft, color: scheme.onSurface),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/dashboard');
+                }
+              },
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(LucideIcons.search, color: scheme.onSurface),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: Icon(LucideIcons.bell, color: scheme.onSurface),
+                onPressed: () {},
+              ),
+            ],
           ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: FitSyncFeatureIcon(type: 'trends', size: 18, container: 36),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FitSyncFeatureIcon(type: 'social', size: 18, container: 36),
+
+          // Main Content
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Style Categories
+                  _buildStyleCategories(theme, scheme),
+                  const SizedBox(height: 32),
+
+                  // Featured Creators
+                  _buildFeaturedCreators(theme, scheme),
+                  const SizedBox(height: 32),
+
+                  // Content Tabs
+                  _buildContentTabs(theme, scheme),
+                  const SizedBox(height: 24),
+
+                  // Tab Content
+                  SizedBox(
+                    height: 600, // Fixed height for demo
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildTrendingTab(theme, scheme),
+                        _buildFollowingTab(theme, scheme),
+                        _buildNearbyTab(theme, scheme),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadExploreData();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Search Bar
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
+    );
+  }
+
+  Widget _buildStyleCategories(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Style Categories',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _styleCategories.length,
+            itemBuilder: (context, index) {
+              final category = _styleCategories[index];
+              final isSelected = _selectedCategoryIndex == index;
+
+              return GestureDetector(
+                onTap: () => setState(() => _selectedCategoryIndex = index),
+                child: Container(
+                  width: 80,
+                  margin: const EdgeInsets.only(right: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? scheme.primary : scheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color:
+                          isSelected
+                              ? scheme.primary
+                              : scheme.outline.withOpacity(0.3),
+                      width: 1,
                     ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    setState(() {});
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search styles, trends, or creators...',
-                    border: InputBorder.none,
-                    icon: const Icon(LucideIcons.search, color: Colors.black54),
-                    suffixIcon:
-                        _searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: Icon(
-                                LucideIcons.x,
-                                color: Colors.grey.shade600,
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                            : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        category['icon'],
+                        color:
+                            isSelected ? scheme.onPrimary : category['color'],
+                        size: 24,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        category['name'],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color:
+                              isSelected ? scheme.onPrimary : scheme.onSurface,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
-              ),
+              ).animate().fadeIn(delay: (50 * index).ms).slideX(begin: 0.2);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-              // Categories
-              Container(
-                height: 50,
-                margin: const EdgeInsets.only(bottom: 16),
-                child:
-                    _isLoadingCategories
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _categories.length,
-                          itemBuilder: (context, index) {
-                            final category = _categories[index];
-                            final isSelected =
-                                _selectedCategoryId == category.id;
+  Widget _buildFeaturedCreators(ThemeData theme, ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Featured Creators',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _featuredCreators.length,
+            itemBuilder: (context, index) {
+              final creator = _featuredCreators[index];
 
-                            return Container(
-                              margin: const EdgeInsets.only(right: 12),
-                              child: FilterChip(
-                                label: Text(
-                                  '${category.name} (${category.count})',
-                                  style: TextStyle(
-                                    color:
-                                        isSelected ? Colors.white : kDarkText,
-                                    fontWeight: FontWeight.w500,
+              return Container(
+                width: 140,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: scheme.outline.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundImage: NetworkImage(creator['avatar']),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      creator['username'],
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: scheme.onSurface,
+                                          ),
+                                    ),
+                                    if (creator['verified'])
+                                      Icon(
+                                        LucideIcons.checkCircle,
+                                        size: 12,
+                                        color: scheme.primary,
+                                      ),
+                                  ],
+                                ),
+                                Text(
+                                  creator['followers'],
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurface.withOpacity(0.6),
                                   ),
                                 ),
-                                selected: isSelected,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedCategoryId = category.id;
-                                  });
-                                },
-                                backgroundColor: Colors.white,
-                                selectedColor: kPrimaryPink,
-                                checkmarkColor: Colors.white,
-                                elevation: 2,
-                                pressElevation: 4,
-                              ),
-                            );
-                          },
-                        ),
-              ),
-
-              // Trending Styles
-              if (_trendingStyles.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Trending Now',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: kDarkText,
-                        ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () {
-                          // Navigate to trends screen
-                          context.go('/trends');
-                        },
-                        child: Text(
-                          'See All',
-                          style: TextStyle(
-                            color: kPrimaryPink,
-                            fontWeight: FontWeight.w600,
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: () {},
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            side: BorderSide(color: scheme.primary),
+                          ),
+                          child: Text(
+                            'Follow',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  height: 120,
-                  margin: const EdgeInsets.only(bottom: 24),
-                  child:
-                      _isLoadingTrendingStyles
-                          ? const Center(child: CircularProgressIndicator())
-                          : ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: _trendingStyles.length,
-                            itemBuilder: (context, index) {
-                              final style = _trendingStyles[index];
-
-                              return Container(
-                                width: 200,
-                                margin: const EdgeInsets.only(right: 16),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      style.color.withOpacity(0.8),
-                                      style.color.withOpacity(0.6),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: style.color.withOpacity(0.3),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        style.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            LucideIcons.trendingUp,
-                                            color: Colors.white,
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            style.growth,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                ),
-              ],
-
-              // Explore Items
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Discover Styles',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: kDarkText,
-                      ),
-                    ),
-                    Text(
-                      '${_filteredItems.length} items',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              if (_isLoadingExploreItems)
-                const Center(child: CircularProgressIndicator())
-              else if (_filteredItems.isEmpty)
-                _buildEmptyState()
-              else
-                ..._filteredItems
-                    .map((item) => _buildExploreItemCard(item))
-                    .toList(),
-
-              const SizedBox(height: 100), // Bottom padding
-            ],
+              ).animate().fadeIn(delay: (100 * index).ms).slideX(begin: 0.3);
+            },
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildContentTabs(ThemeData theme, ColorScheme scheme) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: scheme.surfaceVariant,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          color: scheme.primary,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        labelColor: scheme.onPrimary,
+        unselectedLabelColor: scheme.onSurfaceVariant,
+        labelStyle: theme.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: theme.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+        tabs: const [
+          Tab(text: 'Trending'),
+          Tab(text: 'Following'),
+          Tab(text: 'Nearby'),
+        ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+  Widget _buildTrendingTab(ThemeData theme, ColorScheme scheme) {
+    return ListView.builder(
+      itemCount: _trendingPosts.length,
+      itemBuilder: (context, index) {
+        final post = _trendingPosts[index];
+        return _buildSocialPost(post, theme, scheme);
+      },
+    );
+  }
+
+  Widget _buildFollowingTab(ThemeData theme, ColorScheme scheme) {
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(LucideIcons.search, size: 48, color: Colors.grey.shade400),
+          Icon(
+            LucideIcons.users,
+            size: 64,
+            color: scheme.onSurface.withOpacity(0.5),
+          ),
           const SizedBox(height: 16),
           Text(
-            'No items found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+            'Follow creators to see their posts',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: scheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your search or category filter',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            textAlign: TextAlign.center,
+            'Discover amazing style inspiration',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurface.withOpacity(0.5),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildExploreItemCard(ExploreItem item) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  Widget _buildNearbyTab(ThemeData theme, ColorScheme scheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            LucideIcons.mapPin,
+            size: 64,
+            color: scheme.onSurface.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Enable location to see nearby posts',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: scheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Find style inspiration in your area',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurface.withOpacity(0.5),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSocialPost(
+    Map<String, dynamic> post,
+    ThemeData theme,
+    ColorScheme scheme,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outline.withOpacity(0.3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-            child: Stack(
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                Image.network(
-                  item.image,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: double.infinity,
-                      height: 200,
-                      color: Colors.grey.shade200,
-                      child: Icon(
-                        LucideIcons.image,
-                        size: 48,
-                        color: Colors.grey.shade400,
-                      ),
-                    );
-                  },
+                CircleAvatar(
+                  radius: 20,
+                  backgroundImage: NetworkImage(post['avatar']),
                 ),
-                if (item.trending)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            post['username'],
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          if (post['verified'])
+                            Icon(
+                              LucideIcons.checkCircle,
+                              size: 14,
+                              color: scheme.primary,
+                            ),
+                        ],
                       ),
-                      decoration: BoxDecoration(
-                        color: kPrimaryPink,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'TRENDING',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                      Text(
+                        post['timeAgo'],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withOpacity(0.6),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    post['style'],
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
+                ),
               ],
             ),
           ),
 
-          // Content
+          // Image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Image.network(
+              post['image'],
+              width: double.infinity,
+              height: 300,
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Actions
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Author info
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: kAvatarBg,
-                      child: Text(
-                        item.authorAvatar,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.author,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            '${item.views} views',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     IconButton(
                       icon: Icon(
                         LucideIcons.heart,
-                        size: 20,
-                        color: Colors.grey.shade600,
+                        color: scheme.onSurface.withOpacity(0.8),
                       ),
-                      onPressed: () {
-                        // Handle like
-                      },
+                      onPressed: () {},
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.messageCircle,
+                        color: scheme.onSurface.withOpacity(0.8),
+                      ),
+                      onPressed: () {},
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.share2,
+                        color: scheme.onSurface.withOpacity(0.8),
+                      ),
+                      onPressed: () {},
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.bookmark,
+                        color: scheme.onSurface.withOpacity(0.8),
+                      ),
+                      onPressed: () {},
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 8),
-
-                // Title
                 Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: kDarkText,
+                  '${post['likes']} likes',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
                   ),
                 ),
-
-                const SizedBox(height: 8),
-
-                // Tags
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children:
-                      item.tags.map((tag) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: kPrimaryPink.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '#$tag',
-                            style: TextStyle(
-                              color: kPrimaryPink,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                const SizedBox(height: 4),
+                RichText(
+                  text: TextSpan(
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurface,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: post['username'],
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const TextSpan(text: ' '),
+                      TextSpan(text: post['caption']),
+                    ],
+                  ),
                 ),
-
-                const SizedBox(height: 8),
-
-                // Stats
-                Row(
-                  children: [
-                    Icon(
-                      LucideIcons.heart,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${item.likes}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      LucideIcons.eye,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${item.views}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  'View all ${post['comments']} comments',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(delay: (200 * post['id']).ms).slideY(begin: 0.3);
   }
 }

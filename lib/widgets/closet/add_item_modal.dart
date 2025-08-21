@@ -8,6 +8,7 @@ import 'package:fitsyncgemini/constants/app_constants.dart';
 import 'package:fitsyncgemini/services/camera_service.dart';
 import 'package:fitsyncgemini/widgets/closet/image_crop_widget.dart';
 import 'package:fitsyncgemini/widgets/closet/manual_tagging_widget.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 
 class AddItemModal extends ConsumerStatefulWidget {
   const AddItemModal({super.key});
@@ -93,8 +94,25 @@ class _AddItemModalState extends ConsumerState<AddItemModal> {
     });
 
     try {
-      // TODO: Implement actual save logic with ML analysis
-      await Future.delayed(const Duration(seconds: 2));
+      final String name =
+          _nameController.text.trim().isEmpty
+              ? 'Clothing Item'
+              : _nameController.text.trim();
+      final String category = _selectedCategory;
+      final String subcategory = 'general';
+      final String color =
+          _selectedColors.isNotEmpty ? _selectedColors.first : 'unknown';
+
+      await MLAPIService.uploadClothingItem(
+        imageFile: _croppedImage!,
+        name: name,
+        category: category,
+        subcategory: subcategory,
+        color: color,
+        brand: _brand,
+        price: _price,
+        tags: _tags,
+      );
 
       if (mounted) {
         Navigator.of(context).pop(true); // Return success

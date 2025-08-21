@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/constants/app_constants.dart';
 import 'package:fitsyncgemini/services/clothing_detection_service.dart';
+import 'package:fitsyncgemini/services/MLAPI_service.dart';
 
 class ManualTaggingWidget extends ConsumerStatefulWidget {
   final File imageFile;
@@ -61,6 +62,15 @@ class _ManualTaggingWidgetState extends ConsumerState<ManualTaggingWidget> {
     });
 
     try {
+      // Require valid auth before hitting protected AI endpoints
+      if (MLAPIService.authToken == null || MLAPIService.authToken!.isEmpty) {
+        setState(() {
+          _isAnalyzing = false;
+          _analysisStatus = 'Please log in to use AI analysis';
+        });
+        return;
+      }
+
       final clothingDetectionService = ref.read(
         clothingDetectionServiceProvider,
       );

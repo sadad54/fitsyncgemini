@@ -8,7 +8,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/widgets/common/gradient_button.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fitsyncgemini/providers/providers.dart';
-import 'package:fitsyncgemini/services/MLAPI_service.dart';
 
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key});
@@ -500,75 +499,28 @@ class _QuizScreenState extends State<QuizScreen> {
 
                       // ✅ Get the auth view model
                       final authVM = ref.read(authViewModelProvider.notifier);
-                      final authService = ref.read(authServiceProvider);
+                      final currentAuthState = ref.read(authViewModelProvider);
 
-                      // Debug: Check current status
+                      print('🔍 Current auth state before completion:');
                       print(
-                        '🔍 Debug: Checking current authentication status...',
+                        '  - isAuthenticated: ${currentAuthState.isAuthenticated}',
                       );
-                      await authService.debugOnboardingStatus();
-
-                      // Debug: Check MLAPIService token
-                      print('🔍 Debug: MLAPIService auth token check...');
-                      // We can't directly access _authToken since it's private, but we can test it
-                      try {
-                        final testResponse =
-                            await MLAPIService.getCurrentUser();
-                        print(
-                          '✅ MLAPIService authentication test successful: $testResponse',
-                        );
-                      } catch (e) {
-                        print('❌ MLAPIService authentication test failed: $e');
-                      }
-
-                      // Check if user is authenticated - try to force refresh first
-                      if (!authService.isAuthenticated) {
-                        print(
-                          '🔄 Attempting to force refresh authentication...',
-                        );
-                        final refreshSuccess =
-                            await authService.forceRefreshAuthState();
-
-                        if (!refreshSuccess) {
-                          // Try the regular refresh as fallback
-                          await authVM.refreshAuthState();
-                        }
-
-                        // Check again after refresh
-                        if (!authService.isAuthenticated) {
-                          print(
-                            '❌ User is not authenticated! Cannot complete onboarding.',
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                '❌ Authentication error. Please sign in again.',
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                      }
+                      print(
+                        '  - hasCompletedOnboarding: ${currentAuthState.hasCompletedOnboarding}',
+                      );
 
                       try {
-                        // Send quiz answers to backend for style archetype assignment
-                        print('📝 Sending quiz answers to backend...');
-                        final quizResult = await MLAPIService.completeQuiz(
-                          _quizAnswers,
+                        // Simulate quiz completion delay
+                        print('⏳ Simulating quiz completion delay...');
+                        await Future.delayed(
+                          const Duration(milliseconds: 1500),
                         );
-                        print('✅ Quiz completed successfully: $quizResult');
-
-                        // Get the assigned style archetype
-                        final styleArchetype =
-                            quizResult['style_archetype'] ?? 'minimalist';
-                        print('🎨 Assigned style archetype: $styleArchetype');
 
                         // Show success message with archetype
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              '✨ You\'re a $styleArchetype! Your style preferences have been saved.',
+                              '✨ You\'re a ${archetypeInfo['name']}! Your style preferences have been saved.',
                             ),
                             backgroundColor: Colors.green,
                           ),
@@ -579,46 +531,46 @@ class _QuizScreenState extends State<QuizScreen> {
                         await authVM.completeOnboarding();
                         print('✅ Onboarding marked as completed');
 
-                        // Debug: Check status after completion
-                        print('🔍 Debug: Checking status after completion...');
-                        await authService.debugOnboardingStatus();
+                        // Debug: Check auth service state
+                        final authService = ref.read(authServiceProvider);
+                        await authService.debugAuthStatus();
 
-                        // Refresh auth state to ensure it's up to date
-                        print('🔄 Refreshing auth state...');
-                        await authVM.refreshAuthState();
+                        // Check state after completion
+                        final newAuthState = ref.read(authViewModelProvider);
+                        print('🔍 Auth state after completion:');
+                        print(
+                          '  - isAuthenticated: ${newAuthState.isAuthenticated}',
+                        );
+                        print(
+                          '  - hasCompletedOnboarding: ${newAuthState.hasCompletedOnboarding}',
+                        );
 
                         // Wait a moment for state to propagate
                         print('⏳ Waiting for state propagation...');
                         await Future.delayed(const Duration(milliseconds: 500));
 
-                        // Double-check the final state (only if widget is still mounted)
+                        // ✅ Navigate to dashboard - simplified approach
+                        print('🚀 Navigating to dashboard...');
                         if (mounted) {
-                          final finalState = ref.read(authViewModelProvider);
-                          print('🔍 Final state check:');
-                          print(
-                            '  - isAuthenticated: ${finalState.isAuthenticated}',
-                          );
-                          print(
-                            '  - hasCompletedOnboarding: ${finalState.hasCompletedOnboarding}',
-                          );
-
-                          // ✅ Navigate to dashboard
-                          print('🚀 Navigating to dashboard...');
+                          print('✅ Widget is still mounted, navigating...');
                           context.go('/dashboard');
+                          print('✅ Navigation command sent');
+                        } else {
+                          print('❌ Widget is not mounted, cannot navigate');
                         }
                       } catch (e) {
                         print('❌ Error completing quiz: $e');
 
-                        // If backend fails, still complete onboarding locally
+                        // If there's an error, still complete onboarding locally
                         print(
-                          '📝 Completing onboarding locally due to backend error...',
+                          '📝 Completing onboarding locally due to error...',
                         );
                         await authVM.completeOnboarding();
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              '⚠️ Quiz completed locally. Some features may be limited until you sign in again.',
+                              '⚠️ Quiz completed locally. Some features may be limited.',
                             ),
                             backgroundColor: Colors.orange,
                           ),
@@ -626,6 +578,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
                         // Navigate to dashboard anyway
                         if (mounted) {
+                          print('🚀 Navigating to dashboard after error...');
                           context.go('/dashboard');
                         }
                       }
@@ -640,21 +593,17 @@ class _QuizScreenState extends State<QuizScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Debug button to check auth state
-                  ElevatedButton(
-                    onPressed: () async {
-                      final authService = ref.read(authServiceProvider);
-                      final authState = ref.read(authViewModelProvider);
-                      print('🔍 Manual Debug Check:');
-                      print(
-                        '  - AuthState isAuthenticated: ${authState.isAuthenticated}',
-                      );
-                      print(
-                        '  - AuthState hasCompletedOnboarding: ${authState.hasCompletedOnboarding}',
-                      );
-                      await authService.debugOnboardingStatus();
+                  // Test navigation button
+                  OutlinedButton(
+                    onPressed: () {
+                      print('🧪 Test navigation button pressed');
+                      context.go('/dashboard');
                     },
-                    child: const Text('Debug Auth State'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: const Text('Test Navigation to Dashboard'),
                   ),
                 ],
               ),

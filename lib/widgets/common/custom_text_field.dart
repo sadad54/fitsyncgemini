@@ -8,6 +8,7 @@ class CustomTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool obscureText;
   final TextInputType keyboardType;
+  final String? labelText;
 
   const CustomTextField({
     super.key,
@@ -17,6 +18,7 @@ class CustomTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.labelText,
   });
 
   @override
@@ -27,29 +29,14 @@ class CustomTextField extends StatelessWidget {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hintText,
-        prefixIcon:
-            prefixIcon != null
-                ? Icon(prefixIcon, color: Colors.grey, size: 20)
-                : null,
+        labelText: labelText,
+        prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
         suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.grey.shade100,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: BorderSide.none,
+        // Use global InputDecorationTheme
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          borderSide: BorderSide(
-            color: Theme.of(context).primaryColor,
-            width: 1,
-          ),
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
       ),
     );
   }

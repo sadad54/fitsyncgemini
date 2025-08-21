@@ -1,37 +1,57 @@
 // lib/constants/app_colors.dart
 import 'package:flutter/material.dart';
 
+// Futuristic, minimal, bold color tokens with light/dark variants
 class AppColors {
-  // Primary Palette
-  static const Color pink = Color(0xFFFF6B9D);
-  static const Color purple = Color(0xFFC44DC7);
-  static const Color teal = Color(0xFF4ECDC4);
-  static const Color blue = Color(0xFF45B7D1);
+  // Dark neutrals
+  static const Color bgDark = Color(0xFF0B0F12);
+  static const Color surfaceDark = Color(0xFF11161A);
+  static const Color surfaceAltDark = Color(0xFF0E1317);
+  static const Color onSurfaceDark = Color(0xFFE6E9EF);
+  static const Color outlineDark = Color(0xFF25313A);
 
-  // Neutral Palette
-  static const Color dark = Color(0xFF2C3E50);
-  static const Color darkShade = Color(0xFF34495E);
-  static const Color lightGrey = Color(0xFFF8F9FA);
-  static const Color border = Color(0xFFE0E0E0);
+  // Brand accents
+  static const Color primary = Color(0xFF00E5FF); // electric cyan
+  static const Color secondary = Color(0xFFFF2D95); // magenta
+  static const Color tertiary = Color(0xFF8A63FF); // violet
 
-  // Accent Palette
-  static const Color gold = Color(0xFFFFD700);
+  // Feedback
+  static const Color success = Color(0xFF21D07A);
+  static const Color warning = Color(0xFFFFC857);
+  static const Color error = Color(0xFFFF5A67);
 
-  // Gradients
-  static const LinearGradient primaryGradient = LinearGradient(
-    colors: [pink, purple, teal],
+  // Light neutrals
+  static const Color bgLight = Color(0xFFF8FAFC);
+  static const Color surfaceLight = Color(0xFFFFFFFF);
+  static const Color surfaceAltLight = Color(0xFFF2F4F7);
+  static const Color onSurfaceLight = Color(0xFF0B1220);
+  static const Color outlineLight = Color(0xFFE3E8EF);
+
+  // Gradients (used sparingly for hero/primary CTA)
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [Color(0xFF00E5FF), Color(0xFF8A63FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient fitsyncGradient = LinearGradient(
-    colors: [pink, teal],
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-  );
+  // ---------------------------------------------------------------------------
+  // Backward-compatibility aliases (to minimize refactors across the app)
+  // ---------------------------------------------------------------------------
+  static const Color pink = primary; // old primary now maps to new primary
+  static const Color purple = secondary;
+  static const Color teal = tertiary;
+  static const Color blue = primary;
 
+  static const Color dark = surfaceDark;
+  static const Color darkShade = surfaceAltDark;
+  static const Color lightGrey = bgLight;
+  static const Color border = outlineLight;
+  static const Color gold = warning;
+
+  static const LinearGradient primaryGradient = accentGradient;
+  static const LinearGradient fitsyncGradient = accentGradient;
   static const LinearGradient quizGradient = LinearGradient(
-    colors: [dark, darkShade],
+    colors: [surfaceDark, surfaceAltDark],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

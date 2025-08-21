@@ -1,7 +1,8 @@
 // lib/config/api_config.dart
 class ApiConfig {
   // Base URL - make this configurable for different environments
-  static const String _baseUrl = 'http://127.0.0.1:8000';
+  // When running on Android Emulator, the host machine is accessible via 10.0.2.2
+  static const String _baseUrl = 'http://10.0.2.2:8000';
 
   // Development/Production URL switching
   static String get baseUrl {

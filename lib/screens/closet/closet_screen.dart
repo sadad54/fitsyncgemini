@@ -261,7 +261,13 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
             snap: true,
             leading: IconButton(
               icon: const Icon(LucideIcons.chevronLeft, color: Colors.black87),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/dashboard');
+                }
+              },
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

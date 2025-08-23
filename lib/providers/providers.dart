@@ -20,6 +20,7 @@ import 'package:fitsyncgemini/viewmodels/trends_viewmodel.dart';
 import 'package:fitsyncgemini/viewmodels/try_on_viewmodel.dart';
 import 'package:fitsyncgemini/viewmodels/nearby_viewmodel.dart';
 import 'package:fitsyncgemini/viewmodels/settings_viewmodel.dart';
+import 'package:fitsyncgemini/viewmodels/community_viewmodel.dart';
 import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
 
 // Service Providers
@@ -89,6 +90,12 @@ final settingsViewModelProvider =
     StateNotifierProvider<SettingsViewModel, SettingsModel>((ref) {
       return SettingsViewModel();
     });
+
+final communityViewModelProvider = ChangeNotifierProvider<CommunityViewModel>((
+  ref,
+) {
+  return CommunityViewModel();
+});
 
 // Auth ViewModel Provider
 final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((

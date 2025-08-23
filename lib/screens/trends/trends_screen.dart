@@ -1,10 +1,12 @@
-// lib/screens/trends/trends_screen_new.dart
+// lib/screens/trends/trends_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:fitsyncgemini/services/location_service.dart';
+import 'package:fitsyncgemini/constants/app_colors.dart';
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});
@@ -42,65 +44,116 @@ class _TrendsScreenState extends State<TrendsScreen> {
   void _openFilterSheet() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Filters',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Scope',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildScopeButton('global', 'Global', LucideIcons.globe),
-                  const SizedBox(width: 8),
-                  _buildScopeButton('local', _localLabel, LucideIcons.mapPin),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Timeframe',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildTimeframeButton('day', 'Today'),
-                  const SizedBox(width: 8),
-                  _buildTimeframeButton('week', 'This Week'),
-                  const SizedBox(width: 8),
-                  _buildTimeframeButton('month', 'This Month'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B9D),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  child: const Text('Apply'),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+
+                Text(
+                  'Filter Trends',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                Text(
+                  'Scope',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildScopeButton(
+                        'global',
+                        'Global',
+                        LucideIcons.globe,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildScopeButton(
+                        'local',
+                        _localLabel,
+                        LucideIcons.mapPin,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                Text(
+                  'Timeframe',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _buildTimeframeButton('day', 'Today')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildTimeframeButton('week', 'This Week')),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildTimeframeButton('month', 'This Month'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Apply Filters',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         );
       },
@@ -111,7 +164,6 @@ class _TrendsScreenState extends State<TrendsScreen> {
     try {
       final hasPerm = await _locationService.hasLocationPermission();
       if (!hasPerm) {
-        // Attempt quick request path
         await _locationService.getCurrentLocationWithGeolocator();
       }
       final loc = await _locationService.getCurrentLocationWithGeolocator();
@@ -134,17 +186,30 @@ class _TrendsScreenState extends State<TrendsScreen> {
         setState(() => _selectedScope = id);
         _loadTrendsData();
       },
-      icon: Icon(icon, size: 14),
+      icon: Icon(icon, size: 16),
       label: Text(
         label,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? const Color(0xFFFF6B9D) : Colors.white,
-        foregroundColor: isSelected ? Colors.white : Colors.black,
+        backgroundColor:
+            isSelected
+                ? AppColors.primary
+                : Theme.of(context).colorScheme.surface,
+        foregroundColor:
+            isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
         elevation: isSelected ? 2 : 0,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color:
+                isSelected
+                    ? AppColors.primary
+                    : Theme.of(context).colorScheme.outline,
+            width: 1,
+          ),
+        ),
       ),
     );
   }
@@ -156,22 +221,34 @@ class _TrendsScreenState extends State<TrendsScreen> {
         setState(() => _selectedTimeframe = id);
         _loadTrendsData();
       },
-      icon: const Icon(LucideIcons.calendar, size: 14),
+      icon: const Icon(LucideIcons.calendar, size: 16),
       label: Text(
         label,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? const Color(0xFF4ECDC4) : Colors.white,
-        foregroundColor: isSelected ? Colors.white : Colors.black,
+        backgroundColor:
+            isSelected
+                ? AppColors.secondary
+                : Theme.of(context).colorScheme.surface,
+        foregroundColor:
+            isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
         elevation: isSelected ? 2 : 0,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color:
+                isSelected
+                    ? AppColors.secondary
+                    : Theme.of(context).colorScheme.outline,
+            width: 1,
+          ),
+        ),
       ),
     );
   }
 
-  // (removed duplicate)
   // Load all trends data from backend
   Future<void> _loadTrendsData() async {
     await Future.wait([
@@ -341,241 +418,317 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/dashboard');
-            }
-          },
-        ),
-        title: const Text(
-          'Trends',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.filter),
-            onPressed: _openFilterSheet,
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(78),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(left: 16, right: 16, bottom: 6),
-                child: Text(
-                  "What's hot in fashion",
-                  style: TextStyle(color: Colors.black54, fontSize: 12),
+      backgroundColor: scheme.background,
+      body: CustomScrollView(
+        slivers: [
+          // Modern App Bar with back button
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: true,
+            pinned: true,
+            backgroundColor: scheme.surface,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+              icon: Icon(LucideIcons.arrowLeft, color: scheme.onSurface),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/dashboard');
+                }
+              },
+            ),
+            title: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.secondary],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    LucideIcons.trendingUp,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
+                const SizedBox(width: 12),
+                Text(
+                  'Trends',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    _buildScopeButton('global', 'Global', LucideIcons.globe),
-                    const SizedBox(width: 8),
-                    _buildScopeButton('local', _localLabel, LucideIcons.mapPin),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
-                child: Row(
-                  children: [
-                    _buildTimeframeButton('day', 'Today'),
-                    const SizedBox(width: 8),
-                    _buildTimeframeButton('week', 'This Week'),
-                    const SizedBox(width: 8),
-                    _buildTimeframeButton('month', 'This Month'),
-                  ],
-                ),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(LucideIcons.filter, color: scheme.onSurface),
+                onPressed: _openFilterSheet,
               ),
             ],
-          ),
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadTrendsData();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Timeframe Selector
-              Container(
-                margin: const EdgeInsets.all(16),
-                child: Row(
-                  children:
-                      _timeframes.map((timeframe) {
-                        final isSelected =
-                            _selectedTimeframe == timeframe['id'];
-                        return Expanded(
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedTimeframe = timeframe['id'];
-                                });
-                                _loadTrendsData(); // Reload data for new timeframe
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    isSelected ? Colors.black : Colors.white,
-                                foregroundColor:
-                                    isSelected ? Colors.white : Colors.black,
-                                elevation: isSelected ? 2 : 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: Text(
-                                timeframe['label'],
-                                style: TextStyle(
-                                  fontWeight:
-                                      isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [scheme.surface, scheme.surface.withOpacity(0.8)],
+                  ),
                 ),
               ),
+            ),
+          ),
 
-              // Trending Now Section
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+          // Filter Section
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Trending Now',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "What's hot in fashion",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: scheme.onSurface.withOpacity(0.7),
                     ),
-                    Text(
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildScopeButton(
+                          'global',
+                          'Global',
+                          LucideIcons.globe,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildScopeButton(
+                          'local',
+                          _localLabel,
+                          LucideIcons.mapPin,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildTimeframeButton('day', 'Today')),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTimeframeButton('week', 'This Week'),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTimeframeButton('month', 'This Month'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0),
+          ),
+
+          // Trending Now Section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Trending Now',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
                       '${_trendingNow.length} trends',
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: AppColors.primary,
                         fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms, delay: 100.ms),
+          ),
+
+          // Trending Cards
+          if (_isLoadingTrendingNow)
+            const SliverToBoxAdapter(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
                 ),
               ),
+            )
+          else if (_trendingNow.isEmpty)
+            SliverToBoxAdapter(
+              child: _buildEmptyState('No trending styles found'),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildTrendCard(_trendingNow[index])
+                    .animate()
+                    .fadeIn(duration: 300.ms, delay: (200 + index * 100).ms)
+                    .slideX(begin: 0.1, end: 0),
+                childCount: _trendingNow.length,
+              ),
+            ),
 
-              if (_isLoadingTrendingNow)
-                const Center(child: CircularProgressIndicator())
-              else if (_trendingNow.isEmpty)
-                _buildEmptyState('No trending styles found')
-              else
-                ..._trendingNow.map((trend) => _buildTrendCard(trend)).toList(),
+          // Fashion Insights Section
+          SliverToBoxAdapter(
+            child: _buildFashionInsightsCard().animate().fadeIn(
+              duration: 300.ms,
+              delay: 400.ms,
+            ),
+          ),
 
-              const SizedBox(height: 24),
-
-              // Fashion Insights Section (React parity)
-              _buildFashionInsightsCard(),
-
-              const SizedBox(height: 24),
-
-              // Influencer Spotlight Section
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Influencer Spotlight',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+          // Influencer Spotlight Section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Influencer Spotlight',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                    Text(
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
                       '${_influencerSpotlight.length} influencers',
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: AppColors.secondary,
                         fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms, delay: 500.ms),
+          ),
+
+          // Influencer Cards
+          if (_isLoadingInfluencerSpotlight)
+            const SliverToBoxAdapter(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
                 ),
               ),
+            )
+          else if (_influencerSpotlight.isEmpty)
+            SliverToBoxAdapter(
+              child: _buildEmptyState('No influencers to spotlight'),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) =>
+                    _buildInfluencerCard(_influencerSpotlight[index])
+                        .animate()
+                        .fadeIn(duration: 300.ms, delay: (600 + index * 100).ms)
+                        .slideX(begin: 0.1, end: 0),
+                childCount: _influencerSpotlight.length,
+              ),
+            ),
 
-              if (_isLoadingInfluencerSpotlight)
-                const Center(child: CircularProgressIndicator())
-              else if (_influencerSpotlight.isEmpty)
-                _buildEmptyState('No influencers to spotlight')
-              else
-                ..._influencerSpotlight
-                    .map((influencer) => _buildInfluencerCard(influencer))
-                    .toList(),
-
-              const SizedBox(height: 100), // Bottom padding
-            ],
-          ),
-        ),
+          // Bottom padding
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
       ),
     );
   }
 
   Widget _buildEmptyState(String message) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: scheme.outline.withOpacity(0.2), width: 1),
       ),
       child: Column(
         children: [
-          FitSyncFeatureIcon(type: 'trends', size: 32, container: 60),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              LucideIcons.trendingUp,
+              size: 32,
+              color: AppColors.primary,
+            ),
+          ),
           const SizedBox(height: 16),
           Text(
             message,
-            style: TextStyle(
-              fontSize: 18,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: scheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Check back later for the latest trends',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: scheme.onSurface.withOpacity(0.5),
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -584,48 +737,110 @@ class _TrendsScreenState extends State<TrendsScreen> {
   }
 
   Widget _buildTrendCard(Map<String, dynamic> trend) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final isUpTrend = trend['trend'] == 'up';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: scheme.outline.withOpacity(0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-            child: Image.network(
-              trend['image'],
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
+          // Image with gradient overlay
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                child: Image.network(
+                  trend['image'],
                   width: double.infinity,
                   height: 200,
-                  color: Colors.grey.shade200,
-                  child: Icon(
-                    LucideIcons.image,
-                    size: 48,
-                    color: Colors.grey.shade400,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            scheme.surface,
+                            scheme.surface.withOpacity(0.8),
+                          ],
+                        ),
+                      ),
+                      child: Icon(
+                        LucideIcons.image,
+                        size: 48,
+                        color: scheme.onSurface.withOpacity(0.3),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Gradient overlay
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.3),
+                      ],
+                    ),
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+              // Trend indicator
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isUpTrend ? AppColors.success : AppColors.error,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isUpTrend
+                            ? LucideIcons.trendingUp
+                            : LucideIcons.trendingDown,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        trend['growth'],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
 
           // Content
@@ -634,54 +849,12 @@ class _TrendsScreenState extends State<TrendsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with title and growth
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        trend['title'],
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            isUpTrend
-                                ? Colors.green.withOpacity(0.1)
-                                : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isUpTrend
-                                ? LucideIcons.trendingUp
-                                : LucideIcons.trendingDown,
-                            size: 16,
-                            color: isUpTrend ? Colors.green : Colors.red,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            trend['growth'],
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isUpTrend ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                // Title
+                Text(
+                  trend['title'],
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
 
                 const SizedBox(height: 8),
@@ -689,9 +862,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
                 // Description
                 Text(
                   trend['description'],
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: scheme.onSurface.withOpacity(0.7),
                     height: 1.4,
                   ),
                 ),
@@ -706,19 +878,19 @@ class _TrendsScreenState extends State<TrendsScreen> {
                       (trend['tags'] as List).map((tag) {
                         return Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 10,
+                            vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             '#$tag',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade700,
-                              fontWeight: FontWeight.w500,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         );
@@ -733,28 +905,26 @@ class _TrendsScreenState extends State<TrendsScreen> {
                     Icon(
                       LucideIcons.users,
                       size: 16,
-                      color: Colors.grey.shade600,
+                      color: scheme.onSurface.withOpacity(0.5),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${trend['engagement']} engagement',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Icon(
                       LucideIcons.image,
                       size: 16,
-                      color: Colors.grey.shade600,
+                      color: scheme.onSurface.withOpacity(0.5),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${trend['posts']} posts',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -767,9 +937,10 @@ class _TrendsScreenState extends State<TrendsScreen> {
     );
   }
 
-  // Old card builder removed; replaced by React-styled section
-
   Widget _buildFashionInsightsCard() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -778,43 +949,77 @@ class _TrendsScreenState extends State<TrendsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Fashion Insights',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
               Text(
-                '${_fashionInsights.length} insights',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                'Fashion Insights',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.tertiary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_fashionInsights.length} insights',
+                  style: TextStyle(
+                    color: AppColors.tertiary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           if (_isLoadingFashionInsights)
             const Center(child: CircularProgressIndicator())
           else if (_fashionInsights.isEmpty)
             _buildEmptyState('No fashion insights available')
           else
-            Card(
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
-                        Icon(
-                          LucideIcons.trendingUp,
-                          color: Color(0xFF4ECDC4),
-                          size: 20,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.tertiary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            LucideIcons.barChart3,
+                            color: AppColors.tertiary,
+                            size: 18,
+                          ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         Text(
                           'Fashion Insights',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     ..._fashionInsights.asMap().entries.map((entry) {
                       final insight = entry.value;
                       final category = (insight['category'] ?? '').toString();
@@ -823,35 +1028,45 @@ class _TrendsScreenState extends State<TrendsScreen> {
                       final declining =
                           (insight['declining'] as List).cast<String>();
                       return Container(
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            left: BorderSide(
-                              color: Color(0xFFFF6B9D),
-                              width: 4,
-                            ),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2),
+                            width: 1,
                           ),
                         ),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.only(left: 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               _capitalize(category),
-                              style: const TextStyle(
+                              style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             // Trending
-                            const Text(
-                              'Trending:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
+                            Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.trendingUp,
+                                  size: 16,
+                                  color: AppColors.success,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Trending:',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurface.withOpacity(0.7),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             Wrap(
                               spacing: 6,
                               runSpacing: 6,
@@ -860,23 +1075,35 @@ class _TrendsScreenState extends State<TrendsScreen> {
                                       .map(
                                         (t) => _chip(
                                           t,
-                                          bg: const Color(0xFFE6F4EA),
-                                          fg: const Color(0xFF166534),
+                                          bg: AppColors.success.withOpacity(
+                                            0.1,
+                                          ),
+                                          fg: AppColors.success,
                                           icon: LucideIcons.trendingUp,
                                         ),
                                       )
                                       .toList(),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             // Declining
-                            const Text(
-                              'Declining:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
+                            Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.trendingDown,
+                                  size: 16,
+                                  color: AppColors.error,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Declining:',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurface.withOpacity(0.7),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             Wrap(
                               spacing: 6,
                               runSpacing: 6,
@@ -885,8 +1112,8 @@ class _TrendsScreenState extends State<TrendsScreen> {
                                       .map(
                                         (d) => _chip(
                                           d,
-                                          bg: const Color(0xFFFEE2E2),
-                                          fg: const Color(0xFF991B1B),
+                                          bg: AppColors.error.withOpacity(0.1),
+                                          fg: AppColors.error,
                                           icon: LucideIcons.trendingDown,
                                         ),
                                       )
@@ -920,7 +1147,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -941,46 +1168,73 @@ class _TrendsScreenState extends State<TrendsScreen> {
   }
 
   Widget _buildInfluencerCard(Map<String, dynamic> influencer) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: scheme.outline.withOpacity(0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Recent post image
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-            child: Image.network(
-              influencer['recentPost'],
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
+          // Recent post image with gradient overlay
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                child: Image.network(
+                  influencer['recentPost'],
                   width: double.infinity,
                   height: 200,
-                  color: Colors.grey.shade200,
-                  child: Icon(
-                    LucideIcons.image,
-                    size: 48,
-                    color: Colors.grey.shade400,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            scheme.surface,
+                            scheme.surface.withOpacity(0.8),
+                          ],
+                        ),
+                      ),
+                      child: Icon(
+                        LucideIcons.image,
+                        size: 48,
+                        color: scheme.onSurface.withOpacity(0.3),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Gradient overlay
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.3),
+                      ],
+                    ),
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
 
           // Content
@@ -989,12 +1243,29 @@ class _TrendsScreenState extends State<TrendsScreen> {
             child: Row(
               children: [
                 // Avatar
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: NetworkImage(influencer['avatar']),
-                  onBackgroundImageError: (exception, stackTrace) {
-                    // Handle error
-                  },
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.secondary, width: 2),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.network(
+                      influencer['avatar'],
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: scheme.surfaceVariant,
+                          child: Icon(
+                            LucideIcons.user,
+                            color: scheme.onSurface.withOpacity(0.5),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
 
                 const SizedBox(width: 12),
@@ -1006,24 +1277,21 @@ class _TrendsScreenState extends State<TrendsScreen> {
                     children: [
                       Text(
                         influencer['name'],
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
                         influencer['handle'],
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: scheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         influencer['specialty'],
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -1036,32 +1304,28 @@ class _TrendsScreenState extends State<TrendsScreen> {
                   children: [
                     Text(
                       influencer['followers'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
                       'followers',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       influencer['engagement'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.success,
                       ),
                     ),
                     Text(
                       'engagement',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -1079,15 +1343,22 @@ class _TrendsScreenState extends State<TrendsScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       // Follow influencer
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Following ${influencer['name']}'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
                     },
                     icon: const Icon(LucideIcons.plus, size: 16),
                     label: const Text('Follow'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
@@ -1095,12 +1366,20 @@ class _TrendsScreenState extends State<TrendsScreen> {
                 IconButton(
                   onPressed: () {
                     // View profile
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Opening ${influencer['name']}\'s profile',
+                        ),
+                        backgroundColor: AppColors.secondary,
+                      ),
+                    );
                   },
                   icon: const Icon(LucideIcons.externalLink),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.grey.shade100,
+                    backgroundColor: scheme.surfaceVariant,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),

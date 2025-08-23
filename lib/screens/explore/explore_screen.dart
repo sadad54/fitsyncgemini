@@ -18,12 +18,12 @@ class _ExploreScreenState extends State<ExploreScreen>
   // Placeholder data
   final List<Map<String, dynamic>> _trendingPosts = [
     {
-      'id': '1',
+      'id': 1,
       'username': 'fashion_forward',
       'avatar':
-          'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+          'https://api.dicebear.com/7.x/avataaars/png?seed=fashion_forward',
       'image':
-          'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
+          'https://via.placeholder.com/400x300/FF6B9D/FFFFFF?text=Minimalist+Look',
       'caption':
           'Minimalist office look that speaks volumes ✨ #minimalist #officewear #style',
       'likes': 1247,
@@ -33,12 +33,12 @@ class _ExploreScreenState extends State<ExploreScreen>
       'verified': true,
     },
     {
-      'id': '2',
+      'id': 2,
       'username': 'street_style_mike',
       'avatar':
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+          'https://api.dicebear.com/7.x/avataaars/png?seed=street_style_mike',
       'image':
-          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400',
+          'https://via.placeholder.com/400x300/4ECDC4/FFFFFF?text=Streetwear+Vibes',
       'caption':
           'Urban vibes for the city streets 🏙️ #streetwear #urban #fashion',
       'likes': 892,
@@ -48,12 +48,11 @@ class _ExploreScreenState extends State<ExploreScreen>
       'verified': false,
     },
     {
-      'id': '3',
+      'id': 3,
       'username': 'boho_emma',
-      'avatar':
-          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+      'avatar': 'https://api.dicebear.com/7.x/avataaars/png?seed=boho_emma',
       'image':
-          'https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?w=400',
+          'https://via.placeholder.com/400x300/9B59B6/FFFFFF?text=Boho+Spirit',
       'caption': 'Summer boho vibes ☀️ #boho #summer #chic',
       'likes': 567,
       'comments': 23,
@@ -75,8 +74,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   final List<Map<String, dynamic>> _featuredCreators = [
     {
       'username': 'style_sarah',
-      'avatar':
-          'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+      'avatar': 'https://api.dicebear.com/7.x/avataaars/png?seed=style_sarah',
       'followers': '12.5K',
       'posts': 234,
       'verified': true,
@@ -84,8 +82,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     },
     {
       'username': 'fashion_mike',
-      'avatar':
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      'avatar': 'https://api.dicebear.com/7.x/avataaars/png?seed=fashion_mike',
       'followers': '8.9K',
       'posts': 156,
       'verified': false,
@@ -93,8 +90,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     },
     {
       'username': 'trendy_emma',
-      'avatar':
-          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+      'avatar': 'https://api.dicebear.com/7.x/avataaars/png?seed=trendy_emma',
       'followers': '15.2K',
       'posts': 312,
       'verified': true,
@@ -120,7 +116,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     final scheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: scheme.background,
+      backgroundColor: scheme.surface,
       body: CustomScrollView(
         slivers: [
           // Modern App Bar
@@ -137,7 +133,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [scheme.surface, scheme.surface.withOpacity(0.8)],
+                    colors: [
+                      scheme.surface,
+                      scheme.surface.withValues(alpha: 0.8),
+                    ],
                   ),
                 ),
               ),
@@ -320,7 +319,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               final creator = _featuredCreators[index];
 
               return Container(
-                width: 140,
+                width: 160,
                 margin: const EdgeInsets.only(right: 16),
                 decoration: BoxDecoration(
                   color: scheme.surface,
@@ -331,42 +330,53 @@ class _ExploreScreenState extends State<ExploreScreen>
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
                           CircleAvatar(
-                            radius: 20,
+                            radius: 18,
                             backgroundImage: NetworkImage(creator['avatar']),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      creator['username'],
-                                      style: theme.textTheme.labelMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: scheme.onSurface,
-                                          ),
+                                    Flexible(
+                                      child: Text(
+                                        creator['username'],
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: scheme.onSurface,
+                                            ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    if (creator['verified'])
+                                    if (creator['verified']) ...[
+                                      const SizedBox(width: 2),
                                       Icon(
                                         LucideIcons.checkCircle,
                                         size: 12,
                                         color: scheme.primary,
                                       ),
+                                    ],
                                   ],
                                 ),
                                 Text(
                                   creator['followers'],
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color: scheme.onSurface.withOpacity(0.6),
+                                    color: scheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    fontSize: 10,
                                   ),
                                 ),
                               ],
@@ -374,20 +384,22 @@ class _ExploreScreenState extends State<ExploreScreen>
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
                           onPressed: () {},
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 6),
                             side: BorderSide(color: scheme.primary),
+                            minimumSize: const Size(0, 28),
                           ),
                           child: Text(
                             'Follow',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: scheme.primary,
                               fontWeight: FontWeight.w600,
+                              fontSize: 11,
                             ),
                           ),
                         ),
@@ -507,161 +519,169 @@ class _ExploreScreenState extends State<ExploreScreen>
     ColorScheme scheme,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.outline.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: NetworkImage(post['avatar']),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: scheme.outline.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: NetworkImage(post['avatar']),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Row(
+                            children: [
+                              Text(
+                                post['username'],
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.onSurface,
+                                ),
+                              ),
+                              if (post['verified'])
+                                Icon(
+                                  LucideIcons.checkCircle,
+                                  size: 14,
+                                  color: scheme.primary,
+                                ),
+                            ],
+                          ),
                           Text(
-                            post['username'],
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
+                            post['timeAgo'],
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurface.withOpacity(0.6),
                             ),
                           ),
-                          if (post['verified'])
-                            Icon(
-                              LucideIcons.checkCircle,
-                              size: 14,
-                              color: scheme.primary,
-                            ),
                         ],
                       ),
-                      Text(
-                        post['timeAgo'],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        post['style'],
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurface.withOpacity(0.6),
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    post['style'],
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Image
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: Image.network(
-              post['image'],
-              width: double.infinity,
-              height: 300,
-              fit: BoxFit.cover,
-            ),
-          ),
-
-          // Actions
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        LucideIcons.heart,
-                        color: scheme.onSurface.withOpacity(0.8),
-                      ),
-                      onPressed: () {},
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        LucideIcons.messageCircle,
-                        color: scheme.onSurface.withOpacity(0.8),
-                      ),
-                      onPressed: () {},
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        LucideIcons.share2,
-                        color: scheme.onSurface.withOpacity(0.8),
-                      ),
-                      onPressed: () {},
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: Icon(
-                        LucideIcons.bookmark,
-                        color: scheme.onSurface.withOpacity(0.8),
-                      ),
-                      onPressed: () {},
                     ),
                   ],
                 ),
-                Text(
-                  '${post['likes']} likes',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
+              ),
+
+              // Image
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
-                const SizedBox(height: 4),
-                RichText(
-                  text: TextSpan(
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface,
+                child: Image.network(
+                  post['image'],
+                  width: double.infinity,
+                  height: 300,
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+              // Actions
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            LucideIcons.heart,
+                            color: scheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                          onPressed: () {},
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            LucideIcons.messageCircle,
+                            color: scheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                          onPressed: () {},
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            LucideIcons.share2,
+                            color: scheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                          onPressed: () {},
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: Icon(
+                            LucideIcons.bookmark,
+                            color: scheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                          onPressed: () {},
+                        ),
+                      ],
                     ),
-                    children: [
-                      TextSpan(
-                        text: post['username'],
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                    Text(
+                      '${post['likes']} likes',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
                       ),
-                      const TextSpan(text: ' '),
-                      TextSpan(text: post['caption']),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurface,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: post['username'],
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const TextSpan(text: ' '),
+                          TextSpan(text: post['caption']),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'View all ${post['comments']} comments',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'View all ${post['comments']} comments',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ).animate().fadeIn(delay: (200 * post['id']).ms).slideY(begin: 0.3);
+        )
+        .animate()
+        .fadeIn(delay: (200 * (post['id'] as int)).ms)
+        .slideY(begin: 0.3);
   }
 }

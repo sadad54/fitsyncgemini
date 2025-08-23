@@ -12,6 +12,7 @@ import 'package:fitsyncgemini/screens/trends/trends_screen.dart';
 import 'package:fitsyncgemini/screens/nearby/nearby_screen.dart';
 import 'package:fitsyncgemini/screens/try_on/try_on_screen.dart';
 import 'package:fitsyncgemini/screens/explore/explore_screen.dart';
+import 'package:fitsyncgemini/screens/community/community_screen.dart';
 import 'package:fitsyncgemini/screens/settings/settings_screen.dart';
 import 'package:fitsyncgemini/screens/outfit_suggestions/outfit_suggestions_screen.dart';
 import 'package:fitsyncgemini/screens/profile/profile_screen.dart';
@@ -125,6 +126,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/explore',
         builder: (context, state) => const ExploreScreen(),
+      ),
+      GoRoute(
+        path: '/community',
+        builder: (context, state) => const CommunityScreen(),
       ),
       GoRoute(
         path: '/settings',

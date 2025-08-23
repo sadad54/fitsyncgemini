@@ -5,6 +5,9 @@ import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:fitsyncgemini/models/nearby_model.dart';
 import 'package:fitsyncgemini/utils/map_utils.dart';
 import 'package:fitsyncgemini/constants/app_colors.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fitsyncgemini/data/dummy_nearby_data.dart';
 
 class NearbyMapWidget extends StatefulWidget {
   final LocationInfo userLocation;
@@ -26,7 +29,8 @@ class NearbyMapWidget extends StatefulWidget {
   State<NearbyMapWidget> createState() => _NearbyMapWidgetState();
 }
 
-class _NearbyMapWidgetState extends State<NearbyMapWidget> {
+class _NearbyMapWidgetState extends State<NearbyMapWidget>
+    with TickerProviderStateMixin {
   late GoogleMapController _mapController;
   bool _mapReady = false;
   Set<Marker> _markers = {};
@@ -38,14 +42,21 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
   BitmapDescriptor? _personIcon;
   BitmapDescriptor? _eventIcon;
   BitmapDescriptor? _hotspotIcon;
+  BitmapDescriptor? _storyIcon;
 
   // Filter toggles
   bool _showPeople = true;
   bool _showEvents = true;
   bool _showHotspots = true;
+  bool _showPosts = true;
 
   // Keep last data to re-apply filters without refetch
   Map<String, dynamic>? _lastMapData;
+
+  // SnapMap-inspired features
+  bool _showHeatmap = false;
+  bool _showLiveActivity = true;
+  String _selectedView = 'map'; // 'map' or 'satellite'z
 
   @override
   void initState() {
@@ -74,57 +85,25 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
         _error = null;
       });
 
-      // Get combined nearby data for map overlay
-      Map<String, dynamic> mapData;
-      // If using demo (non-live) location, skip API and use mock data directly
-      if (!widget.userLocation.isLive) {
-        debugPrint('Using demo mock data for Nearby map');
-        mapData = _getMockMapData();
-      } else {
-        try {
-          mapData = await MLAPIService.getNearbyMap(
-            lat: widget.userLocation.latitude,
-            lng: widget.userLocation.longitude,
-            radiusKm: widget.radiusKm,
-            limitPeople: 10,
-            limitEvents: 10,
-            limitHotspots: 10,
-          );
-        } catch (e) {
-          debugPrint('API call failed, using mock data: $e');
-          // Use mock data as fallback
-          mapData = _getMockMapData();
-        }
-      }
+      // Use dummy data for now - easy to replace with real API when backend is ready
+      Map<String, dynamic> mapData = DummyNearbyData.getDummyMapData();
 
       if (!mounted) return;
       _lastMapData = mapData;
 
-      // Ensure icons loaded once
-      if (_userIcon == null) {
-        _userIcon = await MapUtils.createIconMarker(
-          icon: Icons.my_location,
-          backgroundColor: AppColors.blue,
-        );
-      }
-      if (_personIcon == null) {
-        _personIcon = await MapUtils.createIconMarker(
-          icon: Icons.person_pin_circle,
-          backgroundColor: AppColors.teal,
-        );
-      }
-      if (_eventIcon == null) {
-        _eventIcon = await MapUtils.createIconMarker(
-          icon: Icons.event,
-          backgroundColor: AppColors.purple,
-        );
-      }
-      if (_hotspotIcon == null) {
-        _hotspotIcon = await MapUtils.createIconMarker(
-          icon: Icons.local_fire_department,
-          backgroundColor: AppColors.pink,
-        );
-      }
+      // Use default markers for now to avoid icon creation issues
+      _userIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueBlue,
+      );
+      _personIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueGreen,
+      );
+      _eventIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueOrange,
+      );
+      _hotspotIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueRed,
+      );
 
       if (!mounted) return;
       // Build markers with current filter state
@@ -148,13 +127,16 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
       if (_showPeople && mapData['people'] != null) {
         for (var personData in mapData['people']) {
           final person = NearbyPerson(
-            id: personData['id'],
-            name: personData['name'],
-            avatar: personData['avatar'],
-            distance: personData['distance'],
-            style: personData['style'],
-            mutualConnections: personData['mutualConnections'],
-            recentOutfit: personData['recentOutfit'],
+            id: personData['id']?.toString() ?? 'unknown',
+            name: personData['name']?.toString() ?? 'Unknown User',
+            avatar:
+                personData['avatar']?.toString() ??
+                'https://api.dicebear.com/7.x/avataaars/png?seed=default',
+            distance: personData['distance']?.toString() ?? 'Unknown distance',
+            style: personData['style']?.toString() ?? 'Unknown style',
+            mutualConnections: personData['mutualConnections'] ?? 0,
+            recentOutfit:
+                personData['recentOutfit']?.toString() ?? 'No recent outfit',
             isOnline: personData['isOnline'] ?? false,
           );
 
@@ -176,14 +158,18 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
       if (_showEvents && mapData['events'] != null) {
         for (var eventData in mapData['events']) {
           final event = NearbyEvent(
-            id: eventData['id'],
-            title: eventData['title'],
-            location: eventData['location'],
-            distance: eventData['distance'],
-            date: eventData['date'],
-            attendees: eventData['attendees'],
-            image: eventData['image'],
-            category: eventData['category'],
+            id: eventData['id']?.toString() ?? 'unknown',
+            title: eventData['title']?.toString() ?? 'Unknown Event',
+            location: eventData['location']?.toString() ?? 'Unknown Location',
+            distance: eventData['distance']?.toString() ?? 'Unknown distance',
+            date:
+                eventData['date']?.toString() ??
+                DateTime.now().toIso8601String(),
+            attendees: eventData['attendees'] ?? 0,
+            image:
+                eventData['image']?.toString() ??
+                'https://via.placeholder.com/300x200/FF6B9D/FFFFFF?text=Event',
+            category: eventData['category']?.toString() ?? 'General',
           );
 
           newMarkers.add(
@@ -204,15 +190,15 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
       if (_showHotspots && mapData['hotspots'] != null) {
         for (var hotspotData in mapData['hotspots']) {
           final hotspot = NearbyHotspot(
-            id: hotspotData['id'],
-            name: hotspotData['name'],
-            type: hotspotData['type'],
-            distance: hotspotData['distance'],
+            id: hotspotData['id']?.toString() ?? 'unknown',
+            name: hotspotData['name']?.toString() ?? 'Unknown Hotspot',
+            type: hotspotData['type']?.toString() ?? 'Unknown Type',
+            distance: hotspotData['distance']?.toString() ?? 'Unknown distance',
             popularStyles: List<String>.from(
               hotspotData['popularStyles'] ?? [],
             ),
-            rating: hotspotData['rating'].toDouble(),
-            checkIns: hotspotData['checkIns'],
+            rating: (hotspotData['rating'] ?? 0.0).toDouble(),
+            checkIns: hotspotData['checkIns'] ?? 0,
           );
 
           newMarkers.add(
@@ -250,9 +236,10 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
         } catch (_) {}
       }
     } catch (e) {
+      debugPrint('Error loading nearby data: $e');
       setState(() {
         _isLoading = false;
-        _error = e.toString();
+        _error = 'Failed to load map data: ${e.toString()}';
       });
     }
   }
@@ -270,7 +257,9 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
           widget.userLocation.latitude,
           widget.userLocation.longitude,
         ),
-        icon: _userIcon ?? BitmapDescriptor.defaultMarker,
+        icon:
+            _userIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         infoWindow: InfoWindow(
           title: 'Your Location',
           snippet: widget.userLocation.fullLocation,
@@ -282,12 +271,22 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
       for (var personData in _lastMapData!['people']) {
         filtered.add(
           Marker(
-            markerId: MarkerId('person_${personData['id']}'),
-            position: LatLng(personData['latitude'], personData['longitude']),
-            icon: _personIcon ?? BitmapDescriptor.defaultMarker,
+            markerId: MarkerId(
+              'person_${personData['id']?.toString() ?? 'unknown'}',
+            ),
+            position: LatLng(
+              personData['latitude'] ?? 0.0,
+              personData['longitude'] ?? 0.0,
+            ),
+            icon:
+                _personIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen,
+                ),
             infoWindow: InfoWindow(
-              title: personData['name'],
-              snippet: '${personData['style']} • ${personData['distance']}',
+              title: personData['name']?.toString() ?? 'Unknown User',
+              snippet:
+                  '${personData['style']?.toString() ?? 'Unknown'} • ${personData['distance']?.toString() ?? 'Unknown'}',
             ),
           ),
         );
@@ -298,12 +297,22 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
       for (var eventData in _lastMapData!['events']) {
         filtered.add(
           Marker(
-            markerId: MarkerId('event_${eventData['id']}'),
-            position: LatLng(eventData['latitude'], eventData['longitude']),
-            icon: _eventIcon ?? BitmapDescriptor.defaultMarker,
+            markerId: MarkerId(
+              'event_${eventData['id']?.toString() ?? 'unknown'}',
+            ),
+            position: LatLng(
+              eventData['latitude'] ?? 0.0,
+              eventData['longitude'] ?? 0.0,
+            ),
+            icon:
+                _eventIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueOrange,
+                ),
             infoWindow: InfoWindow(
-              title: eventData['title'],
-              snippet: '${eventData['category']} • ${eventData['distance']}',
+              title: eventData['title']?.toString() ?? 'Unknown Event',
+              snippet:
+                  '${eventData['category']?.toString() ?? 'Unknown'} • ${eventData['distance']?.toString() ?? 'Unknown'}',
             ),
           ),
         );
@@ -314,12 +323,20 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
       for (var hotspotData in _lastMapData!['hotspots']) {
         filtered.add(
           Marker(
-            markerId: MarkerId('hotspot_${hotspotData['id']}'),
-            position: LatLng(hotspotData['latitude'], hotspotData['longitude']),
-            icon: _hotspotIcon ?? BitmapDescriptor.defaultMarker,
+            markerId: MarkerId(
+              'hotspot_${hotspotData['id']?.toString() ?? 'unknown'}',
+            ),
+            position: LatLng(
+              hotspotData['latitude'] ?? 0.0,
+              hotspotData['longitude'] ?? 0.0,
+            ),
+            icon:
+                _hotspotIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
             infoWindow: InfoWindow(
-              title: hotspotData['name'],
-              snippet: '${hotspotData['type']} • ${hotspotData['rating']}⭐',
+              title: hotspotData['name']?.toString() ?? 'Unknown Hotspot',
+              snippet:
+                  '${hotspotData['type']?.toString() ?? 'Unknown'} • ${(hotspotData['rating'] ?? 0.0).toStringAsFixed(1)}⭐',
             ),
           ),
         );
@@ -582,39 +599,76 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Container(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading map...'),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load map data',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadNearbyData,
-              child: const Text('Retry'),
-            ),
-          ],
+      return Container(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.alertCircle, size: 48, color: AppColors.error),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load map data',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadNearbyData,
+                icon: const Icon(LucideIcons.refreshCw, size: 16),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return Stack(
       children: [
+        // Main Map
         GoogleMap(
           onMapCreated: (GoogleMapController controller) {
             _mapController = controller;
@@ -629,9 +683,11 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
           ),
           markers: _markers,
           myLocationEnabled: true,
-          myLocationButtonEnabled: true,
-          zoomControlsEnabled: true,
+          myLocationButtonEnabled: false, // We'll add custom button
+          zoomControlsEnabled: false, // We'll add custom controls
           mapToolbarEnabled: false,
+          mapType:
+              _selectedView == 'satellite' ? MapType.satellite : MapType.normal,
           circles: {
             Circle(
               circleId: const CircleId('search_radius'),
@@ -640,152 +696,275 @@ class _NearbyMapWidgetState extends State<NearbyMapWidget> {
                 widget.userLocation.longitude,
               ),
               radius: widget.radiusKm * 1000, // Convert km to meters
-              fillColor: AppColors.pink.withOpacity(0.1),
-              strokeColor: AppColors.pink.withOpacity(0.3),
+              fillColor: AppColors.primary.withOpacity(0.1),
+              strokeColor: AppColors.primary.withOpacity(0.3),
               strokeWidth: 2,
             ),
           },
         ),
+
+        // SnapMap-inspired Filter Bar
         Positioned(
           top: 16,
           left: 16,
           right: 16,
-          child: Material(
-            elevation: 2,
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    FilterChip(
-                      label: const Text('People'),
-                      selected: _showPeople,
-                      onSelected: (v) {
-                        setState(() => _showPeople = v);
-                        _applyFilters();
-                      },
-                      selectedColor: AppColors.teal.withOpacity(0.15),
-                      checkmarkColor: AppColors.teal,
-                    ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Events'),
-                      selected: _showEvents,
-                      onSelected: (v) {
-                        setState(() => _showEvents = v);
-                        _applyFilters();
-                      },
-                      selectedColor: AppColors.purple.withOpacity(0.15),
-                      checkmarkColor: AppColors.purple,
-                    ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Hotspots'),
-                      selected: _showHotspots,
-                      onSelected: (v) {
-                        setState(() => _showHotspots = v);
-                        _applyFilters();
-                      },
-                      selectedColor: AppColors.pink.withOpacity(0.15),
-                      checkmarkColor: AppColors.pink,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          child: _buildFilterBar(
+            theme,
+            scheme,
+          ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.2, end: 0),
+        ),
+
+        // Custom Map Controls
+        Positioned(
+          right: 16,
+          bottom: 100,
+          child: Column(
+                children: [
+                  _buildMapControlButton(
+                    icon: LucideIcons.plus,
+                    onPressed:
+                        () =>
+                            _mapController.animateCamera(CameraUpdate.zoomIn()),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildMapControlButton(
+                    icon: LucideIcons.minus,
+                    onPressed:
+                        () => _mapController.animateCamera(
+                          CameraUpdate.zoomOut(),
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildMapControlButton(
+                    icon: LucideIcons.navigation,
+                    onPressed:
+                        () => _mapController.animateCamera(
+                          CameraUpdate.newLatLng(
+                            LatLng(
+                              widget.userLocation.latitude,
+                              widget.userLocation.longitude,
+                            ),
+                          ),
+                        ),
+                  ),
+                ],
+              )
+              .animate()
+              .fadeIn(duration: 300.ms, delay: 200.ms)
+              .slideX(begin: 0.2, end: 0),
+        ),
+
+        // Live Activity Indicator
+        if (_showLiveActivity)
+          Positioned(
+            top: 100,
+            left: 16,
+            child: _buildLiveActivityIndicator(
+              theme,
+              scheme,
+            ).animate().fadeIn(duration: 300.ms, delay: 400.ms),
           ),
+
+        // Heatmap Toggle
+        Positioned(
+          bottom: 16,
+          left: 16,
+          child: _buildHeatmapToggle(
+            theme,
+            scheme,
+          ).animate().fadeIn(duration: 300.ms, delay: 600.ms),
         ),
       ],
     );
   }
 
-  /// Generate mock map data for testing when API is not available
-  Map<String, dynamic> _getMockMapData() {
-    final userLat = widget.userLocation.latitude;
-    final userLng = widget.userLocation.longitude;
-
-    return {
-      'people': [
-        {
-          'id': 'mock_person_1',
-          'name': 'Alex Chen',
-          'avatar': 'https://api.dicebear.com/7.x/avataaars/png?seed=alex',
-          'distance': '0.3 km',
-          'style': 'Minimalist',
-          'mutualConnections': 5,
-          'recentOutfit': 'Black turtleneck, dark jeans',
-          'isOnline': true,
-          'latitude': userLat + 0.002,
-          'longitude': userLng + 0.001,
-        },
-        {
-          'id': 'mock_person_2',
-          'name': 'Jamie Rodriguez',
-          'avatar': 'https://api.dicebear.com/7.x/avataaars/png?seed=jamie',
-          'distance': '0.8 km',
-          'style': 'Streetwear',
-          'mutualConnections': 2,
-          'recentOutfit': 'Oversized hoodie, cargo pants',
-          'isOnline': false,
-          'latitude': userLat - 0.003,
-          'longitude': userLng + 0.004,
-        },
-      ],
-      'events': [
-        {
-          'id': 'mock_event_1',
-          'title': 'Sustainable Fashion Show',
-          'location': 'Fashion District',
-          'distance': '1.2 km',
-          'date': DateTime.now().add(const Duration(days: 2)).toIso8601String(),
-          'attendees': 85,
-          'image':
-              'https://via.placeholder.com/300x200/FF6B9D/FFFFFF?text=Fashion+Show',
-          'category': 'Fashion Show',
-          'latitude': userLat + 0.005,
-          'longitude': userLng - 0.002,
-        },
-        {
-          'id': 'mock_event_2',
-          'title': 'Vintage Pop-up Market',
-          'location': 'Downtown Plaza',
-          'distance': '2.1 km',
-          'date': DateTime.now().add(const Duration(days: 5)).toIso8601String(),
-          'attendees': 120,
-          'image':
-              'https://via.placeholder.com/300x200/4ECDC4/FFFFFF?text=Vintage+Market',
-          'category': 'Shopping',
-          'latitude': userLat - 0.008,
-          'longitude': userLng - 0.006,
-        },
-      ],
-      'hotspots': [
-        {
-          'id': 'mock_hotspot_1',
-          'name': 'Urban Style Gallery',
-          'type': 'Boutique',
-          'distance': '0.7 km',
-          'popularStyles': ['streetwear', 'contemporary'],
-          'rating': 4.8,
-          'checkIns': 156,
-          'latitude': userLat - 0.001,
-          'longitude': userLng + 0.003,
-        },
-        {
-          'id': 'mock_hotspot_2',
-          'name': 'Minimalist Corner',
-          'type': 'Concept Store',
-          'distance': '1.5 km',
-          'popularStyles': ['minimalist', 'sustainable'],
-          'rating': 4.6,
-          'checkIns': 89,
-          'latitude': userLat + 0.006,
-          'longitude': userLng + 0.007,
-        },
-      ],
-    };
+  Widget _buildFilterBar(ThemeData theme, ColorScheme scheme) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildFilterChip('People', _showPeople, AppColors.secondary, () {
+            setState(() => _showPeople = !_showPeople);
+            _applyFilters();
+          }),
+          const SizedBox(width: 8),
+          _buildFilterChip('Events', _showEvents, AppColors.tertiary, () {
+            setState(() => _showEvents = !_showEvents);
+            _applyFilters();
+          }),
+          const SizedBox(width: 8),
+          _buildFilterChip('Hotspots', _showHotspots, AppColors.success, () {
+            setState(() => _showHotspots = !_showHotspots);
+            _applyFilters();
+          }),
+          const SizedBox(width: 8),
+          _buildFilterChip('Posts', _showPosts, AppColors.warning, () {
+            setState(() => _showPosts = !_showPosts);
+            _applyFilters();
+          }),
+        ],
+      ),
+    );
   }
+
+  Widget _buildFilterChip(
+    String label,
+    bool selected,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? color : scheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? color : scheme.outline.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : color,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Icon(icon, color: scheme.onSurface, size: 20),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLiveActivityIndicator(ThemeData theme, ColorScheme scheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.success.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.success.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'LIVE',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeatmapToggle(ThemeData theme, ColorScheme scheme) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() => _showHeatmap = !_showHeatmap);
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Icon(
+            _showHeatmap ? LucideIcons.layers : LucideIcons.layers,
+            color: _showHeatmap ? AppColors.primary : scheme.onSurface,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // TODO: Replace with real API call when backend is ready
+  // Example:
+  // Map<String, dynamic> mapData = await MLAPIService.getNearbyMap(
+  //   lat: widget.userLocation.latitude,
+  //   lng: widget.userLocation.longitude,
+  //   radiusKm: widget.radiusKm,
+  //   limitPeople: 10,
+  //   limitEvents: 10,
+  //   limitHotspots: 10,
+  // );
 }

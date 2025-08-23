@@ -8,6 +8,7 @@ import 'package:fitsyncgemini/widgets/closet/closet_filter_widget.dart';
 import 'package:fitsyncgemini/services/MLAPI_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
 class ClosetScreen extends ConsumerStatefulWidget {
@@ -25,18 +26,37 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   List<String> _selectedItems = [];
   ClosetFilter _currentFilter = const ClosetFilter();
 
+  // Pagination variables
+  int _itemsPerPage = 12;
+  bool _showAllItems = false;
+
   // Backend integration variables
   List<Map<String, dynamic>> _backendItems = [];
   bool _isLoadingItems = false;
   bool _isLoadingStats = false;
 
   final List<Map<String, dynamic>> _categories = [
-    {'id': 'all', 'name': 'All', 'count': 0},
-    {'id': 'tops', 'name': 'Tops', 'count': 0},
-    {'id': 'bottoms', 'name': 'Bottoms', 'count': 0},
-    {'id': 'dresses', 'name': 'Dresses', 'count': 0},
-    {'id': 'outerwear', 'name': 'Outerwear', 'count': 0},
-    {'id': 'shoes', 'name': 'Shoes', 'count': 0},
+    {'id': 'all', 'name': 'All', 'count': 0, 'icon': LucideIcons.grid},
+    {'id': 'tops', 'name': 'Tops', 'count': 0, 'icon': LucideIcons.shirt},
+    {
+      'id': 'bottoms',
+      'name': 'Bottoms',
+      'count': 0,
+      'icon': LucideIcons.briefcase,
+    },
+    {'id': 'dresses', 'name': 'Dresses', 'count': 0, 'icon': LucideIcons.user},
+    {
+      'id': 'outerwear',
+      'name': 'Outerwear',
+      'count': 0,
+      'icon': LucideIcons.zap,
+    },
+    {
+      'id': 'shoes',
+      'name': 'Shoes',
+      'count': 0,
+      'icon': LucideIcons.footprints,
+    },
   ];
 
   Map<String, dynamic> _closetStats = {
@@ -187,7 +207,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -209,6 +229,16 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
     }).toList();
   }
 
+  List<dynamic> get _displayedItems {
+    if (_showAllItems) {
+      return _filteredItems;
+    }
+    return _filteredItems.take(_itemsPerPage).toList();
+  }
+
+  bool get _hasMoreItems =>
+      _filteredItems.length > _itemsPerPage && !_showAllItems;
+
   void _toggleItemSelection(String itemId) {
     setState(() {
       if (_selectedItems.contains(itemId)) {
@@ -216,6 +246,12 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
       } else {
         _selectedItems.add(itemId);
       }
+    });
+  }
+
+  void _toggleShowAllItems() {
+    setState(() {
+      _showAllItems = !_showAllItems;
     });
   }
 
@@ -248,19 +284,23 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.lightGrey,
+      backgroundColor: scheme.background,
       body: CustomScrollView(
         slivers: [
-          // App Bar
+          // Stunning App Bar with Wardrobe branding
           SliverAppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            pinned: true,
+            expandedHeight: 140,
             floating: true,
-            snap: true,
+            pinned: true,
+            backgroundColor: scheme.surface,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
             leading: IconButton(
-              icon: const Icon(LucideIcons.chevronLeft, color: Colors.black87),
+              icon: Icon(LucideIcons.arrowLeft, color: scheme.onSurface),
               onPressed: () {
                 if (context.canPop()) {
                   context.pop();
@@ -269,20 +309,51 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                 }
               },
             ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            title: Row(
               children: [
-                const Text(
-                  'My Closet',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.secondary],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    LucideIcons.shirt,
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
-                Text(
-                  '${_closetStats['totalItems']} items',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My Wardrobe',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      '${_closetStats['totalItems']} items',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurface.withOpacity(0.7),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -290,7 +361,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               IconButton(
                 icon: Icon(
                   _isGridView ? LucideIcons.list : LucideIcons.grid,
-                  color: Colors.black87,
+                  color: scheme.onSurface,
                 ),
                 onPressed: () {
                   setState(() {
@@ -299,96 +370,116 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                 },
               ),
               IconButton(
-                icon: const Icon(LucideIcons.filter, color: Colors.black87),
+                icon: Icon(LucideIcons.filter, color: scheme.onSurface),
                 onPressed: () => _showFilterModal(),
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: AppColors.fitsyncGradient,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showAddItemModal(),
-                    icon: const Icon(
-                      LucideIcons.plus,
-                      size: 16,
-                      color: Colors.white,
+              Container(
+                margin: const EdgeInsets.only(right: 16),
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddItemModal(),
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Add Item'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    label: const Text(
-                      'Add Item',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                    elevation: 0,
                   ),
                 ),
               ),
             ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
-              child: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'Search your closet...',
-                    prefixIcon: const Icon(
-                      LucideIcons.search,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [scheme.surface, scheme.surface.withOpacity(0.8)],
                   ),
                 ),
               ),
             ),
           ),
 
-          // Content
+          // Search Bar
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Closet Overview
-                  _buildClosetOverview(),
-                  const SizedBox(height: 24),
-
-                  // Categories
-                  _buildCategories(),
-                  const SizedBox(height: 24),
-
-                  // Selected Items Action Bar
-                  if (_selectedItems.isNotEmpty) ...[
-                    _buildSelectedItemsBar(),
-                    const SizedBox(height: 24),
-                  ],
-                ],
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
               ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Search your wardrobe...',
+                  prefixIcon: Icon(
+                    LucideIcons.search,
+                    color: scheme.onSurface.withOpacity(0.5),
+                    size: 20,
+                  ),
+                  filled: true,
+                  fillColor: scheme.surfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0),
+          ),
+
+          // Closet Overview Stats
+          SliverToBoxAdapter(
+            child: _buildClosetOverview().animate().fadeIn(
+              duration: 300.ms,
+              delay: 100.ms,
             ),
           ),
 
+          // Categories
+          SliverToBoxAdapter(
+            child: _buildCategories().animate().fadeIn(
+              duration: 300.ms,
+              delay: 200.ms,
+            ),
+          ),
+
+          // Selected Items Action Bar
+          if (_selectedItems.isNotEmpty)
+            SliverToBoxAdapter(
+              child: _buildSelectedItemsBar().animate().fadeIn(
+                duration: 300.ms,
+                delay: 300.ms,
+              ),
+            ),
+
           // Items Grid/List
           _isGridView ? _buildItemsGrid() : _buildItemsList(),
+
+          // View More Button
+          if (_hasMoreItems)
+            SliverToBoxAdapter(
+              child: _buildViewMoreButton().animate().fadeIn(
+                duration: 300.ms,
+                delay: 600.ms,
+              ),
+            ),
 
           // Recent Activity & Add Item CTA
           SliverToBoxAdapter(
@@ -397,9 +488,15 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               child: Column(
                 children: [
                   const SizedBox(height: 24),
-                  _buildRecentActivity(),
+                  _buildRecentActivity().animate().fadeIn(
+                    duration: 300.ms,
+                    delay: 400.ms,
+                  ),
                   const SizedBox(height: 24),
-                  _buildAddItemCTA(),
+                  _buildAddItemCTA().animate().fadeIn(
+                    duration: 300.ms,
+                    delay: 500.ms,
+                  ),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -411,101 +508,164 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   }
 
   Widget _buildClosetOverview() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            AppColors.pink.withOpacity(0.1),
-            AppColors.teal.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.1),
+            AppColors.secondary.withOpacity(0.05),
           ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.transparent),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
       ),
-      child: Row(
-        children: [
-          // Left Column: Quick Stats
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Quick Stats',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // Left Column: Quick Stats
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          LucideIcons.barChart3,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Quick Stats',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                _buildStatRow(
-                  'Recently added:',
-                  '${_closetStats['recentlyAdded']}',
-                ),
-                const SizedBox(height: 4),
-                _buildStatRow(
-                  'Total value:',
-                  '\$${_closetStats['totalValue']}',
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  _buildStatRow(
+                    'Recently added:',
+                    '${_closetStats['recentlyAdded']}',
+                    LucideIcons.plus,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildStatRow(
+                    'Total value:',
+                    '\$${_closetStats['totalValue']}',
+                    LucideIcons.dollarSign,
+                  ),
+                ],
+              ),
             ),
-          ),
-          // Right Column: Insights
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Insights',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+            // Right Column: Insights
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          LucideIcons.lightbulb,
+                          color: AppColors.secondary,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Insights',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Most worn:',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
-                Text(
-                  _closetStats['mostWorn'],
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.teal,
+                  const SizedBox(height: 16),
+                  Text(
+                    'Most worn:',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurface.withOpacity(0.7),
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    _closetStats['mostWorn'],
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatRow(String label, String value) {
+  Widget _buildStatRow(String label, String value, IconData icon) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-        ),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        Icon(icon, size: 16, color: scheme.onSurface.withOpacity(0.5)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              Text(
+                value,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
   Widget _buildCategories() {
-    return SizedBox(
-      height: 40,
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: 80,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _categories.length,
@@ -513,29 +673,67 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
           final category = _categories[index];
           final isSelected = _selectedCategory == category['id'];
 
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text('${category['name']} (${category['count']})'),
-              selected: isSelected,
-              onSelected: (selected) {
+          return Container(
+            margin: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () {
                 setState(() {
                   _selectedCategory = category['id'];
+                  _showAllItems =
+                      false; // Reset pagination when category changes
                 });
-                // Reload data when category changes
                 _loadWardrobeData();
               },
-              selectedColor: AppColors.pink,
-              backgroundColor: Colors.white,
-              checkmarkColor: Colors.white,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected ? AppColors.pink : Colors.grey.shade300,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 80,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color:
+                        isSelected
+                            ? AppColors.primary
+                            : scheme.outline.withOpacity(0.2),
+                    width: 1,
+                  ),
+                  boxShadow:
+                      isSelected
+                          ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                          : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      category['icon'],
+                      size: 24,
+                      color: isSelected ? Colors.white : scheme.onSurface,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      category['name'],
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : scheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      '${category['count']}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color:
+                            isSelected
+                                ? Colors.white.withOpacity(0.8)
+                                : scheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -546,21 +744,33 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   }
 
   Widget _buildSelectedItemsBar() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.pink,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.secondary],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               '${_selectedItems.length} items selected',
-              style: const TextStyle(
+              style: theme.textTheme.titleMedium?.copyWith(
                 color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -569,58 +779,83 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextButton.icon(
-                  onPressed: () {},
-                  icon: const FitSyncFeatureIcon(
-                    type: 'outfit',
-                    size: 14,
-                    container: 24,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Creating outfit...'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    LucideIcons.shirt,
+                    size: 16,
+                    color: AppColors.primary,
                   ),
                   label: const Text(
                     'Create Outfit',
-                    style: TextStyle(color: AppColors.pink, fontSize: 12),
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 12,
+                      vertical: 8,
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Container(
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
-                  onPressed: () {},
-                  icon: const FitSyncFeatureIcon(
-                    type: 'social',
-                    size: 14,
-                    container: 24,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Sharing items...'),
+                        backgroundColor: AppColors.secondary,
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    LucideIcons.share2,
+                    size: 18,
+                    color: AppColors.secondary,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Container(
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
-                  onPressed: () {},
-                  icon: const FitSyncFeatureIcon(
-                    type: 'virtual',
-                    size: 14,
-                    container: 24,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Opening virtual try-on...'),
+                        backgroundColor: AppColors.tertiary,
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    LucideIcons.camera,
+                    size: 18,
+                    color: AppColors.tertiary,
                   ),
                 ),
               ),
@@ -632,6 +867,9 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
   }
 
   Widget _buildItemsGrid() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverGrid(
@@ -642,7 +880,7 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
           mainAxisSpacing: 16,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
-          final item = _filteredItems[index];
+          final item = _displayedItems[index];
           final itemId =
               _backendItems.isNotEmpty
                   ? item['id'].toString()
@@ -666,20 +904,23 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 border:
                     isSelected
-                        ? Border.all(color: AppColors.pink, width: 2)
-                        : null,
+                        ? Border.all(color: AppColors.primary, width: 2)
+                        : Border.all(
+                          color: scheme.outline.withOpacity(0.2),
+                          width: 1,
+                        ),
                 boxShadow: [
                   BoxShadow(
                     color:
                         isSelected
-                            ? AppColors.pink.withOpacity(0.2)
+                            ? AppColors.primary.withOpacity(0.2)
                             : Colors.black.withOpacity(0.05),
-                    blurRadius: isSelected ? 10 : 5,
-                    offset: const Offset(0, 2),
+                    blurRadius: isSelected ? 12 : 8,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -690,9 +931,9 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: scheme.surfaceVariant,
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
+                          top: Radius.circular(20),
                         ),
                       ),
                       child: Stack(
@@ -701,33 +942,40 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                             width: double.infinity,
                             height: double.infinity,
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
+                              color: scheme.surfaceVariant,
                               borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
+                                top: Radius.circular(20),
                               ),
                             ),
                             child: Icon(
                               LucideIcons.image,
-                              color: Colors.grey.shade400,
+                              color: scheme.onSurface.withOpacity(0.3),
                               size: 40,
                             ),
                           ),
                           if (isSelected)
                             Positioned(
-                              top: 8,
-                              right: 8,
+                              top: 12,
+                              right: 12,
                               child: Container(
-                                width: 24,
-                                height: 24,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.pink,
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
                                   shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: const Center(
                                   child: Icon(
                                     Icons.check,
                                     color: Colors.white,
-                                    size: 16,
+                                    size: 18,
                                   ),
                                 ),
                               ),
@@ -738,50 +986,55 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                   ),
                   // Content
                   Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           itemName,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          itemCategory,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            itemCategory,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurface.withOpacity(0.7),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
-                            Expanded(
-                              child: Row(
-                                children:
-                                    itemColors.take(3).map((color) {
-                                      return Container(
-                                        width: 12,
-                                        height: 12,
-                                        margin: const EdgeInsets.only(right: 4),
-                                        decoration: BoxDecoration(
-                                          color: _getColorFromString(color),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.grey.shade300,
-                                            width: 1,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                              ),
-                            ),
+                            ...itemColors.take(3).map((color) {
+                              return Container(
+                                width: 16,
+                                height: 16,
+                                margin: const EdgeInsets.only(right: 6),
+                                decoration: BoxDecoration(
+                                  color: _getColorFromString(color),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: scheme.outline.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                           ],
                         ),
                       ],
@@ -791,17 +1044,20 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               ),
             ),
           );
-        }, childCount: _filteredItems.length),
+        }, childCount: _displayedItems.length),
       ),
     );
   }
 
   Widget _buildItemsList() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          final item = _filteredItems[index];
+          final item = _displayedItems[index];
           final itemId =
               _backendItems.isNotEmpty
                   ? item['id'].toString()
@@ -820,28 +1076,31 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                   : (item as ClothingItem).colors;
           final isSelected = _selectedItems.contains(itemId);
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
             child: GestureDetector(
               onTap: () => _toggleItemSelection(itemId),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(20),
                   border:
                       isSelected
-                          ? Border.all(color: AppColors.pink, width: 2)
-                          : null,
+                          ? Border.all(color: AppColors.primary, width: 2)
+                          : Border.all(
+                            color: scheme.outline.withOpacity(0.2),
+                            width: 1,
+                          ),
                   boxShadow: [
                     BoxShadow(
                       color:
                           isSelected
-                              ? AppColors.pink.withOpacity(0.2)
+                              ? AppColors.primary.withOpacity(0.2)
                               : Colors.black.withOpacity(0.05),
-                      blurRadius: isSelected ? 10 : 5,
-                      offset: const Offset(0, 2),
+                      blurRadius: isSelected ? 12 : 8,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
@@ -849,16 +1108,16 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                   children: [
                     // Image
                     Container(
-                      width: 64,
-                      height: 64,
+                      width: 72,
+                      height: 72,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
+                        color: scheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
                         LucideIcons.image,
-                        color: Colors.grey.shade400,
-                        size: 24,
+                        color: scheme.onSurface.withOpacity(0.3),
+                        size: 28,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -869,34 +1128,44 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                         children: [
                           Text(
                             itemName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            itemCategory,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceVariant,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              itemCategory,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurface.withOpacity(0.7),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
                               ...itemColors.take(3).map((color) {
                                 return Container(
-                                  width: 12,
-                                  height: 12,
-                                  margin: const EdgeInsets.only(right: 4),
+                                  width: 16,
+                                  height: 16,
+                                  margin: const EdgeInsets.only(right: 6),
                                   decoration: BoxDecoration(
                                     color: _getColorFromString(color),
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.grey.shade300,
+                                      color: scheme.outline.withOpacity(0.3),
                                       width: 1,
                                     ),
                                   ),
@@ -912,26 +1181,34 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
                       children: [
                         if (isSelected)
                           Container(
-                            width: 20,
-                            height: 20,
+                            width: 24,
+                            height: 24,
                             margin: const EdgeInsets.only(right: 8),
-                            decoration: const BoxDecoration(
-                              color: AppColors.pink,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: const Center(
                               child: Icon(
                                 Icons.check,
                                 color: Colors.white,
-                                size: 14,
+                                size: 16,
                               ),
                             ),
                           ),
                         IconButton(
                           onPressed: () {},
-                          icon: const Icon(
+                          icon: Icon(
                             LucideIcons.moreHorizontal,
                             size: 20,
+                            color: scheme.onSurface,
                           ),
                           constraints: const BoxConstraints(),
                           padding: EdgeInsets.zero,
@@ -943,17 +1220,21 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
               ),
             ),
           );
-        }, childCount: _filteredItems.length),
+        }, childCount: _displayedItems.length),
       ),
     );
   }
 
   Widget _buildRecentActivity() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outline.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -965,17 +1246,32 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(LucideIcons.calendar, size: 20, color: AppColors.teal),
-              SizedBox(width: 8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.tertiary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  LucideIcons.activity,
+                  color: AppColors.tertiary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
               Text(
                 'Recent Activity',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Column(
             children:
                 _recentActivity.map((activity) {
@@ -985,66 +1281,65 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
 
                   switch (activity['type']) {
                     case 'add':
-                      iconColor = Colors.green.shade600;
-                      bgColor = Colors.green.shade100;
+                      iconColor = AppColors.success;
+                      bgColor = AppColors.success.withOpacity(0.1);
                       icon = LucideIcons.plus;
                       break;
                     case 'wear':
-                      iconColor = Colors.blue.shade600;
-                      bgColor = Colors.blue.shade100;
+                      iconColor = AppColors.primary;
+                      bgColor = AppColors.primary.withOpacity(0.1);
                       icon = LucideIcons.trendingUp;
                       break;
                     case 'like':
-                      iconColor = Colors.pink.shade600;
-                      bgColor = Colors.pink.shade100;
+                      iconColor = AppColors.secondary;
+                      bgColor = AppColors.secondary.withOpacity(0.1);
                       icon = LucideIcons.heart;
                       break;
                     default:
-                      iconColor = Colors.grey.shade600;
-                      bgColor = Colors.grey.shade100;
+                      iconColor = scheme.onSurface.withOpacity(0.5);
+                      bgColor = scheme.surfaceVariant;
                       icon = LucideIcons.activity;
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: Row(
                       children: [
                         Container(
-                          width: 32,
-                          height: 32,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: bgColor,
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(icon, size: 16, color: iconColor),
+                          child: Icon(icon, size: 18, color: iconColor),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               RichText(
                                 text: TextSpan(
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: scheme.onSurface,
                                   ),
                                   children: [
                                     TextSpan(
                                       text: activity['action'],
                                       style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     TextSpan(text: ' ${activity['item']}'),
                                   ],
                                 ),
                               ),
+                              const SizedBox(height: 4),
                               Text(
                                 activity['time'],
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade500,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurface.withOpacity(0.5),
                                 ),
                               ),
                             ],
@@ -1092,79 +1387,114 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen>
     );
   }
 
+  Widget _buildViewMoreButton() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: ElevatedButton.icon(
+        onPressed: _toggleShowAllItems,
+        icon: Icon(
+          _showAllItems ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+          size: 20,
+        ),
+        label: Text(
+          _showAllItems
+              ? 'Show Less'
+              : 'View More (${_filteredItems.length - _itemsPerPage} more items)',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: scheme.surface,
+          foregroundColor: scheme.onSurface,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+          side: BorderSide(color: scheme.outline.withOpacity(0.2), width: 1),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAddItemCTA() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.shade300,
-          width: 2,
-          style: BorderStyle.solid,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withOpacity(0.1),
+            AppColors.secondary.withOpacity(0.05),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
       ),
       child: Column(
         children: [
           Container(
-            width: 64,
-            height: 64,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              color: AppColors.pink.withOpacity(0.1),
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.secondary],
+              ),
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: const Icon(
               LucideIcons.camera,
-              size: 32,
-              color: AppColors.pink,
+              size: 36,
+              color: Colors.white,
             ),
           ),
-          const SizedBox(height: 12),
-          const Text(
+          const SizedBox(height: 16),
+          Text(
             'Add New Items',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Take photos of your clothes to grow your digital closet',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            'Take photos of your clothes to grow your digital wardrobe',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurface.withOpacity(0.7),
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          Container(
+          const SizedBox(height: 20),
+          SizedBox(
             width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: AppColors.fitsyncGradient,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            height: 52,
             child: ElevatedButton.icon(
               onPressed: () => _showAddItemModal(),
-              icon: const Icon(
-                LucideIcons.camera,
-                size: 16,
-                color: Colors.white,
-              ),
+              icon: const Icon(LucideIcons.camera, size: 20),
               label: const Text(
                 'Take Photo',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                elevation: 0,
               ),
             ),
           ),

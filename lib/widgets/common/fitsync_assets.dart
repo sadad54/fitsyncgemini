@@ -6,7 +6,7 @@ import 'package:fitsyncgemini/constants/app_colors.dart';
 /// Centralized FitSync-themed icon badges to ensure consistent assets across the app
 class FitSyncFeatureIcon extends StatelessWidget {
   final String
-  type; // camera, wardrobe, ai, weather, outfit, social, trends, virtual
+  type; // camera, wardrobe, ai, weather, outfit, social, trends, virtual, community
   final double size; // icon glyph size
   final double container; // outer badge size
 
@@ -51,6 +51,8 @@ class FitSyncFeatureIcon extends StatelessWidget {
         return _IconToken(LucideIcons.trendingUp, AppColors.teal);
       case 'virtual':
         return _IconToken(LucideIcons.play, AppColors.pink);
+      case 'community':
+        return _IconToken(LucideIcons.users, AppColors.pink);
       default:
         return _IconToken(LucideIcons.circle, AppColors.dark);
     }

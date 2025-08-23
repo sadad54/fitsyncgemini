@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fitsyncgemini/constants/app_colors.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -99,6 +100,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Map<String, dynamic>> _quickActions = [
     {'icon': LucideIcons.search, 'title': 'Find Items', 'color': Colors.indigo},
+    {'icon': LucideIcons.plus, 'title': 'Add New Item', 'color': Colors.green},
     {'icon': LucideIcons.users, 'title': 'Community', 'color': Colors.pink},
     {'icon': LucideIcons.mapPin, 'title': 'Nearby', 'color': Colors.amber},
     {'icon': LucideIcons.settings, 'title': 'Settings', 'color': Colors.grey},
@@ -179,7 +181,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             actions: [
               IconButton(
                 icon: Icon(LucideIcons.search, color: scheme.onSurface),
-                onPressed: () {},
+                onPressed: () {
+                  context.go('/explore');
+                },
               ),
               IconButton(
                 icon: Icon(LucideIcons.bell, color: scheme.onSurface),
@@ -398,8 +402,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            crossAxisSpacing: 12,
+            crossAxisCount: 5,
+            crossAxisSpacing: 8,
             mainAxisSpacing: 12,
             childAspectRatio: 1,
           ),
@@ -429,7 +433,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           child: InkWell(
-            onTap: () {},
+            onTap: () {
+              if (action['title'] == 'Nearby') {
+                context.go('/nearby');
+              } else if (action['title'] == 'Find Items') {
+                context.go('/explore');
+              } else if (action['title'] == 'Add New Item') {
+                context.go('/closet');
+              } else if (action['title'] == 'Community') {
+                context.go('/community');
+              } else if (action['title'] == 'Settings') {
+                context.go('/settings');
+              }
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -494,7 +510,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             itemBuilder: (context, index) {
               final isSelected = _selectedTabIndex == index;
               return GestureDetector(
-                onTap: () => setState(() => _selectedTabIndex = index),
+                onTap: () {
+                  if (tabs[index] == 'Nearby') {
+                    context.go('/nearby');
+                  } else {
+                    setState(() => _selectedTabIndex = index);
+                  }
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.all(4),

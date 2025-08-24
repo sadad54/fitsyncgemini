@@ -53,7 +53,8 @@ venv/
 *.dll
 *.lib
 *.so
-.env
+*.env
+
 
 # FastAPI/Build junk
 dist/

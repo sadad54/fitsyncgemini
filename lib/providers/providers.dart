@@ -1,6 +1,6 @@
 // lib/providers/providers.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fitsyncgemini/services/firestore_service.dart';
+import 'package:fitsyncgemini/services/supabase_service.dart';
 import 'package:fitsyncgemini/services/ml_service.dart';
 import 'package:fitsyncgemini/services/storage_service.dart';
 import 'package:fitsyncgemini/services/auth_service.dart';
@@ -22,10 +22,11 @@ import 'package:fitsyncgemini/viewmodels/nearby_viewmodel.dart';
 import 'package:fitsyncgemini/viewmodels/settings_viewmodel.dart';
 import 'package:fitsyncgemini/viewmodels/community_viewmodel.dart';
 import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 // Service Providers
-final firestoreServiceProvider = Provider<FirestoreService>((ref) {
-  return FirestoreService();
+final supabaseClientProvider = Provider<supabase.SupabaseClient>((ref) {
+  return supabase.Supabase.instance.client;
 });
 
 final mlServiceProvider = Provider<MLService>((ref) {
@@ -48,15 +49,15 @@ final dummyDataServiceProvider = Provider<DummyDataService>((ref) {
 // ViewModel Providers
 final dashboardViewModelProvider =
     StateNotifierProvider<DashboardViewModel, DashboardModel>((ref) {
-      final firestoreService = ref.watch(firestoreServiceProvider);
+      final supabaseClient = ref.watch(supabaseClientProvider);
       final mlService = ref.watch(mlServiceProvider);
-      return DashboardViewModel(firestoreService, mlService);
+      return DashboardViewModel(supabaseClient, mlService);
     });
 
 final closetViewModelProvider =
     StateNotifierProvider<ClosetViewModel, ClosetModel>((ref) {
-      final firestoreService = ref.watch(firestoreServiceProvider);
-      return ClosetViewModel(firestoreService);
+      final supabaseClient = ref.watch(supabaseClientProvider);
+      return ClosetViewModel(supabaseClient);
     });
 
 final outfitSuggestionsViewModelProvider =
@@ -64,8 +65,8 @@ final outfitSuggestionsViewModelProvider =
       ref,
     ) {
       final mlService = ref.watch(mlServiceProvider);
-      final firestoreService = ref.watch(firestoreServiceProvider);
-      return OutfitSuggestionsViewModel(mlService, firestoreService);
+      final supabaseClient = ref.watch(supabaseClientProvider);
+      return OutfitSuggestionsViewModel(mlService, supabaseClient);
     });
 
 final trendsViewModelProvider =

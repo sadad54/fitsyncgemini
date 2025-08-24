@@ -1,0 +1,39 @@
+# FastAPI and ASGI
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Database
+supabase==2.0.2
+asyncpg==0.29.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-decouple==3.8
+
+# External APIs
+httpx>=0.24.0,<0.25.0
+aiohttp==3.9.1
+google-cloud-vision==3.4.4
+googlemaps==4.10.0
+
+# Image Processing
+Pillow==10.1.0
+opencv-python==4.8.1.78
+
+# Caching & Rate Limiting
+redis==5.0.1
+aioredis==2.0.1
+
+# Utilities
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+loguru==0.7.2
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+isort==5.12.0

@@ -1,17 +1,30 @@
-import 'package:firebase_core/firebase_core.dart';
-import 'package:fitsyncgemini/firebase_options.dart';
 import 'package:fitsyncgemini/utils/router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/constants/app_theme.dart';
+import 'package:fitsyncgemini/config/supabase_config.dart';
+import 'package:fitsyncgemini/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔥 Initialize Firebase using the auto-generated options
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // 🚀 Initialize Supabase
+  await SupabaseConfig.initialize();
+
+  // Initialize services
+  await _initializeServices();
 
   runApp(const ProviderScope(child: FitSyncApp()));
+}
+
+Future<void> _initializeServices() async {
+  try {
+    // Initialize notification service
+    await NotificationService.initialize();
+    print('✅ Services initialized successfully');
+  } catch (e) {
+    print('❌ Error initializing services: $e');
+  }
 }
 
 class FitSyncApp extends ConsumerWidget {

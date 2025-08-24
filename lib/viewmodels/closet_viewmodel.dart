@@ -2,12 +2,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/models/closet_model.dart';
 import 'package:fitsyncgemini/models/clothing_item.dart';
-import 'package:fitsyncgemini/services/firestore_service.dart';
+import 'package:fitsyncgemini/services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ClosetViewModel extends StateNotifier<ClosetModel> {
-  final FirestoreService _firestoreService;
+  final SupabaseClient _supabase;
 
-  ClosetViewModel(this._firestoreService)
+  ClosetViewModel(this._supabase)
     : super(
         const ClosetModel(
           items: [],
@@ -42,13 +43,27 @@ class ClosetViewModel extends StateNotifier<ClosetModel> {
 
   Future<void> _loadClosetItems() async {
     try {
-      // Mock user ID - replace with actual user ID from auth
-      const userId = 'current_user_id';
-      final closetStream = _firestoreService.getClosetItems(userId);
-      final items = await closetStream.first;
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await _supabase
+          .from('clothing_items')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .order('created_at', ascending: false);
+
+      final items =
+          (response as List)
+              .map((item) => ClothingItem.fromMap(item, item['id']))
+              .toList();
+
       state = state.copyWith(items: items);
     } catch (e) {
-      // Handle error
+      print('Error loading closet items: $e');
+      // Fallback to empty list
+      state = state.copyWith(items: []);
     }
   }
 
@@ -80,7 +95,7 @@ class ClosetViewModel extends StateNotifier<ClosetModel> {
       ];
       state = state.copyWith(recentActivities: activities);
     } catch (e) {
-      // Handle error
+      print('Error loading recent activities: $e');
     }
   }
 
@@ -123,16 +138,34 @@ class ClosetViewModel extends StateNotifier<ClosetModel> {
             )
             .length;
 
-    // Mock stats - replace with actual calculation
-    const stats = ClosetStats(
-      totalItems: 6,
-      recentlyAdded: 3,
-      mostWorn: 'White Button Shirt',
-      leastWorn: 'Black Dress',
-      totalValue: 2840,
+    // Calculate stats from actual data
+    final stats = ClosetStats(
+      totalItems: totalItems,
+      recentlyAdded: recentlyAdded,
+      mostWorn: _getMostWornItem(),
+      leastWorn: _getLeastWornItem(),
+      totalValue: _calculateTotalValue(),
     );
 
     state = state.copyWith(stats: stats);
+  }
+
+  String _getMostWornItem() {
+    if (state.items.isEmpty) return '';
+
+    // For now, return the first item - implement actual wear tracking later
+    return state.items.first.name;
+  }
+
+  String _getLeastWornItem() {
+    if (state.items.isEmpty) return '';
+
+    // For now, return the last item - implement actual wear tracking later
+    return state.items.last.name;
+  }
+
+  double _calculateTotalValue() {
+    return state.items.fold(0.0, (sum, item) => sum + (item.price ?? 0));
   }
 
   void setSelectedCategory(String categoryId) {
@@ -165,9 +198,16 @@ class ClosetViewModel extends StateNotifier<ClosetModel> {
     try {
       state = state.copyWith(isLoading: true);
 
-      // Mock user ID - replace with actual user ID from auth
-      const userId = 'current_user_id';
-      await _firestoreService.addClothingItem(userId, item);
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Add user_id to the item data
+      final itemData = item.toMap();
+      itemData['user_id'] = currentUser.id;
+
+      await _supabase.from('clothing_items').insert(itemData);
 
       // Reload closet items
       await _loadClosetItems();
@@ -184,9 +224,16 @@ class ClosetViewModel extends StateNotifier<ClosetModel> {
     try {
       state = state.copyWith(isLoading: true);
 
-      // Mock user ID - replace with actual user ID from auth
-      const userId = 'current_user_id';
-      await _firestoreService.deleteClothingItem(userId, itemId);
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await _supabase
+          .from('clothing_items')
+          .delete()
+          .eq('id', itemId)
+          .eq('user_id', currentUser.id);
 
       // Reload closet items
       await _loadClosetItems();
@@ -211,5 +258,5 @@ class ClosetViewModel extends StateNotifier<ClosetModel> {
 // Provider
 final closetViewModelProvider =
     StateNotifierProvider<ClosetViewModel, ClosetModel>(
-      (ref) => ClosetViewModel(ref.read(firestoreServiceProvider)),
+      (ref) => ClosetViewModel(Supabase.instance.client),
     );

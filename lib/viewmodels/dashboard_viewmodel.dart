@@ -1,15 +1,17 @@
 // lib/viewmodels/dashboard_viewmodel.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/models/dashboard_model.dart';
-import 'package:fitsyncgemini/services/firestore_service.dart';
+import 'package:fitsyncgemini/services/supabase_service.dart';
 import 'package:fitsyncgemini/services/ml_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DashboardViewModel extends StateNotifier<DashboardModel> {
-  final FirestoreService _firestoreService;
+  final SupabaseClient _supabase;
   final MLService _mlService;
 
-  DashboardViewModel(this._firestoreService, this._mlService)
-      : super(const DashboardModel(
+  DashboardViewModel(this._supabase, this._mlService)
+    : super(
+        const DashboardModel(
           greeting: '',
           userName: '',
           styleArchetype: '',
@@ -23,17 +25,15 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
             insights: {},
           ),
           recentActivities: [],
-          weatherInfo: WeatherInfo(
-            temperature: 0,
-            condition: '',
-          ),
-        )) {
+          weatherInfo: WeatherInfo(temperature: 0, condition: ''),
+        ),
+      ) {
     _initializeDashboard();
   }
 
   Future<void> _initializeDashboard() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       await Future.wait([
         _loadUserData(),
@@ -42,58 +42,70 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
         _loadRecentActivities(),
         _loadStyleInsights(),
       ]);
-      
+
       _updateGreeting();
       _initializeQuickActions();
       _initializeFeatures();
-      
+
       state = state.copyWith(isLoading: false);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
   Future<void> _loadUserData() async {
     try {
-      // Mock user ID - replace with actual user ID from auth
-      const userId = 'current_user_id';
-      final userData = await _firestoreService.getUserProfile(userId);
-      if (userData != null) {
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response =
+          await _supabase
+              .from('users')
+              .select('*')
+              .eq('id', currentUser.id)
+              .single();
+
+      if (response != null) {
         state = state.copyWith(
-          userName: userData['firstName'] ?? 'User',
-          styleArchetype: userData['styleArchetype'] ?? 'Minimalist',
+          userName: response['first_name'] ?? 'User',
+          styleArchetype: response['style_archetype'] ?? 'Minimalist',
         );
       }
     } catch (e) {
-      // Handle error
+      print('Error loading user data: $e');
+      // Fallback to default values
+      state = state.copyWith(userName: 'User', styleArchetype: 'Minimalist');
     }
   }
 
   Future<void> _loadClosetData() async {
     try {
-      // Mock user ID - replace with actual user ID from auth
-      const userId = 'current_user_id';
-      final closetStream = _firestoreService.getClosetItems(userId);
-      final closetItems = await closetStream.first;
-      state = state.copyWith(closetItemCount: closetItems.length);
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await _supabase
+          .from('clothing_items')
+          .select('id')
+          .eq('user_id', currentUser.id);
+
+      state = state.copyWith(closetItemCount: response.length);
     } catch (e) {
-      // Handle error
+      print('Error loading closet data: $e');
+      state = state.copyWith(closetItemCount: 0);
     }
   }
 
   Future<void> _loadWeatherData() async {
     try {
       // Mock weather data - replace with actual weather service
-      const weatherInfo = WeatherInfo(
-        temperature: 24.0,
-        condition: 'Sunny',
-      );
+      const weatherInfo = WeatherInfo(temperature: 24.0, condition: 'Sunny');
       state = state.copyWith(weatherInfo: weatherInfo);
     } catch (e) {
-      // Handle error
+      print('Error loading weather data: $e');
     }
   }
 
@@ -125,7 +137,7 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
       ];
       state = state.copyWith(recentActivities: activities);
     } catch (e) {
-      // Handle error
+      print('Error loading recent activities: $e');
     }
   }
 
@@ -136,21 +148,18 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
         styleArchetype: 'Minimalist',
         description: 'Clean lines, neutral colors, timeless pieces',
         traits: ['Neutral Colors', 'Clean Lines', 'Timeless'],
-        insights: {
-          'Most Worn': 'White Tees',
-          'Favorite Color': 'Black',
-        },
+        insights: {'Most Worn': 'White Tees', 'Favorite Color': 'Black'},
       );
       state = state.copyWith(styleInsights: insights);
     } catch (e) {
-      // Handle error
+      print('Error loading style insights: $e');
     }
   }
 
   void _updateGreeting() {
     final hour = DateTime.now().hour;
     String greeting;
-    
+
     if (hour < 12) {
       greeting = 'Good Morning';
     } else if (hour < 17) {
@@ -158,7 +167,7 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
     } else {
       greeting = 'Good Evening';
     }
-    
+
     state = state.copyWith(greeting: greeting);
   }
 
@@ -189,7 +198,7 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
         color: 'blue',
       ),
     ];
-    
+
     state = state.copyWith(quickActions: quickActions);
   }
 
@@ -224,7 +233,7 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
         gradientColors: ['blue', 'pink'],
       ),
     ];
-    
+
     state = state.copyWith(features: features);
   }
 
@@ -235,7 +244,7 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
   Future<void> generateNewOutfitSuggestion() async {
     try {
       state = state.copyWith(isLoading: true);
-      
+
       // Mock outfit suggestion - replace with actual ML service implementation
       const suggestion = OutfitSuggestion(
         id: '1',
@@ -243,22 +252,14 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
         occasion: 'Casual',
         itemIds: ['item1', 'item2', 'item3'],
         matchPercentage: 95.0,
-        description: 'Based on weather forecast and your minimalist style preference',
-        weatherInfo: WeatherInfo(
-          temperature: 24.0,
-          condition: 'Sunny',
-        ),
+        description:
+            'Based on weather forecast and your minimalist style preference',
+        weatherInfo: WeatherInfo(temperature: 24.0, condition: 'Sunny'),
       );
-      
-      state = state.copyWith(
-        todaysSuggestion: suggestion,
-        isLoading: false,
-      );
+
+      state = state.copyWith(todaysSuggestion: suggestion, isLoading: false);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -268,13 +269,13 @@ class DashboardViewModel extends StateNotifier<DashboardModel> {
 }
 
 // Provider
-final dashboardViewModelProvider = StateNotifierProvider<DashboardViewModel, DashboardModel>(
-  (ref) => DashboardViewModel(
-    ref.read(firestoreServiceProvider),
-    ref.read(mlServiceProvider),
-  ),
-);
+final dashboardViewModelProvider =
+    StateNotifierProvider<DashboardViewModel, DashboardModel>(
+      (ref) => DashboardViewModel(
+        Supabase.instance.client,
+        ref.read(mlServiceProvider),
+      ),
+    );
 
-// Service providers (these should be defined in your services)
-final firestoreServiceProvider = Provider((ref) => FirestoreService());
-final mlServiceProvider = Provider((ref) => MLService()); 
+// Service providers
+final mlServiceProvider = Provider((ref) => MLService());

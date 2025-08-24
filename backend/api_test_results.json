@@ -1,0 +1,23 @@
+{
+  "groq": {
+    "status": "success",
+    "response": "Based on current fashion forecasts, here are the top 3 fashion trends for summer 2024:\n\n1. **Neon Re"
+  },
+  "google_vision": {
+    "status": "success",
+    "labels": 0
+  },
+  "huggingface": {
+    "status": "failed",
+    "error": "{\"error\":\"Invalid credentials in Authorization header\"}"
+  },
+  "openweather": {
+    "status": "success",
+    "temperature": 18.03,
+    "weather": "Clear"
+  },
+  "google_places": {
+    "status": "success",
+    "places_count": 20
+  }
+}

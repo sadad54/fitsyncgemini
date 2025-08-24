@@ -2,42 +2,35 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/models/outfit_suggestions_model.dart';
 import 'package:fitsyncgemini/services/ml_service.dart';
-import 'package:fitsyncgemini/services/firestore_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
   final MLService _mlService;
-  final FirestoreService _firestoreService;
+  final SupabaseClient _supabase;
 
-  OutfitSuggestionsViewModel(this._mlService, this._firestoreService)
-      : super(const OutfitSuggestionsModel(
+  OutfitSuggestionsViewModel(this._mlService, this._supabase)
+    : super(
+        const OutfitSuggestionsModel(
           styleFocus: StyleFocus(
             title: '',
             description: '',
-            weatherInfo: WeatherInfo(
-              temperature: 0,
-              condition: '',
-            ),
+            weatherInfo: WeatherInfo(temperature: 0, condition: ''),
             recommendations: [],
           ),
-        )) {
+        ),
+      ) {
     _initializeOutfitSuggestions();
   }
 
   Future<void> _initializeOutfitSuggestions() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
-      await Future.wait([
-        _loadStyleFocus(),
-        _loadSuggestions(),
-      ]);
-      
+      await Future.wait([_loadStyleFocus(), _loadSuggestions()]);
+
       state = state.copyWith(isLoading: false);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -46,18 +39,16 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
       // Mock style focus - replace with actual implementation
       const styleFocus = StyleFocus(
         title: 'Today\'s Style Focus',
-        description: 'Minimalist • Light layers recommended for temperature changes',
-        weatherInfo: WeatherInfo(
-          temperature: 24.0,
-          condition: 'Sunny',
-        ),
+        description:
+            'Minimalist • Light layers recommended for temperature changes',
+        weatherInfo: WeatherInfo(temperature: 24.0, condition: 'Sunny'),
         recommendations: [
           'Light layers for temperature changes',
           'Neutral colors for versatility',
           'Comfortable fabrics for all-day wear',
         ],
       );
-      
+
       state = state.copyWith(styleFocus: styleFocus);
     } catch (e) {
       // Handle error
@@ -77,28 +68,29 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
               id: 'item1',
               name: 'White Cotton Tee',
               category: 'comfortable',
-              imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
               isMain: true,
             ),
             OutfitItem(
               id: 'item2',
               name: 'Light Blue Jeans',
               category: 'breathable',
-              imageUrl: 'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
             ),
             OutfitItem(
               id: 'item3',
               name: 'White Sneakers',
               category: 'casual',
-              imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
             ),
           ],
           matchPercentage: 95.0,
-          description: 'Based on weather forecast and your minimalist style preference',
-          weatherInfo: WeatherInfo(
-            temperature: 24.0,
-            condition: 'Sunny',
-          ),
+          description:
+              'Based on weather forecast and your minimalist style preference',
+          weatherInfo: WeatherInfo(temperature: 24.0, condition: 'Sunny'),
         ),
         const OutfitSuggestion(
           id: '2',
@@ -109,20 +101,23 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
               id: 'item4',
               name: 'Navy Blazer',
               category: 'Professional',
-              imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
               isMain: true,
             ),
             OutfitItem(
               id: 'item5',
               name: 'White Button Shirt',
               category: 'Classic',
-              imageUrl: 'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
             ),
             OutfitItem(
               id: 'item6',
               name: 'Tailored Trousers',
               category: 'Business',
-              imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
             ),
           ],
           matchPercentage: 89.0,
@@ -133,7 +128,7 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
           ),
         ),
       ];
-      
+
       state = state.copyWith(suggestions: suggestions);
     } catch (e) {
       // Handle error
@@ -147,10 +142,10 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
   Future<void> generateNewSuggestions() async {
     try {
       state = state.copyWith(isGenerating: true);
-      
+
       // Mock generation delay
       await Future.delayed(const Duration(seconds: 2));
-      
+
       // Mock new suggestions - replace with actual ML service implementation
       final newSuggestions = [
         const OutfitSuggestion(
@@ -162,42 +157,39 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
               id: 'item7',
               name: 'Striped T-Shirt',
               category: 'casual',
-              imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400',
               isMain: true,
             ),
             OutfitItem(
               id: 'item8',
               name: 'Black Jeans',
               category: 'versatile',
-              imageUrl: 'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1602293589914-9e19a782a0e5?w=400',
             ),
             OutfitItem(
               id: 'item9',
               name: 'White Sneakers',
               category: 'comfortable',
-              imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+              imageUrl:
+                  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
             ),
           ],
           matchPercentage: 92.0,
           description: 'A fresh take on casual wear with modern styling',
-          weatherInfo: WeatherInfo(
-            temperature: 24.0,
-            condition: 'Sunny',
-          ),
+          weatherInfo: WeatherInfo(temperature: 24.0, condition: 'Sunny'),
         ),
       ];
-      
+
       final updatedSuggestions = [...state.suggestions, ...newSuggestions];
-      
+
       state = state.copyWith(
         suggestions: updatedSuggestions,
         isGenerating: false,
       );
     } catch (e) {
-      state = state.copyWith(
-        isGenerating: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isGenerating: false, error: e.toString());
     }
   }
 
@@ -206,21 +198,22 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
       final suggestion = state.suggestions.firstWhere(
         (s) => s.id == suggestionId,
       );
-      
+
       // Mock user ID - replace with actual user ID from auth
       const userId = 'current_user_id';
-      
+
       // Convert to Outfit model and save
       // This would require creating an Outfit from OutfitSuggestion
       // For now, just mark as favorite in the current state
-      
-      final updatedSuggestions = state.suggestions.map((s) {
-        if (s.id == suggestionId) {
-          return s.copyWith(isFavorite: !s.isFavorite);
-        }
-        return s;
-      }).toList();
-      
+
+      final updatedSuggestions =
+          state.suggestions.map((s) {
+            if (s.id == suggestionId) {
+              return s.copyWith(isFavorite: !s.isFavorite);
+            }
+            return s;
+          }).toList();
+
       state = state.copyWith(suggestions: updatedSuggestions);
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -237,9 +230,10 @@ class OutfitSuggestionsViewModel extends StateNotifier<OutfitSuggestionsModel> {
 }
 
 // Provider
-final outfitSuggestionsViewModelProvider = StateNotifierProvider<OutfitSuggestionsViewModel, OutfitSuggestionsModel>(
-  (ref) => OutfitSuggestionsViewModel(
-    ref.read(mlServiceProvider),
-    ref.read(firestoreServiceProvider),
-  ),
-); 
+final outfitSuggestionsViewModelProvider =
+    StateNotifierProvider<OutfitSuggestionsViewModel, OutfitSuggestionsModel>(
+      (ref) => OutfitSuggestionsViewModel(
+        ref.read(mlServiceProvider),
+        Supabase.instance.client,
+      ),
+    );

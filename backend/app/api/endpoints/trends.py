@@ -29,5 +29,5 @@ async def get_trend(
     if not trend:
         raise HTTPException(status_code=404, detail="Trend not found")
     return trend
-```
+
 

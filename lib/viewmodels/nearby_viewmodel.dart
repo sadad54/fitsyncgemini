@@ -1,6 +1,7 @@
 // lib/viewmodels/nearby_viewmodel.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/models/nearby_model.dart';
+import 'package:fitsyncgemini/services/backend_api.dart';
 
 class NearbyViewModel extends StateNotifier<NearbyModel> {
   NearbyViewModel()
@@ -36,41 +37,30 @@ class NearbyViewModel extends StateNotifier<NearbyModel> {
 
   Future<void> _loadNearbyPeople() async {
     try {
-      // Mock nearby people - replace with actual implementation
-      final nearbyPeople = [
-        const NearbyPerson(
-          id: '1',
-          name: 'Jessica Chen',
-          avatar: 'JC',
-          distance: '0.3 mi',
-          style: 'Minimalist',
-          mutualConnections: 5,
-          recentOutfit: 'https://picsum.photos/200/200?random=1',
-          isOnline: true,
-        ),
-        const NearbyPerson(
-          id: '2',
-          name: 'Maya Patel',
-          avatar: 'MP',
-          distance: '0.8 mi',
-          style: 'Bohemian',
-          mutualConnections: 12,
-          recentOutfit: 'https://picsum.photos/200/200?random=2',
-          isOnline: true,
-        ),
-        const NearbyPerson(
-          id: '3',
-          name: 'Alex Rivera',
-          avatar: 'AR',
-          distance: '1.2 mi',
-          style: 'Professional',
-          mutualConnections: 3,
-          recentOutfit: 'https://picsum.photos/200/200?random=3',
-          isOnline: false,
-        ),
-      ];
+      final loc = state.locationInfo;
+      final data = await BackendApi.getNearby(
+        lat: loc.latitude,
+        lon: loc.longitude,
+        radius: 5000,
+      );
+      final places = (data['places'] as List<dynamic>? ?? []).take(10);
+      final mapped =
+          places
+              .map(
+                (p) => NearbyPerson(
+                  id: (p['id'] ?? '').toString(),
+                  name: p['name']?.toString() ?? 'Place',
+                  avatar: (p['name']?.toString() ?? 'P').substring(0, 1),
+                  distance: '${(p['distance_km'] ?? 1.0).toString()} km',
+                  style: p['category']?.toString() ?? 'Fashion',
+                  mutualConnections: 0,
+                  recentOutfit: '',
+                  isOnline: false,
+                ),
+              )
+              .toList();
 
-      state = state.copyWith(nearbyPeople: nearbyPeople);
+      state = state.copyWith(nearbyPeople: mapped);
     } catch (e) {
       // Handle error
     }
@@ -78,31 +68,30 @@ class NearbyViewModel extends StateNotifier<NearbyModel> {
 
   Future<void> _loadNearbyEvents() async {
     try {
-      // Mock nearby events - replace with actual implementation
-      final nearbyEvents = [
-        const NearbyEvent(
-          id: '1',
-          title: 'Style Swap Meet',
-          location: 'Central Park',
-          distance: '0.5 mi',
-          date: 'Today, 3:00 PM',
-          attendees: 24,
-          image: 'https://picsum.photos/400/300?random=4',
-          category: 'Community',
-        ),
-        const NearbyEvent(
-          id: '2',
-          title: 'Vintage Fashion Market',
-          location: 'Brooklyn Flea',
-          distance: '2.1 mi',
-          date: 'Tomorrow, 10:00 AM',
-          attendees: 156,
-          image: 'https://picsum.photos/400/300?random=5',
-          category: 'Shopping',
-        ),
-      ];
-
-      state = state.copyWith(nearbyEvents: nearbyEvents);
+      // Placeholder: map places as events for now
+      final loc = state.locationInfo;
+      final data = await BackendApi.getNearby(
+        lat: loc.latitude,
+        lon: loc.longitude,
+        radius: 5000,
+      );
+      final places = (data['places'] as List<dynamic>? ?? []).take(5);
+      final events =
+          places
+              .map(
+                (p) => NearbyEvent(
+                  id: (p['id'] ?? '').toString(),
+                  title: p['name']?.toString() ?? 'Fashion Event',
+                  location: p['address']?.toString() ?? '',
+                  distance: '—',
+                  date: '',
+                  attendees: 0,
+                  image: '',
+                  category: 'Shopping',
+                ),
+              )
+              .toList();
+      state = state.copyWith(nearbyEvents: events);
     } catch (e) {
       // Handle error
     }
@@ -110,29 +99,31 @@ class NearbyViewModel extends StateNotifier<NearbyModel> {
 
   Future<void> _loadHotspots() async {
     try {
-      // Mock hotspots - replace with actual implementation
-      final hotspots = [
-        const NearbyHotspot(
-          id: '1',
-          name: 'SoHo District',
-          type: 'Shopping Area',
-          distance: '1.8 mi',
-          popularStyles: ['Minimalist', 'Professional'],
-          rating: 4.8,
-          checkIns: 342,
-        ),
-        const NearbyHotspot(
-          id: '2',
-          name: 'Williamsburg',
-          type: 'Creative Hub',
-          distance: '3.2 mi',
-          popularStyles: ['Bohemian', 'Eclectic'],
-          rating: 4.6,
-          checkIns: 198,
-        ),
-      ];
-
-      state = state.copyWith(hotspots: hotspots);
+      final loc = state.locationInfo;
+      final data = await BackendApi.getNearby(
+        lat: loc.latitude,
+        lon: loc.longitude,
+        radius: 5000,
+      );
+      final places = (data['places'] as List<dynamic>? ?? []);
+      final hs =
+          places
+              .map(
+                (p) => NearbyHotspot(
+                  id: (p['id'] ?? '').toString(),
+                  name: p['name']?.toString() ?? 'Shop',
+                  type: p['category']?.toString() ?? 'Fashion',
+                  distance: '—',
+                  popularStyles: const <String>[],
+                  rating:
+                      (p['rating'] is num)
+                          ? (p['rating'] as num).toDouble()
+                          : 0.0,
+                  checkIns: 0,
+                ),
+              )
+              .toList();
+      state = state.copyWith(hotspots: hs);
     } catch (e) {
       // Handle error
     }

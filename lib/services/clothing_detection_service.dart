@@ -1,6 +1,7 @@
 // lib/services/clothing_detection_service.dart
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'backend_api.dart';
 
 // Provider for the service
 final clothingDetectionServiceProvider = Provider<ClothingDetectionService>((
@@ -13,83 +14,26 @@ class ClothingDetectionService {
   /// Detects clothing items from an image file (placeholder)
   /// Returns a map containing detection results or throws an exception
   Future<Map<String, dynamic>> detectClothing(File imageFile) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 2000));
-
-    return {
-      'items': [
-        {
-          'type': 'tops',
-          'subtype': 't-shirt',
-          'confidence': 0.95,
-          'color_palette': {
-            'colors': ['white', 'navy', 'grey'],
-            'primary': 'white',
-          },
-          'style_classification': {'style': 'minimalist', 'confidence': 0.88},
-        },
-        {
-          'type': 'bottoms',
-          'subtype': 'jeans',
-          'confidence': 0.92,
-          'color_palette': {
-            'colors': ['blue', 'navy', 'black'],
-            'primary': 'blue',
-          },
-          'style_classification': {'style': 'casual', 'confidence': 0.85},
-        },
-      ],
-      'confidence': 0.93,
-      'processing_time': 1.8,
-    };
+    final res = await BackendApi.createClothingItem(
+      image: imageFile,
+      name: 'Uploaded Item',
+    );
+    return res;
   }
 
   /// Detects colors from an image file (placeholder)
   /// Returns a map containing color detection results or throws an exception
   Future<Map<String, dynamic>> detectColors(File imageFile) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    return {
-      'dominantColors': ['white', 'navy', 'grey', 'blue'],
-      'accentColors': ['black', 'beige'],
-      'primaryColor': 'white',
-      'colorPercentages': {
-        'white': 0.35,
-        'navy': 0.25,
-        'grey': 0.20,
-        'blue': 0.15,
-        'black': 0.03,
-        'beige': 0.02,
-      },
-      'confidence': 0.91,
-      'processing_time': 1.2,
-    };
+    // Color analysis is part of createClothingItem response; reuse detectClothing
+    final res = await detectClothing(imageFile);
+    return res['colorAnalysis'] ?? res['color_analysis'] ?? res;
   }
 
   /// Gets style suggestions from an image file (placeholder)
   /// Returns a map containing style suggestions or throws an exception
   Future<Map<String, dynamic>> getSuggestions(File imageFile) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 1800));
-
-    return {
-      'suggestedOutfits': [
-        'Minimalist Office Look',
-        'Casual Weekend Style',
-        'Smart Casual Ensemble',
-      ],
-      'complementaryItems': [
-        'White sneakers',
-        'Navy blazer',
-        'Minimalist watch',
-      ],
-      'occasions': ['casual', 'work', 'weekend'],
-      'styleArchetype': 'minimalist',
-      'seasonRecommendations': ['spring', 'summer', 'fall'],
-      'confidence': 0.89,
-      'processing_time': 1.5,
-    };
+    final res = await detectClothing(imageFile);
+    return res['suggestions'] ?? res['styleSuggestions'] ?? res;
   }
 
   /// Analyzes clothing and extracts metadata using all available endpoints (placeholder)

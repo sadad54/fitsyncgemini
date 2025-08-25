@@ -1,35 +1,43 @@
 // lib/config/api_config.dart
-class ApiConfig {
-  // Base URL - make this configurable for different environments
-  // When running on Android Emulator, the host machine is accessible via 10.0.2.2
-  static const String _baseUrl = 'http://10.0.2.2:8000';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-  // Development/Production URL switching
+class ApiConfig {
+  // API prefix from backend
+  static const String _apiPrefix = '/api/v1';
+
+  // Platform-aware base URLs
+  static const String _androidEmulatorBase = 'http://10.0.2.2:8000';
+  static const String _iosSimulatorBase = 'http://127.0.0.1:8000';
+  static const String _webBase = 'http://127.0.0.1:8000';
+
   static String get baseUrl {
-    // You can add environment detection logic here
-    // For example: return kDebugMode ? _devBaseUrl : _prodBaseUrl;
-    return _baseUrl;
+    if (kIsWeb) return _webBase;
+    if (Platform.isAndroid) return _androidEmulatorBase;
+    return _iosSimulatorBase;
   }
 
-  // Endpoint paths
-  static const String detectPath = '/detect';
-  static const String colorPath = '/color';
-  static const String suggestPath = '/suggest';
-  static const String healthPath = '/health';
-
-  // Full endpoint URLs
-  static String get detectUrl => '$baseUrl$detectPath';
-  static String get colorUrl => '$baseUrl$colorPath';
-  static String get suggestUrl => '$baseUrl$suggestPath';
-  static String get healthUrl => '$baseUrl$healthPath';
+  // Common endpoints used by the app (align with backend)
+  static String get healthUrl => '$baseUrl/health';
+  static String get clothingBase => '$baseUrl$_apiPrefix/clothing';
+  static String get outfitsBase => '$baseUrl$_apiPrefix/outfits';
+  static String get tryOnBase => '$baseUrl$_apiPrefix/tryon';
+  static String get virtualTryOnBase => '$baseUrl/virtual-tryon';
+  static String get trendsBase => '$baseUrl$_apiPrefix/trends';
+  static String get communityBase => '$baseUrl$_apiPrefix/community';
+  static String get weatherBase => '$baseUrl$_apiPrefix/weather';
 
   // Request configuration
   static const Duration requestTimeout = Duration(seconds: 30);
   static const Duration healthCheckTimeout = Duration(seconds: 10);
 
   // Headers
-  static const Map<String, String> defaultHeaders = {
+  static const Map<String, String> defaultMultipartHeaders = {
     'Accept': 'application/json',
     'Content-Type': 'multipart/form-data',
+  };
+  static const Map<String, String> defaultJsonHeaders = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
   };
 }

@@ -73,5 +73,5 @@ async def update_user_info(
     update_data = user_update.dict(exclude_unset=True)
     result = db.table("users").update(update_data).eq("id", current_user.id).execute()
     return User(**result.data[0])
-```
+
 

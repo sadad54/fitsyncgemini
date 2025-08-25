@@ -53,7 +53,7 @@ class ClothingService:
                 "colors": vision_analysis.get("colors", []),
                 "ml_confidence": vision_analysis.get("confidence", 0.0),
                 "ml_analysis": combined_analysis,
-                **additional_info if additional_info else {}
+                **(additional_info or {})  # ✅ valid syntax
             }
             
             result = await db.create_clothing_item(clothing_data)

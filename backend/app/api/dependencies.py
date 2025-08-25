@@ -5,6 +5,12 @@ from app.core.database import get_db
 from app.core.cache import get_cache
 from app.models.user import User
 from typing import Optional
+from fastapi import UploadFile, HTTPException
+
+async def validate_image_file(file: UploadFile):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files are allowed.")
+    return file
 
 security = HTTPBearer()
 

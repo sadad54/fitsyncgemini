@@ -38,5 +38,4 @@ class ClothingItem(ClothingItemBase):
     
     class Config:
         from_attributes = True
-```
 

@@ -9,13 +9,20 @@ class Database:
         self.pool: Optional[asyncpg.Pool] = None
 
     async def connect(self):
-        self.client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
-        # For direct PostgreSQL access if needed
-        self.pool = await asyncpg.create_pool(
-            settings.SUPABASE_URL.replace("https://", "postgresql://postgres:"),
-            min_size=5,
-            max_size=20
-        )
+        try:
+            self.client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+        except Exception:
+            self.client = None
+
+        try:
+            if settings.SUPABASE_DB_URL:
+                dsn = settings.SUPABASE_DB_URL
+            else:
+                host = settings.SUPABASE_URL.replace("https://", "").strip("/")
+                dsn = f"postgresql://postgres:{settings.SUPABASE_SERVICE_ROLE_KEY}@db.{host}:5432/postgres"
+            self.pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
+        except Exception:
+            self.pool = None
 
     async def disconnect(self):
         if self.pool:

@@ -63,7 +63,5 @@ async def share_outfit(
     outfit_service: OutfitService = Depends()
 ):
     return await outfit_service.share_outfit(outfit_id, current_user.id)
-```
 
-```
 

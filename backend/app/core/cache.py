@@ -7,7 +7,12 @@ class Cache:
         self.redis: Optional[redis.Redis] = None
 
     async def connect(self):
-        self.redis = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            self.redis = redis.from_url(settings.REDIS_URL, decode_responses=True)
+            # Attempt a ping to validate
+            await self.redis.ping()
+        except Exception:
+            self.redis = None
 
     async def disconnect(self):
         if self.redis:

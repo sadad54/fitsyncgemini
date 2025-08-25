@@ -1,5 +1,6 @@
 import aiohttp
-from typing import Dict, Optional
+import json
+from typing import Dict, Optional, List
 from app.core.config import settings
 from app.utils.rate_limiter import rate_limiter
 from fastapi import HTTPException

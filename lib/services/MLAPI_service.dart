@@ -2,6 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/supabase_config.dart';
+import 'backend_api.dart';
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 /// Placeholder MLAPI Service - No backend dependencies
 /// This service provides mock data for UI development and testing
@@ -14,7 +19,7 @@ class MLAPIService {
 
   static String? get authToken => _authToken;
 
-  // ---------- Auth Methods (Placeholder) ----------
+  // ---------- Auth Methods (Supabase) ----------
   static Future<Map<String, dynamic>> registerUser({
     required String email,
     required String password,
@@ -22,15 +27,30 @@ class MLAPIService {
     required String firstName,
     required String lastName,
   }) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 800));
-
+    final client = SupabaseConfig.client;
+    final res = await client.auth.signUp(
+      email: email,
+      password: password,
+      data: {
+        'username': username,
+        'first_name': firstName,
+        'last_name': lastName,
+      },
+    );
+    final session = res.session;
+    if (session != null && session.accessToken.isNotEmpty) {
+      setAuthToken(session.accessToken);
+    }
+    final user = res.user;
+    if (user == null) {
+      throw Exception('Registration failed');
+    }
     return {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'email': email,
-      'username': username,
-      'first_name': firstName,
-      'last_name': lastName,
+      'id': user.id,
+      'email': user.email,
+      'username': user.userMetadata?['username'],
+      'first_name': user.userMetadata?['first_name'],
+      'last_name': user.userMetadata?['last_name'],
       'message': 'User registered successfully',
     };
   }
@@ -39,49 +59,50 @@ class MLAPIService {
     required String email,
     required String password,
   }) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    final token = 'demo_token_${DateTime.now().millisecondsSinceEpoch}';
-    setAuthToken(token);
-
+    final client = SupabaseConfig.client;
+    final AuthResponse res = await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+    final session = res.session;
+    if (session == null || session.accessToken.isEmpty) {
+      throw Exception('Login failed');
+    }
+    setAuthToken(session.accessToken);
+    final user = res.user;
     return {
-      'access_token': token,
-      'user_id': 'demo_user_${DateTime.now().millisecondsSinceEpoch}',
+      'access_token': session.accessToken,
+      'user_id': user?.id,
       'user': {
-        'id': 'demo_user_${DateTime.now().millisecondsSinceEpoch}',
-        'email': email,
-        'username': email.split('@')[0],
-        'first_name': 'John',
-        'last_name': 'Doe',
+        'id': user?.id,
+        'email': user?.email,
+        'username':
+            user?.userMetadata?['username'] ?? user?.email?.split('@').first,
+        'first_name': user?.userMetadata?['first_name'],
+        'last_name': user?.userMetadata?['last_name'],
       },
     };
   }
 
   static Future<Map<String, dynamic>> getCurrentUser() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 300));
-
+    final client = SupabaseConfig.client;
+    final userRes = await client.auth.getUser();
+    final user = userRes.user;
+    if (user == null) throw Exception('Not authenticated');
     return {
-      'id': 'demo_user_${DateTime.now().millisecondsSinceEpoch}',
-      'email': 'demo@fitsync.com',
-      'username': 'demo_user',
-      'first_name': 'John',
-      'last_name': 'Doe',
-      'avatar':
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      'hasCompletedOnboarding': true,
-      'style_preferences': {
-        'archetype': 'minimalist',
-        'favorite_colors': ['black', 'white', 'navy', 'grey'],
-        'preferred_styles': ['minimalist', 'casual', 'professional'],
-      },
+      'id': user.id,
+      'email': user.email,
+      'username':
+          user.userMetadata?['username'] ?? user.email?.split('@').first,
+      'first_name': user.userMetadata?['first_name'],
+      'last_name': user.userMetadata?['last_name'],
+      'avatar': user.userMetadata?['avatar'],
     };
   }
 
   static Future<void> logout() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 200));
+    final client = SupabaseConfig.client;
+    await client.auth.signOut();
     _authToken = null;
   }
 
@@ -288,16 +309,12 @@ class MLAPIService {
     File personImage,
     File clothingImage,
   ) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 3000));
-
-    return {
-      'result_image_url':
-          'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
-      'confidence': 0.92,
-      'fit_score': 0.85,
-      'processing_time': 2.5,
-    };
+    final userId = 'demo_user';
+    return await BackendApi.tryOnSingle(
+      userId: userId,
+      personImage: personImage,
+      clothingImage: clothingImage,
+    );
   }
 
   // ---------- Quiz and Style Preferences (Placeholder) ----------
@@ -388,22 +405,20 @@ class MLAPIService {
     };
   }
 
-  // ---------- Health Check (Placeholder) ----------
+  // ---------- Health Check (Backend) ----------
   static Future<Map<String, dynamic>> healthCheck() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    return {
-      'status': 'healthy',
-      'timestamp': DateTime.now().toIso8601String(),
-      'version': '1.0.0',
-      'services': {
-        'auth': 'healthy',
-        'clothing': 'healthy',
-        'ml': 'healthy',
-        'recommendations': 'healthy',
-      },
-    };
+    try {
+      final uri = Uri.parse(ApiConfig.healthUrl);
+      final resp = await http
+          .get(uri, headers: ApiConfig.defaultJsonHeaders)
+          .timeout(ApiConfig.healthCheckTimeout);
+      if (resp.statusCode == 200) {
+        return Map<String, dynamic>.from(json.decode(resp.body));
+      }
+      return {'status': 'unhealthy', 'code': resp.statusCode};
+    } catch (e) {
+      return {'status': 'unreachable', 'error': e.toString()};
+    }
   }
 
   // ---------- Explore Methods (Placeholder) ----------

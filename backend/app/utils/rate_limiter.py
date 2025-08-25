@@ -1,45 +1,22 @@
+# app/utils/rate_limiter.py
+
 import time
-from typing import Dict, Optional
-from app.core.cache import get_cache
-import json
+from collections import defaultdict
+from typing import Tuple
 
-class RateLimiter:
+# Simple in-memory fallback rate limiter (non-production safe)
+class InMemoryRateLimiter:
     def __init__(self):
-        self.cache = get_cache()
+        self.requests = defaultdict(list)  # {user_key: [timestamps]}
 
-    async def check_rate_limit(self, key: str, limit: int, window: int) -> bool:
-        """Check if request is within rate limit"""
-        current_time = int(time.time())
-        window_start = current_time - window
-        
-        # Get current requests in window
-        requests_data = await self.cache.get(f"rate_limit:{key}")
-        if requests_data:
-            requests = json.loads(requests_data)
-            # Remove old requests outside window
-            requests = [req for req in requests if req > window_start]
-        else:
-            requests = []
-        
-        # Check if limit exceeded
-        if len(requests) >= limit:
-            return False
-        
-        # Add current request
-        requests.append(current_time)
-        await self.cache.set(f"rate_limit:{key}", json.dumps(requests), window)
-        
-        return True
+    async def check_rate_limit(self, endpoint: str, limit: int, window: int, user_id: str) -> Tuple[bool, int]:
+        current_time = time.time()
+        key = f"{endpoint}:{user_id}"
 
-    async def get_remaining_requests(self, key: str, limit: int, window: int) -> int:
-        """Get remaining requests for rate limit"""
-        current_time = int(time.time())
-        window_start = current_time - window
-        
-        requests_data = await self.cache.get(f"rate_limit:{key}")
-        if requests_data:
-            requests = json.loads(requests_data)
-            requests = [req for req in requests if req > window_start]
-            return max(0, limit - len(requests))
-        
-        return limit
+        self.requests[key] = [t for t in self.requests[key] if t > current_time - window]
+        if len(self.requests[key]) < limit:
+            self.requests[key].append(current_time)
+            return True, int(current_time + window)
+        return False, int(current_time + window)
+
+rate_limiter = InMemoryRateLimiter()

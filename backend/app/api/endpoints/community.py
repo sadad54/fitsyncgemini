@@ -46,5 +46,5 @@ async def unlike_post(
     community_service: CommunityService = Depends()
 ):
     return await community_service.unlike_post(post_id, current_user.id)
-```
+
 

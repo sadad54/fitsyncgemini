@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/models/trends_model.dart';
 import 'package:fitsyncgemini/services/ml_service.dart';
+import 'package:fitsyncgemini/services/backend_api.dart';
 
 class TrendsViewModel extends StateNotifier<TrendsModel> {
   final MLService _mlService;
@@ -28,59 +29,36 @@ class TrendsViewModel extends StateNotifier<TrendsModel> {
 
   Future<void> _loadTrendingNow() async {
     try {
-      // Mock trending styles - replace with actual ML service implementation
-      final trendingNow = [
-        const TrendingStyle(
-          id: '1',
-          title: 'Y2K Revival',
-          growth: '+23%',
-          trend: TrendDirection.up,
-          description:
-              'Low-rise jeans, metallic fabrics, and butterfly accessories making a comeback',
-          image: 'https://picsum.photos/400/400?random=1',
-          tags: ['retro', 'metallic', 'bold'],
-          engagement: 15420,
-          posts: 342,
-        ),
-        const TrendingStyle(
-          id: '2',
-          title: 'Dark Academia',
-          growth: '+18%',
-          trend: TrendDirection.up,
-          description:
-              'Tweed blazers, plaid skirts, and vintage-inspired pieces for intellectual elegance',
-          image: 'https://picsum.photos/400/400?random=2',
-          tags: ['vintage', 'academic', 'sophisticated'],
-          engagement: 12890,
-          posts: 267,
-        ),
-        const TrendingStyle(
-          id: '3',
-          title: 'Oversized Blazers',
-          growth: '+12%',
-          trend: TrendDirection.up,
-          description:
-              'Power dressing with relaxed silhouettes for modern professional wear',
-          image: 'https://picsum.photos/400/400?random=3',
-          tags: ['professional', 'oversized', 'power'],
-          engagement: 9876,
-          posts: 189,
-        ),
-        const TrendingStyle(
-          id: '4',
-          title: 'Neon Colors',
-          growth: '-8%',
-          trend: TrendDirection.down,
-          description:
-              'Bright fluorescent colors losing momentum as neutrals take center stage',
-          image: 'https://picsum.photos/400/400?random=4',
-          tags: ['bright', 'bold', 'statement'],
-          engagement: 5432,
-          posts: 98,
-        ),
-      ];
+      final list = await BackendApi.getTrendsList();
+      final trending =
+          list
+              .map((t) {
+                final id = (t['id'] ?? '').toString();
+                final title =
+                    t['keyword']?.toString() ??
+                    t['title']?.toString() ??
+                    'Trend';
+                final growthVal =
+                    (t['growth_rate'] ?? t['growth'] ?? 0).toString();
+                final growth =
+                    growthVal.endsWith('%') ? growthVal : '+$growthVal%';
+                final posts = (t['search_volume'] ?? 0) as int? ?? 0;
+                return TrendingStyle(
+                  id: id.isEmpty ? title : id,
+                  title: title,
+                  growth: growth,
+                  trend: TrendDirection.up,
+                  description: t['category']?.toString() ?? '',
+                  image: '',
+                  tags: List<String>.from(t['style_tags'] ?? const <String>[]),
+                  engagement: posts,
+                  posts: posts,
+                );
+              })
+              .toList()
+              .cast<TrendingStyle>();
 
-      state = state.copyWith(trendingNow: trendingNow);
+      state = state.copyWith(trendingNow: trending);
     } catch (e) {
       // Handle error
     }
@@ -88,26 +66,23 @@ class TrendsViewModel extends StateNotifier<TrendsModel> {
 
   Future<void> _loadFashionInsights() async {
     try {
-      // Mock fashion insights - replace with actual implementation
-      final fashionInsights = [
-        const FashionInsight(
-          category: 'Colors',
-          trending: ['Sage Green', 'Warm Beige', 'Soft Lavender'],
-          declining: ['Hot Pink', 'Electric Blue'],
-        ),
-        const FashionInsight(
-          category: 'Silhouettes',
-          trending: ['Oversized', 'High-waisted', 'Cropped'],
-          declining: ['Bodycon', 'Low-rise'],
-        ),
-        const FashionInsight(
-          category: 'Fabrics',
-          trending: ['Corduroy', 'Velvet', 'Organic Cotton'],
-          declining: ['Polyester Blends', 'Shiny Materials'],
-        ),
-      ];
-
-      state = state.copyWith(fashionInsights: fashionInsights);
+      final analysis = await BackendApi.getTrendAnalysis();
+      final insights = <FashionInsight>[];
+      final topCats =
+          (analysis['top_categories'] as List<dynamic>? ?? [])
+              .map((e) => e[0]?.toString() ?? '')
+              .where((s) => s.isNotEmpty)
+              .toList();
+      if (topCats.isNotEmpty) {
+        insights.add(
+          FashionInsight(
+            category: 'Top Categories',
+            trending: topCats,
+            declining: const <String>[],
+          ),
+        );
+      }
+      state = state.copyWith(fashionInsights: insights);
     } catch (e) {
       // Handle error
     }

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fitsyncgemini/constants/app_theme.dart';
 import 'package:fitsyncgemini/config/supabase_config.dart';
 import 'package:fitsyncgemini/services/notification_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/MLAPI_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +23,11 @@ Future<void> _initializeServices() async {
   try {
     // Initialize notification service
     await NotificationService.initialize();
+    // If Supabase has a session, set bearer token for backend
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null && session.accessToken.isNotEmpty) {
+      MLAPIService.setAuthToken(session.accessToken);
+    }
     print('✅ Services initialized successfully');
   } catch (e) {
     print('❌ Error initializing services: $e');

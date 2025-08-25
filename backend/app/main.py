@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
-import redis.asyncio as redis
 from loguru import logger
 
 from app.core.config import settings
@@ -10,19 +9,16 @@ from app.api.endpoints.v1 import auth, clothing, tryon
 from app.api.endpoints import outfits, trends, community, weather, locations
 from app.core.database import init_db
 from app.core.cache import init_cache
+from app.routers import virtual_tryon_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     logger.info("Starting FitSync Backend...")
     await init_db()
     await init_cache()
     logger.info("FitSync Backend started successfully!")
-    
     yield
-    
-    # Shutdown
     logger.info("Shutting down FitSync Backend...")
 
 
@@ -33,10 +29,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,10 +39,9 @@ app.add_middleware(
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]  # Configure properly for production
+    allowed_hosts=["*"]
 )
 
-# Include routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
 app.include_router(clothing.router, prefix=f"{settings.API_V1_STR}/clothing", tags=["Clothing"])
 app.include_router(outfits.router, prefix=f"{settings.API_V1_STR}/outfits", tags=["Outfits"])
@@ -56,6 +50,7 @@ app.include_router(trends.router, prefix=f"{settings.API_V1_STR}/trends", tags=[
 app.include_router(community.router, prefix=f"{settings.API_V1_STR}/community", tags=["Community"])
 app.include_router(weather.router, prefix=f"{settings.API_V1_STR}/weather", tags=["Weather"])
 app.include_router(locations.router, prefix=f"{settings.API_V1_STR}/locations", tags=["Locations"])
+app.include_router(virtual_tryon_router.router)
 
 
 @app.get("/")
@@ -65,7 +60,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "fitsync-backend"}
+    return {"status": "healthy", "service": "fitsync-backend", "env": settings.ENV}
 
 
 if __name__ == "__main__":

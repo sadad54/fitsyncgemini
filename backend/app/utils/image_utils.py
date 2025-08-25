@@ -1,62 +1,71 @@
-import cv2
+import os
+import uuid
 import numpy as np
-from PIL import Image
-import io
-from typing import Tuple, Optional, List
-import base64
+import cv2
+from typing import Tuple, Optional
+from app.utils.supabase_client import supabase
 
-class ImageUtils:
-    @staticmethod
-    def resize_image(image_data: bytes, max_size: Tuple[int, int] = (800, 800)) -> bytes:
-        """Resize image while maintaining aspect ratio"""
-        image = Image.open(io.BytesIO(image_data))
-        image.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
-        output = io.BytesIO()
-        image.save(output, format='JPEG', quality=85)
-        return output.getvalue()
 
-    @staticmethod
-    def convert_to_base64(image_data: bytes) -> str:
-        """Convert image bytes to base64 string"""
-        return base64.b64encode(image_data).decode('utf-8')
-
-    @staticmethod
-    def detect_face(image_data: bytes) -> Optional[Tuple[int, int, int, int]]:
-        """Detect face in image and return bounding box"""
-        nparr = np.frombuffer(image_data, np.uint8)
+def process_image(image_bytes: bytes, resize_dim: Tuple[int, int] = (512, 512)) -> bytes:
+    """
+    Process an image (resize, etc.) and return the encoded bytes.
+    """
+    try:
+        # Convert bytes to OpenCV image
+        nparr = np.frombuffer(image_bytes, np.uint8)
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-        
-        if len(faces) > 0:
-            x, y, w, h = faces[0]
-            return (x, y, w, h)
-        return None
 
-    @staticmethod
-    def extract_dominant_colors(image_data: bytes, num_colors: int = 5) -> List[Tuple[int, int, int]]:
-        """Extract dominant colors from image"""
-        image = Image.open(io.BytesIO(image_data))
-        image = image.convert('RGB')
-        
-        # Resize for faster processing
-        image = image.resize((150, 150))
-        
-        # Convert to numpy array
-        pixels = np.array(image)
-        pixels = pixels.reshape(-1, 3)
-        
-        # Use k-means to find dominant colors
-        from sklearn.cluster import KMeans
-        kmeans = KMeans(n_clusters=num_colors, random_state=42)
-        kmeans.fit(pixels)
-        
-        colors = kmeans.cluster_centers_.astype(int)
-        return [tuple(color) for color in colors]
-```
+        if image is None:
+            raise ValueError("❌ OpenCV failed to decode image. Invalid image format.")
 
-```
+        # Resize the image
+        resized = cv2.resize(image, resize_dim)
 
+        # Encode to JPEG
+        success, encoded_image = cv2.imencode('.jpg', resized)
+        if not success:
+            raise ValueError("❌ Failed to encode image to JPEG.")
+
+        return encoded_image.tobytes()
+
+    except Exception as e:
+        raise RuntimeError(f"⚠️ Image processing error: {str(e)}")
+
+
+def upload_to_supabase(image_bytes: bytes, user_id: str) -> Tuple[str, str]:
+    """
+    Upload processed image to Supabase storage and return (public_url, image_path).
+    """
+    try:
+        file_id = uuid.uuid4().hex
+        image_path = f"uploads/{user_id}/{file_id}.jpg"
+
+        # Upload to Supabase
+        supabase.storage.from_("fitsync").upload(
+            path=image_path,
+            file=image_bytes,
+            file_options={"content-type": "image/jpeg"}
+        )
+
+        # Generate public URL
+        public_url = supabase.storage.from_("fitsync").get_public_url(image_path)
+        return public_url, image_path
+
+    except Exception as e:
+        raise RuntimeError(f"❌ Supabase upload error: {str(e)}")
+
+
+def process_and_upload_image(image_bytes: bytes, user_id: str) -> Tuple[str, str]:
+    """
+    Full pipeline: process image and upload to Supabase.
+    Returns: (public_url, image_path)
+    """
+    try:
+        # Step 1: Resize/process the image
+        processed_image = process_image(image_bytes)
+
+        # Step 2: Upload and get URLs
+        return upload_to_supabase(processed_image, user_id)
+
+    except Exception as e:
+        raise RuntimeError(f"❌ process_and_upload_image failed: {str(e)}")

@@ -25,5 +25,3 @@ class Outfit(OutfitBase):
     
     class Config:
         from_attributes = True
-```
-

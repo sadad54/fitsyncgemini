@@ -76,3 +76,4 @@ android/app/build/
 .vscode/
 .idea/
 .DS_Store
+.env

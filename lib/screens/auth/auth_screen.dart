@@ -1,6 +1,7 @@
 // lib/screens/auth/auth_screen.dart
 import 'package:fitsyncgemini/viewmodels/auth_viewmodel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -8,6 +9,7 @@ import 'package:fitsyncgemini/constants/app_colors.dart';
 import 'package:fitsyncgemini/widgets/common/gradient_button.dart';
 import 'package:fitsyncgemini/widgets/common/social_button.dart';
 import 'package:fitsyncgemini/widgets/common/custom_text_field.dart';
+import 'package:fitsyncgemini/services/auth_service.dart';
 
 enum AuthMode { login, signup }
 
@@ -298,6 +300,47 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
 
                   const SizedBox(height: 24),
+
+                  // Debug button for testing
+                  if (kDebugMode) ...[
+                    ElevatedButton(
+                      onPressed: () async {
+                        final authService = ref.read(authServiceProvider);
+                        await authService.testSupabaseConnection();
+                      },
+                      child: const Text('Test Supabase Connection'),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final authService = ref.read(authServiceProvider);
+                        final result = await authService.createTestUser(
+                          email: 'test@example.com',
+                          password: 'testpassword123',
+                          firstName: 'Test',
+                          lastName: 'User',
+                        );
+                        if (result.isSuccess) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Test user created successfully!'),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Test user creation failed: ${result.error}',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Create Test User'),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   _buildSeparator(context),
                   const SizedBox(height: 24),
                   const SocialButton(),

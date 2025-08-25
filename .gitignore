@@ -54,8 +54,13 @@ venv/
 *.lib
 *.so
 *.env
-
-
+.env.example
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
 # FastAPI/Build junk
 dist/
 build/

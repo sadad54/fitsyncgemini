@@ -76,4 +76,6 @@ android/app/build/
 .vscode/
 .idea/
 .DS_Store
-.env
+backend/.env
+docker-compose.yml
+backend/env.example

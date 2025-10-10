@@ -79,3 +79,4 @@ android/app/build/
 backend/.env
 docker-compose.yml
 backend/env.example
+env.example

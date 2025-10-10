@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:fitsyncgemini/config/api_config.dart';
 
 class AuthService {
   String? _currentUserId;
@@ -59,7 +61,7 @@ class AuthService {
     _currentUserId = null;
   }
 
-  // Sign up with email and password (placeholder)
+  // Sign up with email and password (backend-first with fallback)
   Future<AuthResult> signUpWithEmail(
     String email,
     String password,
@@ -67,23 +69,44 @@ class AuthService {
     String lastName,
   ) async {
     try {
-      // Simulate network delay
+      if (ApiConfig.useBackend) {
+        final uri = Uri.parse(ApiConfig.authRegisterUrl);
+        final body = json.encode({
+          'email': email,
+          'password': password,
+          'username': email.split('@')[0].replaceAll(RegExp(r'[^a-zA-Z0-9_]'), ''),
+          'full_name': '$firstName $lastName',
+        });
+        final resp = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: body,
+        );
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          final data = json.decode(resp.body) as Map<String, dynamic>;
+          // Immediately login to obtain token
+          final loginRes = await signInWithEmail(email, password);
+          return loginRes;
+        } else {
+          // Fall through to mock if backend unavailable or returns error
+          print('⚠️ Backend register failed: ${resp.statusCode} ${resp.body}');
+        }
+      }
+
+      // Fallback mock path
       await Future.delayed(const Duration(milliseconds: 800));
-
-      // Create placeholder user data
-      final username = email
-          .split('@')[0]
-          .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      final username = email.split('@')[0].replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
       final userId = DateTime.now().millisecondsSinceEpoch.toString();
-
       final userData = {
         'id': userId,
         'email': email,
         'username': username,
         'first_name': firstName,
         'last_name': lastName,
-        'avatar':
-            'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        'avatar': 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
         'hasCompletedOnboarding': false,
         'style_preferences': {
           'archetype': 'minimalist',
@@ -96,16 +119,11 @@ class AuthService {
           'recently_added': 0,
         },
       };
-
       _currentUserId = userId;
       _currentUser = userData;
-      _accessToken =
-          'placeholder_token_${DateTime.now().millisecondsSinceEpoch}';
-
-      // Save to local storage
+      _accessToken = 'placeholder_token_${DateTime.now().millisecondsSinceEpoch}';
       await _saveAuth(_accessToken!, userData);
-
-      print('✅ AuthService: Sign up successful');
+      print('✅ AuthService: Sign up (mock) successful');
       return AuthResult.success(userId);
     } catch (e) {
       print('❌ AuthService: Sign up failed - $e');
@@ -113,31 +131,58 @@ class AuthService {
     }
   }
 
-  // Sign in with email and password (placeholder)
+  // Sign in with email and password (backend-first with fallback)
   Future<AuthResult> signInWithEmail(String email, String password) async {
     try {
-      // Simulate network delay
-      await Future.delayed(const Duration(milliseconds: 600));
+      if (ApiConfig.useBackend) {
+        final uri = Uri.parse(ApiConfig.authLoginUrl);
+        final body = 'username=${Uri.encodeQueryComponent(email)}&password=${Uri.encodeQueryComponent(password)}';
+        final resp = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+          body: body,
+        );
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          final data = json.decode(resp.body) as Map<String, dynamic>;
+          final token = data['access_token']?.toString();
+          if (token == null || token.isEmpty) {
+            return AuthResult.failure('Invalid token from server.');
+          }
+          _accessToken = token;
+          final user = data['user'] is Map<String, dynamic>
+              ? data['user'] as Map<String, dynamic>
+              : {
+                  'id': data['user']?['id']?.toString() ?? 'unknown',
+                  'email': email,
+                  'username': email.split('@')[0],
+                };
+          _currentUser = user;
+          _currentUserId = user['id']?.toString();
+          await _saveAuth(_accessToken!, _currentUser!);
+          print('✅ AuthService: Sign in (backend) successful');
+          return AuthResult.success(_currentUserId);
+        } else {
+          print('⚠️ Backend login failed: ${resp.statusCode} ${resp.body}');
+        }
+      }
 
-      // Check if user exists (in a real app, this would validate against backend)
+      // Fallback mock path
+      await Future.delayed(const Duration(milliseconds: 600));
       if (email.isEmpty || password.isEmpty) {
         return AuthResult.failure('Please enter both email and password.');
       }
-
-      // Create placeholder user data for demo
-      final username = email
-          .split('@')[0]
-          .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      final username = email.split('@')[0].replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
       final userId = 'demo_user_${DateTime.now().millisecondsSinceEpoch}';
-
       final userData = {
         'id': userId,
         'email': email,
         'username': username,
         'first_name': 'John',
         'last_name': 'Doe',
-        'avatar':
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
         'hasCompletedOnboarding': true,
         'style_preferences': {
           'archetype': 'minimalist',
@@ -150,15 +195,11 @@ class AuthService {
           'recently_added': 3,
         },
       };
-
       _currentUserId = userId;
       _currentUser = userData;
       _accessToken = 'demo_token_${DateTime.now().millisecondsSinceEpoch}';
-
-      // Save to local storage
       await _saveAuth(_accessToken!, userData);
-
-      print('✅ AuthService: Sign in successful');
+      print('✅ AuthService: Sign in (mock) successful');
       return AuthResult.success(userId);
     } catch (e) {
       print('❌ AuthService: Sign in failed - $e');

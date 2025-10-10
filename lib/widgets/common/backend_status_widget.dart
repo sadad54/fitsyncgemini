@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fitsyncgemini/services/MLAPI_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:fitsyncgemini/config/api_config.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fitsyncgemini/widgets/common/fitsync_assets.dart';
 
@@ -30,11 +32,22 @@ class _BackendStatusWidgetState extends State<BackendStatusWidget> {
     });
 
     try {
-      final health = await MLAPIService.healthCheck();
-      setState(() {
-        _isConnected = true;
-        _healthData = health;
-      });
+      final uri = Uri.parse(ApiConfig.healthUrl);
+      final resp = await http
+          .get(uri)
+          .timeout(ApiConfig.healthCheckTimeout);
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        setState(() {
+          _isConnected = true;
+          _healthData = data;
+        });
+      } else {
+        setState(() {
+          _isConnected = false;
+          _errorMessage = 'HTTP ${resp.statusCode}: ${resp.body}';
+        });
+      }
     } catch (e) {
       setState(() {
         _isConnected = false;

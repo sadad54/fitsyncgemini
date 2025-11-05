@@ -30,6 +30,7 @@ class _BackendStatusWidgetState extends State<BackendStatusWidget> {
     });
 
     try {
+      // Import the enhanced service at the top of the file
       final health = await MLAPIService.healthCheck();
       setState(() {
         _isConnected = true;

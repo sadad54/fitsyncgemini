@@ -6,15 +6,22 @@ class ApiConfig {
   // API prefix from backend
   static const String _apiPrefix = '/api/v1';
 
-  // Platform-aware base URLs
+  // Environment-based configuration
+  static const String _developmentBase = 'http://localhost:8000';
   static const String _androidEmulatorBase = 'http://10.0.2.2:8000';
   static const String _iosSimulatorBase = 'http://127.0.0.1:8000';
   static const String _webBase = 'http://127.0.0.1:8000';
 
   static String get baseUrl {
-    if (kIsWeb) return _webBase;
-    if (Platform.isAndroid) return _androidEmulatorBase;
-    return _iosSimulatorBase;
+    // For development, always use localhost first
+    if (kDebugMode) {
+      if (kIsWeb) return _webBase;
+      if (Platform.isAndroid) return _androidEmulatorBase;
+      return _iosSimulatorBase;
+    }
+    
+    // Production URLs would go here
+    return _developmentBase;
   }
 
   // Common endpoints used by the app (align with backend)

@@ -1,60 +1,49 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.core.security import verify_token
-from app.core.database import get_db
-from app.core.cache import get_cache
 from app.models.user import User
-from typing import Optional
-from fastapi import UploadFile, HTTPException
-
-async def validate_image_file(file: UploadFile):
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files are allowed.")
-    return file
+from app.services.unified_auth_service import auth_service
 
 security = HTTPBearer()
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db = Depends(get_db)
-) -> User:
-    token = credentials.credentials
-    payload = verify_token(token)
-    
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload"
-        )
-    
-    # Get user from database
-    user_data = db.table("users").select("*").eq("id", user_id).execute()
-    if not user_data.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    return User(**user_data.data[0])
-
-async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db = Depends(get_db)
-) -> Optional[User]:
-    if not credentials:
-        return None
-    
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+    """Get current authenticated user"""
     try:
-        return await get_current_user(credentials, db)
+        return await auth_service.get_current_user_from_token(credentials.credentials)
     except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed"
+        )
+
+async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User | None:
+    """Get current user if authenticated, None otherwise"""
+    try:
+        return await auth_service.get_current_user_from_token(credentials.credentials)
+    except Exception:
         return None
 
-
+# Image validation
+async def validate_image_file(file):
+    """Validate uploaded image file"""
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be an image"
+        )
+    
+    # Check file size (10MB limit)
+    file_size = 0
+    chunk_size = 1024
+    while chunk := await file.read(chunk_size):
+        file_size += len(chunk)
+        if file_size > 10 * 1024 * 1024:  # 10MB
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File too large. Maximum size is 10MB"
+            )
+    
+    # Reset file pointer
+    await file.seek(0)
+    return file

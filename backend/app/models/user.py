@@ -1,28 +1,26 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 
-class UserBase(BaseModel):
+
+class User(BaseModel):
+    user_id: str
     email: EmailStr
-    username: str
-    full_name: Optional[str] = None
-
-class UserCreate(UserBase):
-    password: str
-
-class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    username: Optional[str] = None
-    full_name: Optional[str] = None
-    bio: Optional[str] = None
-    profile_image: Optional[str] = None
-
-class User(UserBase):
-    id: str
+    display_name: Optional[str] = None
+    style_preferences: List[str] = []
+    favorite_colors: List[str] = []
+    sizes: Dict[str, str] = {}
+    onboarding_complete: bool = False
     created_at: datetime
     updated_at: datetime
-    bio: Optional[str] = None
-    profile_image: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    display_name: Optional[str] = None
+    style_preferences: Optional[List[str]] = None
+    favorite_colors: Optional[List[str]] = None
+    sizes: Optional[Dict[str, str]] = None
+    onboarding_complete: Optional[bool] = None

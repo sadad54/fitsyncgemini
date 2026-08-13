@@ -97,10 +97,10 @@ export const api = {
     if (params?.category && params.category !== "all") qs.set("category", params.category);
     if (params?.search) qs.set("search", params.search);
     const suffix = qs.toString() ? `?${qs}` : "";
-    return request<{ items: ClothingItem[]; total: number }>(`/closet/items${suffix}`);
+    return request<{ items: ClothingItem[]; total: number }>(`/clothing${suffix}`);
   },
-  closetItem: (id: string) => request<ClothingItem>(`/closet/items/${id}`),
-  closetStats: () => request<ClosetStats>("/closet/stats"),
+  closetItem: (id: string) => request<ClothingItem>(`/clothing/${id}`),
+  closetStats: () => request<ClosetStats>("/clothing/stats"),
   addClosetItem: async (input: { name: string; category?: ClothingCategory; imageUri: string; brand?: string; notes?: string }) => {
     const name = input.name.trim();
     const filename = imageName(name, input.imageUri);
@@ -110,10 +110,10 @@ export const api = {
     if (input.brand?.trim()) form.append("brand", input.brand.trim());
     if (input.notes?.trim()) form.append("notes", input.notes.trim());
     form.append("image", await imagePart(input.imageUri, filename));
-    return request<ClothingItem>("/closet/items", { method: "POST", body: form });
+    return request<ClothingItem>("/clothing", { method: "POST", body: form });
   },
-  updateClosetItem: (id: string, input: Partial<ClothingItem>) => request<ClothingItem>(`/closet/items/${id}`, { method: "PUT", body: JSON.stringify(input) }),
-  deleteClosetItem: (id: string) => request<{ deleted: boolean }>(`/closet/items/${id}`, { method: "DELETE" }),
+  updateClosetItem: (id: string, input: Partial<ClothingItem>) => request<ClothingItem>(`/clothing/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+  deleteClosetItem: (id: string) => request<{ deleted: boolean }>(`/clothing/${id}`, { method: "DELETE" }),
   generateOutfit: (input: { occasion: string; use_weather?: boolean; latitude?: number; longitude?: number }) =>
     request<Outfit>("/outfits/generate", { method: "POST", body: JSON.stringify(input) }),
   outfits: (savedOnly = false) => request<{ outfits: Outfit[]; total: number }>(`/outfits?saved_only=${savedOnly}`),

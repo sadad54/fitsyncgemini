@@ -15,6 +15,7 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const signIn = useAuthStore((state) => state.signIn);
   const signUp = useAuthStore((state) => state.signUp);
 
@@ -24,9 +25,17 @@ export default function SignIn() {
     if (!ready || busy) return;
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
-      if (mode === "sign-up") await signUp(email, password);
-      else await signIn(email, password);
+      if (mode === "sign-up") {
+        await signUp(email, password);
+        if (!useAuthStore.getState().token) {
+          setNotice("Check your email to confirm your account, then sign in.");
+          return;
+        }
+      } else {
+        await signIn(email, password);
+      }
       router.replace("/onboarding");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
@@ -109,6 +118,7 @@ export default function SignIn() {
               onPress={submit}
             />
             {error ? <AppText selectable style={styles.error}>{error}</AppText> : null}
+            {notice ? <AppText selectable style={styles.error}>{notice}</AppText> : null}
             <AppText style={styles.privacy}>Your session is secured with Supabase auth and stored only on this device.</AppText>
           </View>
         </Reveal>

@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "FitSync",
+    "slug": "fitsync",
+    "scheme": "fitsync",
+    "version": "0.2.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FitSync uses your photos to add clothing items to your closet.",
+          "cameraPermission": "FitSync uses your camera to capture clothing items."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FitSync uses your location once to make outfit suggestions appropriate for the current weather."
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "FitSync can use Face ID to protect your local style session."
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://127.0.0.1:8000"
+    }
+  }
+}

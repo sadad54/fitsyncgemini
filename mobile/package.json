@@ -1,0 +1,53 @@
+{
+  "name": "fitsync-mobile",
+  "version": "0.2.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "set REACT_NATIVE_PACKAGER_HOSTNAME=10.20.3.40&& set EXPO_NO_TELEMETRY=1&& set HOME=%CD%\\expo_home&& set USERPROFILE=%CD%\\expo_home&& set EXPO_HOME=%CD%\\expo_home&& set EXPO_NO_TYPESCRIPT_SETUP=1&& node node_modules/expo/bin/cli start --host lan --clear",
+    "start:8082": "set REACT_NATIVE_PACKAGER_HOSTNAME=10.20.3.40&& set EXPO_NO_TELEMETRY=1&& set HOME=%CD%\\expo_home&& set USERPROFILE=%CD%\\expo_home&& set EXPO_HOME=%CD%\\expo_home&& set EXPO_NO_TYPESCRIPT_SETUP=1&& node node_modules/expo/bin/cli start --host lan --port 8082 --clear",
+    "android": "set REACT_NATIVE_PACKAGER_HOSTNAME=10.20.3.40&& set EXPO_NO_TELEMETRY=1&& set HOME=%CD%\\expo_home&& set USERPROFILE=%CD%\\expo_home&& set EXPO_HOME=%CD%\\expo_home&& set EXPO_NO_TYPESCRIPT_SETUP=1&& node node_modules/expo/bin/cli start --android --host lan --clear",
+    "ios": "set REACT_NATIVE_PACKAGER_HOSTNAME=10.20.3.40&& set EXPO_NO_TELEMETRY=1&& set HOME=%CD%\\expo_home&& set USERPROFILE=%CD%\\expo_home&& set EXPO_HOME=%CD%\\expo_home&& set EXPO_NO_TYPESCRIPT_SETUP=1&& node node_modules/expo/bin/cli start --ios --host lan --clear",
+    "web": "set REACT_NATIVE_PACKAGER_HOSTNAME=10.20.3.40&& set EXPO_NO_TELEMETRY=1&& set HOME=%CD%\\expo_home&& set USERPROFILE=%CD%\\expo_home&& set EXPO_HOME=%CD%\\expo_home&& set EXPO_NO_TYPESCRIPT_SETUP=1&& node node_modules/expo/bin/cli start --web",
+    "doctor": "set EXPO_NO_TELEMETRY=1&& set HOME=%CD%\\expo_home&& set USERPROFILE=%CD%\\expo_home&& set EXPO_HOME=%CD%\\expo_home&& node node_modules/expo/bin/cli install --check",
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "6.1.2",
+    "@expo/vector-icons": "^15.0.3",
+    "@hookform/resolvers": "^3.9.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "@tanstack/react-query": "^5.62.7",
+    "expo": "~54.0.35",
+    "expo-blur": "~15.0.8",
+    "expo-haptics": "~15.0.8",
+    "expo-image": "~3.0.11",
+    "expo-image-picker": "~17.0.11",
+    "expo-linear-gradient": "~15.0.8",
+    "expo-location": "~19.0.8",
+    "expo-router": "~6.0.24",
+    "expo-secure-store": "~15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hook-form": "^7.54.2",
+    "react-native": "0.81.5",
+    "react-native-reanimated": "~4.1.7",
+    "react-native-safe-area-context": "5.6.2",
+    "react-native-url-polyfill": "^2.0.0",
+    "react-native-web": "0.21.0",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^12.9.0",
+    "@types/react": "~19.1.17",
+    "jest": "^29.7.0",
+    "jest-expo": "~54.0.17",
+    "typescript": "~5.9.3"
+  },
+  "jest": {
+    "preset": "jest-expo"
+  }
+}

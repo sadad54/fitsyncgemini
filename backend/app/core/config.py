@@ -43,6 +43,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_CLOUD_VISION_API_KEY", "google_vision_api_key"),
     )
     GOOGLE_CLOUD_CREDENTIALS_PATH: str = os.getenv("GOOGLE_CLOUD_CREDENTIALS_PATH", "secrets/service_account.json")
+    GOOGLE_VISION_RATE_LIMIT: int = int(os.getenv("GOOGLE_VISION_RATE_LIMIT", "30"))
     # If you keep a numeric limit in .env (string there), Pydantic will coerce to int
     PLACES_RATE_LIMIT: Optional[int] = Field(
         default=100,

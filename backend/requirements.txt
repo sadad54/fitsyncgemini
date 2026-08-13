@@ -21,6 +21,7 @@ googlemaps==4.10.0
 # Image Processing
 Pillow==10.1.0
 opencv-python==4.8.1.78
+numpy<2
 
 # Caching & Rate Limiting
 redis==5.0.1
@@ -29,6 +30,7 @@ aioredis==2.0.1
 # Utilities
 pydantic==2.5.0
 pydantic-settings==2.1.0
+email-validator==2.3.0
 python-dotenv==1.0.0
 loguru==0.7.2
 

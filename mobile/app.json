@@ -26,7 +26,8 @@
         {
           "faceIDPermission": "FitSync can use Face ID to protect your local style session."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "apiBaseUrl": "http://127.0.0.1:8000"

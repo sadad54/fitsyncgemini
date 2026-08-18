@@ -1,4 +1,4 @@
-import type { ClosetStats, ClothingCategory, ClothingItem, Outfit, Profile } from "@/types/api";
+import type { ClosetStats, ClothingCategory, ClothingItem, Outfit, Profile, TryOnResult } from "@/types/api";
 import { useAuthStore } from "@/store/auth";
 
 const isLocalWebPreview = process.env.EXPO_OS === "web" && typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -101,7 +101,7 @@ export const api = {
   },
   closetItem: (id: string) => request<ClothingItem>(`/clothing/${id}`),
   closetStats: () => request<ClosetStats>("/clothing/stats"),
-  addClosetItem: async (input: { name: string; category?: ClothingCategory; imageUri: string; brand?: string; notes?: string }) => {
+  addClosetItem: async (input: { name: string; category?: ClothingCategory; imageUri: string; brand?: string; notes?: string; detectedVision?: unknown }) => {
     const name = input.name.trim();
     const filename = imageName(name, input.imageUri);
     const form = new FormData();
@@ -109,8 +109,15 @@ export const api = {
     if (input.category) form.append("category", input.category);
     if (input.brand?.trim()) form.append("brand", input.brand.trim());
     if (input.notes?.trim()) form.append("notes", input.notes.trim());
+    if (input.detectedVision) form.append("detected_vision", JSON.stringify(input.detectedVision));
     form.append("image", await imagePart(input.imageUri, filename));
     return request<ClothingItem>("/clothing", { method: "POST", body: form });
+  },
+  detectClosetItemCategory: async (imageUri: string) => {
+    const filename = imageName("detect", imageUri);
+    const form = new FormData();
+    form.append("image", await imagePart(imageUri, filename));
+    return request<{ category: ClothingCategory; sub_category?: string; colors?: string[]; confidence?: number }>("/clothing/detect", { method: "POST", body: form });
   },
   updateClosetItem: (id: string, input: Partial<ClothingItem>) => request<ClothingItem>(`/clothing/${id}`, { method: "PUT", body: JSON.stringify(input) }),
   deleteClosetItem: (id: string) => request<{ deleted: boolean }>(`/clothing/${id}`, { method: "DELETE" }),
@@ -121,5 +128,14 @@ export const api = {
   favoriteOutfit: (id: string) => request<Outfit>(`/outfits/${id}/favorite`, { method: "POST" }),
   feedbackOutfit: (id: string, rating: number, reason?: string) =>
     request<{ recorded: boolean }>(`/outfits/${id}/feedback`, { method: "POST", body: JSON.stringify({ rating, reason }) }),
-  weather: (latitude: number, longitude: number) => request<Record<string, unknown>>(`/weather/current?latitude=${latitude}&longitude=${longitude}`)
+  weather: (latitude: number, longitude: number) => request<Record<string, unknown>>(`/weather/current?latitude=${latitude}&longitude=${longitude}`),
+  createTryOn: async (input: { imageUri: string; itemIds: string[] }) => {
+    const form = new FormData();
+    form.append("item_ids", JSON.stringify(input.itemIds));
+    form.append("person_image", await imagePart(input.imageUri, imageName("try-on", input.imageUri)));
+    return request<TryOnResult>("/tryon/", { method: "POST", body: form });
+  },
+  tryOns: () => request<{ results: TryOnResult[]; total: number }>("/tryon/"),
+  tryOn: (id: string) => request<TryOnResult>(`/tryon/${id}`),
+  deleteTryOn: (id: string) => request<{ deleted: boolean }>(`/tryon/${id}`, { method: "DELETE" })
 };

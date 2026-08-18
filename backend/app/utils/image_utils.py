@@ -30,30 +30,30 @@ def process_image(image_bytes: bytes, resize_dim: Tuple[int, int] = (512, 512)) 
         raise RuntimeError(f"Image processing error: {str(e)}")
 
 
-def upload_to_supabase(image_bytes: bytes, user_id: str) -> Tuple[str, str]:
+def upload_to_supabase(image_bytes: bytes, user_id: str, bucket: str = BUCKET) -> Tuple[str, str]:
     """Upload processed image bytes to Supabase storage and return (public_url, image_path)."""
     try:
         file_id = uuid.uuid4().hex
         image_path = f"{user_id}/{file_id}.jpg"
 
         client = db.get_client()
-        client.storage.from_(BUCKET).upload(
+        client.storage.from_(bucket).upload(
             path=image_path,
             file=image_bytes,
             file_options={"content-type": "image/jpeg"},
         )
 
-        public_url = client.storage.from_(BUCKET).get_public_url(image_path)
+        public_url = client.storage.from_(bucket).get_public_url(image_path)
         return public_url, image_path
 
     except Exception as e:
         raise RuntimeError(f"Supabase upload error: {str(e)}")
 
 
-def process_and_upload_image(image_bytes: bytes, user_id: str) -> Tuple[str, str]:
+def process_and_upload_image(image_bytes: bytes, user_id: str, bucket: str = BUCKET, resize: bool = True) -> Tuple[str, str]:
     """Full pipeline: resize/process the image, then upload it. Returns (public_url, image_path)."""
     try:
-        processed_image = process_image(image_bytes)
-        return upload_to_supabase(processed_image, user_id)
+        processed_image = process_image(image_bytes) if resize else image_bytes
+        return upload_to_supabase(processed_image, user_id, bucket=bucket)
     except Exception as e:
         raise RuntimeError(f"process_and_upload_image failed: {str(e)}")

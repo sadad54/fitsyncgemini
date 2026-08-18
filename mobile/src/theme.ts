@@ -1,49 +1,53 @@
-// Editorial, system-first palette: warm paper, ink, and one restrained signal color.
+// Modernist — flat, architectural, one family (Archivo), one signal color.
+// Atelier-at-night: ink ground, bone type, signal red. Zero radius, no shadows,
+// full-bleed bands divided by rules instead of floating cards.
 export const colors = {
-  canvas: "#F5F4F0",
-  canvasSoft: "#FBFAF7",
-  surface: "#FFFFFF",
-  surfaceElevated: "#FFFFFF",
-  surfaceMuted: "#ECE9E2",
-  ink: "#191917",
-  inkSoft: "#3F3D38",
-  muted: "#6F6B64",
-  faint: "#99948B",
-  stroke: "rgba(25, 25, 23, 0.09)",
-  strokeStrong: "rgba(25, 25, 23, 0.15)",
-  rose: "#C94734",
-  roseSoft: "#A43D2D",
-  roseWash: "rgba(201, 71, 52, 0.09)",
-  plum: "#373330",
-  plumWash: "rgba(55, 51, 48, 0.07)",
-  gold: "#9A6A24",
-  goldWash: "rgba(154, 106, 36, 0.10)",
-  sage: "#39745D",
-  sageWash: "rgba(57, 116, 93, 0.10)",
-  danger: "#B42318",
-  dangerWash: "rgba(180, 35, 24, 0.10)",
-  white: "#FFFFFF",
+  canvas: "#131211",
+  canvasSoft: "#131211",
+  surface: "#1c1a19",
+  surfaceElevated: "#232120",
+  surfaceMuted: "#232120",
+  ink: "#f3f2f2",
+  inkSoft: "#f3f2f2",
+  muted: "#9b9797",
+  faint: "rgba(243, 242, 242, 0.42)",
+  stroke: "rgba(243, 242, 242, 0.18)",
+  strokeStrong: "#f3f2f2",
+  rose: "#ec3013",
+  roseSoft: "#ff563c",
+  roseWash: "transparent",
+  plum: "#9b9797",
+  plumWash: "transparent",
+  gold: "#ec3013",
+  goldWash: "transparent",
+  sage: "#5fae8c",
+  sageWash: "transparent",
+  danger: "#ec3013",
+  dangerWash: "transparent",
+  white: "#ffffff",
   black: "#000000",
-  scrim: "rgba(18, 18, 16, 0.46)",
+  scrim: "rgba(13, 12, 11, 0.72)",
 
   // Compatibility aliases while legacy components migrate to semantic tokens.
-  paper: "#F5F4F0",
-  cotton: "#FFFFFF",
-  bone: "#ECE9E2",
-  stitch: "rgba(25, 25, 23, 0.09)",
-  moss: "#39745D",
-  denim: "#373330",
-  tomato: "#C94734",
-  brass: "#9A6A24",
-  success: "#39745D"
+  paper: "#131211",
+  cotton: "#1c1a19",
+  bone: "#232120",
+  stitch: "rgba(243, 242, 242, 0.18)",
+  moss: "#5fae8c",
+  denim: "#9b9797",
+  tomato: "#ec3013",
+  brass: "#ec3013",
+  success: "#5fae8c"
 };
 
+// Flat fills — same-stop arrays so LinearGradient renders as a solid color.
+// Kept as gradients only so call sites don't need touching.
 export const gradients = {
-  hero: ["#FBFAF7", "#F5F4F0", "#F5F4F0"] as const,
-  rose: ["#191917", "#191917"] as const,
-  plum: ["#373330", "#373330"] as const,
-  gold: ["#B88439", "#98651B"] as const,
-  surface: ["#FFFFFF", "#FFFFFF"] as const
+  hero: ["#131211", "#131211"] as const,
+  rose: ["#ec3013", "#ec3013"] as const,
+  plum: ["#232120", "#232120"] as const,
+  gold: ["#ec3013", "#ec3013"] as const,
+  surface: ["#1c1a19", "#1c1a19"] as const
 };
 
 export const spacing = {
@@ -52,42 +56,54 @@ export const spacing = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 24,
+  xl: 22,
   xxl: 32,
   xxxl: 40,
   display: 56
 };
 
+// Every radius is 0 on purpose — nothing rounds in this system.
 export const radius = {
-  sm: 12,
-  md: 18,
-  lg: 24,
-  xl: 32,
-  pill: 999
+  sm: 0,
+  md: 0,
+  lg: 0,
+  xl: 0,
+  pill: 0
+};
+
+export const fonts = {
+  regular: "Archivo_400Regular",
+  medium: "Archivo_500Medium",
+  semibold: "Archivo_600SemiBold",
+  bold: "Archivo_700Bold",
+  black: "Archivo_800ExtraBold"
 };
 
 export const typography = {
   display: {
-    fontFamily: process.env.EXPO_OS === "ios" ? "New York" : "Georgia",
-    fontWeight: "700" as const,
-    letterSpacing: -1.2
+    fontFamily: fonts.black,
+    fontWeight: "800" as const,
+    letterSpacing: -1.6
   },
   body: {
+    fontFamily: fonts.regular,
     fontWeight: "400" as const
   },
   label: {
+    fontFamily: fonts.bold,
     fontWeight: "700" as const,
-    letterSpacing: 0.2
+    letterSpacing: 1.6
   }
 };
 
 export const motion = {
   quick: 160,
   standard: 260,
-  reveal: 420
+  reveal: 300
 };
 
+// No elevation in this system — bands are separated by rules, not shadow.
 export const shadows = {
-  card: "0 8px 28px rgba(25, 25, 23, 0.07)",
-  floating: "0 16px 40px rgba(25, 25, 23, 0.13)"
+  card: "none",
+  floating: "none"
 };

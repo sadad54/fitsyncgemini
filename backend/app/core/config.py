@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
-from pydantic import Field, AliasChoices
+from typing import List, Optional
+from pydantic import Field, AliasChoices, field_validator
 
 # Load .env file from backend root directory
 env_path = Path(__file__).parent.parent.parent / ".env"
@@ -15,9 +15,35 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(env_path), extra="ignore")
 
     # ---- Core app settings ----
-    ENV: str = "development"
-    DEBUG: bool = True
+    # Defaults here are the safe-by-default posture for an unconfigured
+    # environment (e.g. a fresh container with no .env mounted yet) — local
+    # dev explicitly opts into DEBUG via .env, not the other way around.
+    ENV: str = os.getenv("ENV", "production")
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("1", "true", "yes")
     API_V1_STR: str = os.getenv("API_V1_STR", "/api/v1")
+
+    # ---- CORS / host allowlists ----
+    # Comma-separated. Empty in production means "reject all browser origins"
+    # rather than falling back to a wildcard.
+    CORS_ALLOWED_ORIGINS: str = os.getenv("CORS_ALLOWED_ORIGINS", "")
+    ALLOWED_HOSTS: str = os.getenv("ALLOWED_HOSTS", "")
+
+    @property
+    def cors_origins(self) -> List[str]:
+        if self.ENV != "production":
+            # Expo dev clients hit the API from an arbitrary LAN IP:port and
+            # from the web preview's localhost origin — both change per
+            # machine, so dev trusts any origin rather than hand-listing IPs.
+            return ["*"]
+        origins = [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
+        return origins
+
+    @property
+    def trusted_hosts(self) -> List[str]:
+        if self.ENV != "production":
+            return ["*"]
+        hosts = [h.strip() for h in self.ALLOWED_HOSTS.split(",") if h.strip()]
+        return hosts or ["*"]
 
     # ---- Supabase ----
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://eixnacajmchafxkbtmnr.supabase.co")

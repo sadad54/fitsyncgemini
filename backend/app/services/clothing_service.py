@@ -4,12 +4,33 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException, status
 
 from app.core.database import db
-from app.external_apis.google_vision import google_vision_client
 from app.external_apis.groq_client import groq_client
+from app.ml.clothing_classifier import clothing_classifier
 from app.models.clothing import ClothingItem
 from app.utils.image_utils import process_and_upload_image
 
 CORE_CATEGORIES = ["tops", "bottoms", "footwear", "outerwear"]
+
+FALLBACK_VISION_RESULT: Dict[str, Any] = {
+    "category": "unknown",
+    "sub_category": None,
+    "colors": [],
+    "confidence": 0.0,
+    "detected_objects": [],
+    "detected_labels": [],
+    "error": "vision_unavailable",
+}
+
+
+async def _safe_vision_analysis(image_bytes: bytes, user_id: str) -> Dict[str, Any]:
+    """AI category detection is a nice-to-have, not a blocker — the local
+    classifier has no external dependency to fail, but a fallback stays here
+    in case the model can't load (e.g. disk space) so adding a closet item
+    still works with manual category selection either way."""
+    try:
+        return await clothing_classifier.analyze(image_bytes)
+    except Exception:
+        return dict(FALLBACK_VISION_RESULT)
 
 
 def _to_clothing_item(row: Dict[str, Any]) -> ClothingItem:
@@ -33,6 +54,9 @@ def _to_clothing_item(row: Dict[str, Any]) -> ClothingItem:
 
 
 class ClothingService:
+    async def detect_category(self, image_bytes: bytes, user_id: str) -> Dict[str, Any]:
+        return await _safe_vision_analysis(image_bytes, user_id)
+
     async def create_clothing_item(
         self,
         user_id: str,
@@ -41,10 +65,11 @@ class ClothingService:
         category: Optional[str] = None,
         brand: Optional[str] = None,
         notes: Optional[str] = None,
+        precomputed_vision: Optional[Dict[str, Any]] = None,
     ) -> ClothingItem:
         image_url, _ = process_and_upload_image(image_bytes, user_id)
 
-        vision_result = await google_vision_client.analyze_clothing_item(image_bytes, user_id)
+        vision_result = precomputed_vision or await _safe_vision_analysis(image_bytes, user_id)
 
         analysis: Dict[str, Any] = {"vision": vision_result}
         tags: List[str] = list(vision_result.get("detected_labels") or [])

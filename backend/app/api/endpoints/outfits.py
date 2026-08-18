@@ -1,67 +1,51 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from app.models.outfit import Outfit, OutfitCreate, OutfitUpdate
-from app.services.outfit_service import OutfitService
-from app.api.dependencies import get_current_user, get_optional_user
-from typing import List
-import uuid
+from fastapi import APIRouter, Depends
+
+from app.api.dependencies import get_current_user
+from app.models.outfit import Outfit, OutfitFeedback, OutfitGenerateRequest
+from app.models.user import User
+from app.services.outfit_service import outfit_service
 
 router = APIRouter()
 
-@router.post("/", response_model=Outfit)
-async def create_outfit(
-    outfit_data: OutfitCreate,
-    current_user = Depends(get_current_user),
-    outfit_service: OutfitService = Depends()
-):
-    return await outfit_service.create_outfit(outfit_data, current_user.id)
 
-@router.get("/", response_model=List[Outfit])
-async def get_outfits(
-    current_user = Depends(get_current_user),
-    outfit_service: OutfitService = Depends()
+@router.post("/generate", response_model=Outfit)
+async def generate_outfit(
+    request: OutfitGenerateRequest,
+    current_user: User = Depends(get_current_user),
 ):
-    return await outfit_service.get_user_outfits(current_user.id)
+    return await outfit_service.generate_outfit(
+        user_id=current_user.user_id,
+        occasion=request.occasion,
+        use_weather=request.use_weather,
+        latitude=request.latitude,
+        longitude=request.longitude,
+    )
 
-@router.get("/{outfit_id}", response_model=Outfit)
-async def get_outfit(
+
+@router.get("/")
+async def list_outfits(
+    saved_only: bool = False,
+    current_user: User = Depends(get_current_user),
+):
+    outfits, total = await outfit_service.list_outfits(current_user.user_id, saved_only)
+    return {"outfits": outfits, "total": total}
+
+
+@router.post("/{outfit_id}/save", response_model=Outfit)
+async def save_outfit(outfit_id: str, current_user: User = Depends(get_current_user)):
+    return await outfit_service.save_outfit(current_user.user_id, outfit_id)
+
+
+@router.post("/{outfit_id}/favorite", response_model=Outfit)
+async def favorite_outfit(outfit_id: str, current_user: User = Depends(get_current_user)):
+    return await outfit_service.favorite_outfit(current_user.user_id, outfit_id)
+
+
+@router.post("/{outfit_id}/feedback")
+async def feedback_outfit(
     outfit_id: str,
-    current_user = Depends(get_current_user),
-    outfit_service: OutfitService = Depends()
+    feedback: OutfitFeedback,
+    current_user: User = Depends(get_current_user),
 ):
-    outfit = await outfit_service.get_outfit(outfit_id, current_user.id)
-    if not outfit:
-        raise HTTPException(status_code=404, detail="Outfit not found")
-    return outfit
-
-@router.put("/{outfit_id}", response_model=Outfit)
-async def update_outfit(
-    outfit_id: str,
-    outfit_data: OutfitUpdate,
-    current_user = Depends(get_current_user),
-    outfit_service: OutfitService = Depends()
-):
-    outfit = await outfit_service.update_outfit(outfit_id, outfit_data, current_user.id)
-    if not outfit:
-        raise HTTPException(status_code=404, detail="Outfit not found")
-    return outfit
-
-@router.delete("/{outfit_id}")
-async def delete_outfit(
-    outfit_id: str,
-    current_user = Depends(get_current_user),
-    outfit_service: OutfitService = Depends()
-):
-    success = await outfit_service.delete_outfit(outfit_id, current_user.id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Outfit not found")
-    return {"message": "Outfit deleted successfully"}
-
-@router.post("/{outfit_id}/share")
-async def share_outfit(
-    outfit_id: str,
-    current_user = Depends(get_current_user),
-    outfit_service: OutfitService = Depends()
-):
-    return await outfit_service.share_outfit(outfit_id, current_user.id)
-
-
+    await outfit_service.record_feedback(current_user.user_id, outfit_id, feedback.rating, feedback.reason)
+    return {"recorded": True}

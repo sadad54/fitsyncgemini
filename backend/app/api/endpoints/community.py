@@ -1,107 +1,82 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from app.models.community import Post, Comment, Like
-from app.services.community_service import CommunityService
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
 from app.api.dependencies import get_current_user, get_optional_user
-from typing import List, Dict, Any
-from datetime import datetime
+from app.models.user import User
+from app.services.community_service import community_service
 
 router = APIRouter()
 
-# Simple mock data endpoint for testing (no auth required)
-@router.get("/posts", response_model=List[Dict[str, Any]])
-async def get_posts():
-    """Get community posts - returns mock data for now"""
-    mock_posts = [
-        {
-            "id": 1,
-            "username": "fashionista_jane",
-            "avatar": "https://images.unsplash.com/photo-1494790108755-2616b332c8f2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=150&q=80",
-            "image_url": "https://images.unsplash.com/photo-1506629905607-bb5c07bef3ea?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80",
-            "content": "Perfect summer day calls for this flowy maxi dress! 🌞 The floral print gives me major vacation vibes ✨ #SummerStyle #FloralDress #OOTD",
-            "likes": 42,
-            "comments": 8,
-            "created_at": "2025-11-05T10:30:00Z",
-            "liked": False,
-            "challenge": "Summer Vibes Challenge"
-        },
-        {
-            "id": 2,
-            "username": "style_guru_mike",
-            "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=150&q=80",
-            "image_url": "https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80",
-            "content": "Keeping it minimal today with this monochrome look. Sometimes less really is more 👌 #MinimalStyle #Monochrome #LessIsMore",
-            "likes": 67,
-            "comments": 12,
-            "created_at": "2025-11-05T08:15:00Z",
-            "liked": True,
-            "challenge": "Monochrome Monday"
-        },
-        {
-            "id": 3,
-            "username": "chic_explorer",
-            "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=150&q=80",
-            "image_url": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80",
-            "content": "Found this amazing vintage leather jacket at a thrift store! Paired it with modern pieces for the perfect blend 💎 #VintageFinds #ThriftStyle #SustainableFashion",
-            "likes": 89,
-            "comments": 15,
-            "created_at": "2025-11-04T16:45:00Z",
-            "liked": False,
-            "challenge": "Vintage Revival Challenge"
-        },
-        {
-            "id": 4,
-            "username": "trendy_alex",
-            "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=150&q=80",
-            "image_url": "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80",
-            "content": "Street style captured in the heart of London! This oversized blazer is giving me boss vibes 💼✨ #StreetStyle #London #Blazer",
-            "likes": 34,
-            "comments": 6,
-            "created_at": "2025-11-04T14:20:00Z",
-            "liked": True,
-            "challenge": None
-        }
-    ]
-    return mock_posts
 
-@router.post("/posts", response_model=Post)
-async def create_post(
-    content: str,
-    image: UploadFile = File(None),
-    current_user = Depends(get_current_user),
-    community_service: CommunityService = Depends()
-):
-    return await community_service.create_post(content, current_user.id, image)
+class PostCreate(BaseModel):
+    content: str = ""
+    image_url: Optional[str] = None
+    tags: List[str] = []
 
-@router.get("/posts/authenticated", response_model=List[Post])
-async def get_posts_authenticated(
-    community_service: CommunityService = Depends(),
-    current_user = Depends(get_optional_user)
-):
-    return await community_service.get_posts(current_user.id if current_user else None)
 
-@router.post("/posts/{post_id}/comments", response_model=Comment)
-async def create_comment(
-    post_id: str,
-    content: str,
-    current_user = Depends(get_current_user),
-    community_service: CommunityService = Depends()
+class CommentCreate(BaseModel):
+    content: str
+
+
+@router.get("/posts")
+async def get_posts(
+    limit: int = 20,
+    offset: int = 0,
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
-    return await community_service.create_comment(post_id, content, current_user.id)
+    viewer_id = current_user.user_id if current_user else None
+    return await community_service.list_posts(viewer_id, limit=limit, offset=offset)
+
+
+@router.post("/posts")
+async def create_post(body: PostCreate, current_user: User = Depends(get_current_user)):
+    return await community_service.create_post(current_user.user_id, body.content, body.image_url, body.tags)
+
+
+@router.delete("/posts/{post_id}")
+async def delete_post(post_id: str, current_user: User = Depends(get_current_user)):
+    await community_service.delete_post(current_user.user_id, post_id)
+    return {"success": True}
+
 
 @router.post("/posts/{post_id}/like")
-async def like_post(
-    post_id: str,
-    current_user = Depends(get_current_user),
-    community_service: CommunityService = Depends()
-):
-    return await community_service.like_post(post_id, current_user.id)
+async def like_post(post_id: str, current_user: User = Depends(get_current_user)):
+    return await community_service.like_post(current_user.user_id, post_id)
+
 
 @router.delete("/posts/{post_id}/like")
-async def unlike_post(
-    post_id: str,
-    current_user = Depends(get_current_user),
-    community_service: CommunityService = Depends()
-):
-    return await community_service.unlike_post(post_id, current_user.id)
+async def unlike_post(post_id: str, current_user: User = Depends(get_current_user)):
+    return await community_service.unlike_post(current_user.user_id, post_id)
 
 
+@router.get("/posts/{post_id}/comments")
+async def get_comments(post_id: str):
+    return await community_service.list_comments(post_id)
+
+
+@router.post("/posts/{post_id}/comments")
+async def create_comment(post_id: str, body: CommentCreate, current_user: User = Depends(get_current_user)):
+    return await community_service.create_comment(current_user.user_id, post_id, body.content)
+
+
+@router.post("/users/{user_id}/follow")
+async def follow_user(user_id: str, current_user: User = Depends(get_current_user)):
+    return await community_service.follow_user(current_user.user_id, user_id)
+
+
+@router.delete("/users/{user_id}/follow")
+async def unfollow_user(user_id: str, current_user: User = Depends(get_current_user)):
+    return await community_service.unfollow_user(current_user.user_id, user_id)
+
+
+@router.get("/challenges")
+async def get_challenges(current_user: Optional[User] = Depends(get_optional_user)):
+    viewer_id = current_user.user_id if current_user else None
+    return await community_service.list_challenges(viewer_id)
+
+
+@router.post("/challenges/{challenge_id}/join")
+async def join_challenge(challenge_id: str, current_user: User = Depends(get_current_user)):
+    return await community_service.join_challenge(current_user.user_id, challenge_id)

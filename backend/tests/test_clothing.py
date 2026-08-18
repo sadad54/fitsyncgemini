@@ -52,6 +52,52 @@ def test_create_clothing_item_returns_created_item(client, monkeypatch):
     assert body["category"] == "tops"
 
 
+def test_detect_clothing_category_returns_vision_result(client, monkeypatch):
+    async def fake_detect(image_bytes, user_id):
+        assert user_id == TEST_USER_ID
+        return {"category": "tops", "sub_category": "casual", "colors": ["blue"], "confidence": 0.8}
+
+    monkeypatch.setattr(clothing_module.clothing_service, "detect_category", fake_detect)
+
+    response = client.post(
+        "/api/v1/clothing/detect",
+        files={"image": ("shirt.jpg", BytesIO(b"fake-image-bytes"), "image/jpeg")},
+        headers={"Authorization": "Bearer test-token"},
+    )
+    assert response.status_code == 200
+    assert response.json()["category"] == "tops"
+
+
+def test_create_clothing_item_reuses_precomputed_vision(client, monkeypatch):
+    async def fake_create(**kwargs):
+        assert kwargs["precomputed_vision"] == {"category": "tops", "confidence": 0.8}
+        return _sample_item()
+
+    monkeypatch.setattr(clothing_module.clothing_service, "create_clothing_item", fake_create)
+
+    response = client.post(
+        "/api/v1/clothing/",
+        data={"name": "Blue linen shirt", "detected_vision": '{"category": "tops", "confidence": 0.8}'},
+        files={"image": ("shirt.jpg", BytesIO(b"fake-image-bytes"), "image/jpeg")},
+        headers={"Authorization": "Bearer test-token"},
+    )
+    assert response.status_code == 200
+
+
+def test_detect_category_falls_back_when_local_classifier_fails(monkeypatch):
+    import asyncio
+
+    async def broken_classifier(image_bytes):
+        raise RuntimeError("model failed to load")
+
+    monkeypatch.setattr(clothing_module.clothing_classifier, "analyze", broken_classifier)
+
+    result = asyncio.run(clothing_module.clothing_service.detect_category(b"fake-bytes", TEST_USER_ID))
+
+    assert result["category"] == "unknown"
+    assert result["error"] == "vision_unavailable"
+
+
 def test_list_clothing_items_returns_items_and_total(client, monkeypatch):
     async def fake_list(user_id, category=None, search=None):
         assert user_id == TEST_USER_ID

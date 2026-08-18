@@ -10,6 +10,8 @@ export const keys = {
   stats: ["closet-stats"] as const,
   outfitsRoot: ["outfits"] as const,
   outfits: (savedOnly: boolean) => ["outfits", savedOnly] as const,
+  tryonsRoot: ["tryons"] as const,
+  tryon: (id: string) => ["tryon", id] as const,
   health: ["health"] as const
 };
 
@@ -55,6 +57,10 @@ export function useAddClosetItem() {
       queryClient.invalidateQueries({ queryKey: keys.stats });
     }
   });
+}
+
+export function useDetectClosetItemCategory() {
+  return useMutation({ mutationFn: api.detectClosetItemCategory });
 }
 
 export function useUpdateClosetItem() {
@@ -107,4 +113,24 @@ export function useFavoriteOutfit() {
 
 export function useOutfitFeedback() {
   return useMutation({ mutationFn: ({ id, rating, reason }: { id: string; rating: number; reason?: string }) => api.feedbackOutfit(id, rating, reason) });
+}
+
+export function useTryOns() {
+  return useQuery({ queryKey: keys.tryonsRoot, queryFn: api.tryOns });
+}
+
+export function useCreateTryOn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createTryOn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.tryonsRoot })
+  });
+}
+
+export function useDeleteTryOn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteTryOn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.tryonsRoot })
+  });
 }

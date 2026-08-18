@@ -43,6 +43,19 @@ export type ClosetStats = {
   missing_essentials: string[];
 };
 
+export type TryOnResult = {
+  id: string;
+  user_id: string;
+  item_ids: string[];
+  person_image_url?: string | null;
+  result_image_url?: string | null;
+  status: "processing" | "completed" | "failed";
+  confidence_score?: number | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Outfit = {
   id: string;
   user_id: string;

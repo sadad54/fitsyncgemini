@@ -8,10 +8,11 @@ router = APIRouter()
 
 @router.get("/current")
 async def get_current_weather(
-    lat: float,
-    lon: float
+    latitude: float,
+    longitude: float
 ):
     """Get current weather for coordinates"""
+    lat, lon = latitude, longitude
     try:
         weather_service = WeatherService()
         return await weather_service.get_current_weather(lat, lon)
@@ -36,10 +37,11 @@ async def get_current_weather(
 
 @router.get("/forecast")
 async def get_weather_forecast(
-    lat: float,
-    lon: float
+    latitude: float,
+    longitude: float
 ):
     """Get weather forecast for coordinates"""
+    lat, lon = latitude, longitude
     try:
         weather_service = WeatherService()
         return await weather_service.get_forecast(lat, lon)

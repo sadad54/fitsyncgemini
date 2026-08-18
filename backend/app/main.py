@@ -9,7 +9,6 @@ from app.api.endpoints.v1 import auth, clothing, tryon
 from app.api.endpoints import outfits, trends, community, weather, locations
 from app.core.database import init_db
 from app.core.cache import init_cache
-from app.routers import virtual_tryon_router
 
 
 @asynccontextmanager
@@ -31,15 +30,17 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origins,
+    # Credentialed CORS requires an explicit origin list — the spec forbids
+    # combining a wildcard origin with allow_credentials=True.
+    allow_credentials="*" not in settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]
+    allowed_hosts=settings.trusted_hosts
 )
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
@@ -50,7 +51,6 @@ app.include_router(trends.router, prefix=f"{settings.API_V1_STR}/trends", tags=[
 app.include_router(community.router, prefix=f"{settings.API_V1_STR}/community", tags=["Community"])
 app.include_router(weather.router, prefix=f"{settings.API_V1_STR}/weather", tags=["Weather"])
 app.include_router(locations.router, prefix=f"{settings.API_V1_STR}/locations", tags=["Locations"])
-app.include_router(virtual_tryon_router.router)
 
 
 @app.get("/")

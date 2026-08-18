@@ -1,27 +1,34 @@
-from pydantic import BaseModel
-from typing import Optional, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-class OutfitBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    clothing_items: List[str]  # List of clothing item IDs
-    is_public: bool = False
+from pydantic import BaseModel
 
-class OutfitCreate(OutfitBase):
-    pass
 
-class OutfitUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    clothing_items: Optional[List[str]] = None
-    is_public: Optional[bool] = None
-
-class Outfit(OutfitBase):
+class Outfit(BaseModel):
     id: str
     user_id: str
+    name: str
+    item_ids: List[str] = []
+    occasion: str
+    weather_context: Optional[Dict[str, Any]] = None
+    score: float
+    explanation: str
+    saved: bool = False
+    favorited: bool = False
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
+
+
+class OutfitGenerateRequest(BaseModel):
+    occasion: str
+    use_weather: bool = False
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class OutfitFeedback(BaseModel):
+    rating: int
+    reason: Optional[str] = None

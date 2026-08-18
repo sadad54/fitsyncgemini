@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, router } from "expo-router";
 import { AppText, Display, Eyebrow } from "@/components/AppText";
 import { Button } from "@/components/Button";
@@ -9,7 +8,7 @@ import { Reveal } from "@/components/motion";
 import { Screen } from "@/components/Screen";
 import { useUpdateProfile } from "@/api/queries";
 import { useAuthStore } from "@/store/auth";
-import { colors, gradients, radius, spacing } from "@/theme";
+import { colors, fonts, spacing } from "@/theme";
 
 const styleAnchors = ["minimal", "streetwear", "classic", "athleisure", "soft glam", "workwear", "tailored", "weekend"];
 const colorAnchors = [
@@ -41,8 +40,6 @@ export default function Onboarding() {
 
   async function finish() {
     if (!ready || update.isPending) return;
-    // Enter immediately, then sync when the API is available. This keeps the
-    // first-run experience usable on web previews and intermittent networks.
     await completeOnboarding();
     router.replace("/(tabs)/home");
     update.mutate({ display_name: name.trim(), style_preferences: styles, favorite_colors: colorsSelected, onboarding_complete: true });
@@ -53,11 +50,11 @@ export default function Onboarding() {
 
   return (
     <Screen bottomInset={false}>
-      <View style={stylesSheet.progressTrack}><LinearGradient colors={gradients.rose} style={[stylesSheet.progress, { width: `${progress * 100}%` }]} /></View>
+      <View style={stylesSheet.progressTrack}><View style={[stylesSheet.progress, { width: `${progress * 100}%` }]} /></View>
       <Reveal>
         <View style={stylesSheet.header}>
           <Eyebrow>Three details, better looks</Eyebrow>
-          <Display>Make the stylist feel like yours.</Display>
+          <Display>Tune the{"\n"}stylist.</Display>
           <AppText style={stylesSheet.note}>We use these anchors to rank outfit combinations—not to put your taste in a box.</AppText>
         </View>
       </Reveal>
@@ -84,43 +81,39 @@ export default function Onboarding() {
             {colorAnchors.map((color) => {
               const active = colorsSelected.includes(color.name);
               return (
-                <View key={color.name} style={stylesSheet.colorWrap}>
-                  <Pressable accessibilityRole="button" accessibilityLabel={color.name} accessibilityState={{ selected: active }} style={({ pressed }) => [stylesSheet.colorRing, active && stylesSheet.colorRingActive, pressed && stylesSheet.colorPressed]} onPress={() => toggle(color.name, setColorsSelected)}>
-                    <View style={[stylesSheet.colorDot, { backgroundColor: color.value }]} />
-                  </Pressable>
+                <Pressable key={color.name} accessibilityRole="button" accessibilityLabel={color.name} accessibilityState={{ selected: active }} style={stylesSheet.colorWrap} onPress={() => toggle(color.name, setColorsSelected)}>
+                  <View style={[stylesSheet.colorSwatch, { backgroundColor: color.value }, active && stylesSheet.colorSwatchActive]} />
                   <AppText style={[stylesSheet.colorName, active && stylesSheet.colorNameActive]}>{color.name}</AppText>
-                </View>
+                </Pressable>
               );
             })}
           </View>
         </View>
       </Reveal>
 
-      <Button title={update.isPending ? "Building your profile…" : "Enter my closet"} disabled={!ready || update.isPending} onPress={finish} />
+      <Button title={update.isPending ? "Building your profile…" : "Enter my closet"} icon="arrow" disabled={!ready || update.isPending} onPress={finish} />
       {update.error ? <AppText selectable style={stylesSheet.error}>{update.error.message}</AppText> : null}
     </Screen>
   );
 }
 
 const stylesSheet = StyleSheet.create({
-  progressTrack: { height: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, overflow: "hidden" },
-  progress: { height: "100%", borderRadius: radius.pill },
-  header: { gap: spacing.md },
-  note: { color: colors.muted, fontSize: 17, lineHeight: 26 },
-  section: { gap: spacing.md, paddingVertical: spacing.sm },
-  stepRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  step: { color: colors.rose, fontSize: 12, fontWeight: "900", fontVariant: ["tabular-nums"] },
-  sectionTitle: { fontSize: 22, lineHeight: 27, fontWeight: "800" },
-  helper: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  input: { minHeight: 56, borderRadius: radius.lg, borderCurve: "continuous", borderWidth: 1, borderColor: colors.strokeStrong, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: spacing.lg, fontSize: 17 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  palette: { flexDirection: "row", flexWrap: "wrap", gap: spacing.lg },
-  colorWrap: { alignItems: "center", gap: spacing.xs, width: 54 },
-  colorRing: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
-  colorRingActive: { borderColor: colors.roseSoft },
-  colorPressed: { opacity: 0.7 },
-  colorDot: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: colors.strokeStrong },
-  colorName: { color: colors.faint, fontSize: 11, lineHeight: 14, textTransform: "capitalize" },
-  colorNameActive: { color: colors.inkSoft },
-  error: { color: colors.danger }
+  progressTrack: { height: 3, backgroundColor: colors.surfaceElevated },
+  progress: { height: "100%", backgroundColor: colors.rose },
+  header: { gap: spacing.md, borderBottomWidth: 2, borderColor: colors.strokeStrong, paddingBottom: spacing.lg },
+  note: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  section: { gap: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderColor: colors.stroke },
+  stepRow: { flexDirection: "row", alignItems: "baseline", gap: spacing.md },
+  step: { color: colors.roseSoft, fontSize: 11, fontFamily: fonts.black, fontWeight: "800" },
+  sectionTitle: { fontSize: 17, lineHeight: 21, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.2 },
+  helper: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  input: { height: 50, borderWidth: 1, borderColor: colors.stroke, borderLeftWidth: 2, borderLeftColor: colors.strokeStrong, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: spacing.md, fontSize: 15, fontFamily: fonts.medium },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  palette: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  colorWrap: { alignItems: "flex-start", gap: spacing.xs, width: 66 },
+  colorSwatch: { width: "100%", height: 44, borderWidth: 1, borderColor: colors.stroke },
+  colorSwatchActive: { borderWidth: 2, borderColor: colors.rose },
+  colorName: { color: colors.muted, fontSize: 9, lineHeight: 12, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
+  colorNameActive: { color: colors.ink },
+  error: { color: colors.roseSoft }
 });

@@ -1,6 +1,6 @@
 import { PropsWithChildren } from "react";
 import { StyleSheet, Text, TextProps } from "react-native";
-import { colors, typography } from "@/theme";
+import { colors, fonts, typography } from "@/theme";
 
 export function AppText({ children, style, ...props }: PropsWithChildren<TextProps>) {
   return (
@@ -24,7 +24,15 @@ export function Eyebrow({ children, style, ...props }: PropsWithChildren<TextPro
 
 const styles = StyleSheet.create({
   text: { color: colors.ink, fontSize: 16, lineHeight: 24, ...typography.body },
-  display: { color: colors.ink, fontSize: 44, lineHeight: 48, ...typography.display },
-  title: { color: colors.ink, fontSize: 30, lineHeight: 35, ...typography.display },
-  eyebrow: { color: colors.roseSoft, fontSize: 12, lineHeight: 16, ...typography.label, letterSpacing: 1.2, textTransform: "uppercase" }
+  display: { color: colors.ink, fontSize: 44, lineHeight: 41, ...typography.display, textTransform: "uppercase" },
+  title: { color: colors.ink, fontSize: 40, lineHeight: 37, ...typography.display, textTransform: "uppercase" },
+  eyebrow: {
+    color: colors.roseSoft,
+    fontSize: 10,
+    lineHeight: 13,
+    fontFamily: fonts.bold,
+    fontWeight: "700",
+    letterSpacing: 1.6,
+    textTransform: "uppercase"
+  }
 });

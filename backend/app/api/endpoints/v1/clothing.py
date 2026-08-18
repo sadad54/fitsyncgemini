@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
@@ -10,17 +11,34 @@ from app.services.clothing_service import clothing_service
 router = APIRouter()
 
 
+@router.post("/detect")
+async def detect_clothing_category(
+    image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    await validate_image_file(image)
+    image_bytes = await image.read()
+    return await clothing_service.detect_category(image_bytes, current_user.user_id)
+
+
 @router.post("/", response_model=ClothingItem)
 async def create_clothing_item(
     name: str = Form(...),
     category: Optional[str] = Form(None),
     brand: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
+    detected_vision: Optional[str] = Form(None),
     image: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ):
     await validate_image_file(image)
     image_bytes = await image.read()
+    precomputed_vision = None
+    if detected_vision:
+        try:
+            precomputed_vision = json.loads(detected_vision)
+        except ValueError:
+            precomputed_vision = None
     return await clothing_service.create_clothing_item(
         user_id=current_user.user_id,
         name=name,
@@ -28,6 +46,7 @@ async def create_clothing_item(
         category=category,
         brand=brand,
         notes=notes,
+        precomputed_vision=precomputed_vision,
     )
 
 

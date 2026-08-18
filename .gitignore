@@ -76,7 +76,52 @@ android/app/build/
 .vscode/
 .idea/
 .DS_Store
+
+# Backend sensitive files
 backend/.env
-docker-compose.yml
 backend/env.example
+backend/secrets/*
+backend/secrets/**/*
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/api_test_results.json
+backend/*.log
+backend_v2/runtime_images/
+backend_v2/uploads/
+backend_v2/.env
+mobile/.expo/
+mobile/.expo-home/
+mobile/expo_home/
+mobile/node_modules/
+mobile/.pnpm-store/
+mobile/.pnpm-cache/
+
+# Docker files (if containing sensitive info)
+docker-compose.yml
+docker-compose.override.yml
+
+# Environment files at any level
+.env
+.env.*
+!.env.example
 env.example
+
+# API keys and credentials
+*.key
+*.pem
+service_account.json
+**/service_account.json
+credentials.json
+**/credentials.json
+
+# Test files with potentially sensitive data
+test_*_results.json
+*_test_results.json
+
+# Temporary test connection files
+test_connection.dart
+test_endpoints.dart
+test_backend_connection.dart
+test_flutter_services.dart
+simple_test.dart

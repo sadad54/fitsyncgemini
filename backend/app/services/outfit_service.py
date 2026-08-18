@@ -1,59 +1,202 @@
-from app.models.outfit import Outfit, OutfitCreate, OutfitUpdate
-from app.core.database import get_db
-from app.services.recommendation_service import RecommendationService
-from typing import List, Optional
-import uuid
-from datetime import datetime
+import random
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
+from fastapi import HTTPException, status
+
+from app.core.database import db
+from app.models.outfit import Outfit
+from app.services.weather_service import WeatherService
+
+ESSENTIAL_CATEGORIES = ["tops", "bottoms", "footwear"]
+
+OCCASION_NAMES = {
+    "casual": "Everyday Edit",
+    "work": "Desk to Done",
+    "date": "Easy Charm",
+    "workout": "Move Ready",
+    "travel": "Pack Light",
+    "dinner": "Evening Out",
+}
+
+
+def _to_outfit(row: Dict[str, Any]) -> Outfit:
+    # DB columns predate this contract in a couple of spots (ai_score,
+    # is_favorite) — map them to the app-facing names here.
+    return Outfit(
+        id=row["id"],
+        user_id=row["user_id"],
+        name=row.get("name") or "Your look",
+        item_ids=row.get("item_ids") or [],
+        occasion=row.get("occasion") or "casual",
+        weather_context=row.get("weather_context"),
+        score=row.get("ai_score") or 0.0,
+        explanation=row.get("explanation") or "",
+        saved=bool(row.get("saved")),
+        favorited=bool(row.get("is_favorite")),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
 
 class OutfitService:
     def __init__(self):
-        self.db = get_db()
-        self.recommendation_service = RecommendationService()
+        self.weather_service = WeatherService()
 
-    async def create_outfit(self, outfit_data: OutfitCreate, user_id: str) -> Outfit:
-        outfit_dict = outfit_data.dict()
-        outfit_dict["id"] = str(uuid.uuid4())
-        outfit_dict["user_id"] = user_id
-        outfit_dict["created_at"] = datetime.utcnow().isoformat()
-        outfit_dict["updated_at"] = datetime.utcnow().isoformat()
-        
-        result = self.db.table("outfits").insert(outfit_dict).execute()
-        return Outfit(**result.data[0])
+    async def generate_outfit(
+        self,
+        user_id: str,
+        occasion: str,
+        use_weather: bool = False,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+    ) -> Outfit:
+        items_result = db.get_client().table("clothing_items").select("*").eq("user_id", user_id).execute()
+        items = items_result.data or []
 
-    async def get_user_outfits(self, user_id: str) -> List[Outfit]:
-        result = self.db.table("outfits").select("*").eq("user_id", user_id).execute()
-        return [Outfit(**outfit) for outfit in result.data]
+        weather_context: Optional[Dict[str, Any]] = None
+        if use_weather and latitude is not None and longitude is not None:
+            try:
+                weather_context = await self.weather_service.get_current_weather(latitude, longitude, user_id=user_id)
+            except Exception:
+                weather_context = None
 
-    async def get_outfit(self, outfit_id: str, user_id: str) -> Optional[Outfit]:
-        result = self.db.table("outfits").select("*").eq("id", outfit_id).eq("user_id", user_id).execute()
-        if result.data:
-            return Outfit(**result.data[0])
-        return None
+        selected, categories_filled = self._select_items(items, occasion, weather_context)
+        item_ids = [item["id"] for item in selected]
+        score = self._score(categories_filled, weather_context is not None, len(item_ids))
+        explanation = self._explain(selected, occasion, weather_context)
 
-    async def update_outfit(self, outfit_id: str, outfit_data: OutfitUpdate, user_id: str) -> Optional[Outfit]:
-        update_data = outfit_data.dict(exclude_unset=True)
-        update_data["updated_at"] = datetime.utcnow().isoformat()
-        
-        result = self.db.table("outfits").update(update_data).eq("id", outfit_id).eq("user_id", user_id).execute()
-        if result.data:
-            return Outfit(**result.data[0])
-        return None
+        now = datetime.now(timezone.utc).isoformat()
+        row = {
+            "user_id": user_id,
+            "name": OCCASION_NAMES.get(occasion, occasion.replace("_", " ").title()),
+            "occasion": occasion,
+            "item_ids": item_ids,
+            "weather_context": weather_context,
+            "ai_score": score,
+            "explanation": explanation,
+            "saved": False,
+            "is_favorite": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = db.get_client().table("outfits").insert(row).execute()
+        return _to_outfit(result.data[0])
 
-    async def delete_outfit(self, outfit_id: str, user_id: str) -> bool:
-        result = self.db.table("outfits").delete().eq("id", outfit_id).eq("user_id", user_id).execute()
-        return len(result.data) > 0
+    async def list_outfits(self, user_id: str, saved_only: bool = False) -> Tuple[List[Outfit], int]:
+        query = db.get_client().table("outfits").select("*").eq("user_id", user_id)
+        if saved_only:
+            query = query.eq("saved", True)
+        result = query.order("created_at", desc=True).execute()
+        outfits = [_to_outfit(row) for row in result.data]
+        return outfits, len(outfits)
 
-    async def share_outfit(self, outfit_id: str, user_id: str) -> dict:
-        outfit = await self.get_outfit(outfit_id, user_id)
-        if not outfit:
-            raise ValueError("Outfit not found")
-        
-        # Create a shared version of the outfit
-        shared_outfit = outfit.dict()
-        shared_outfit["id"] = str(uuid.uuid4())
-        shared_outfit["original_outfit_id"] = outfit_id
-        shared_outfit["is_shared"] = True
-        shared_outfit["created_at"] = datetime.utcnow().isoformat()
-        
-        result = self.db.table("shared_outfits").insert(shared_outfit).execute()
-        return {"shared_outfit_id": result.data[0]["id"]}
+    async def save_outfit(self, user_id: str, outfit_id: str) -> Outfit:
+        return await self._update(user_id, outfit_id, {"saved": True})
+
+    async def favorite_outfit(self, user_id: str, outfit_id: str) -> Outfit:
+        return await self._update(user_id, outfit_id, {"is_favorite": True})
+
+    async def record_feedback(self, user_id: str, outfit_id: str, rating: int, reason: Optional[str] = None) -> None:
+        updates: Dict[str, Any] = {"rating": rating, "updated_at": datetime.now(timezone.utc).isoformat()}
+        if reason:
+            updates["feedback_reason"] = reason
+        result = (
+            db.get_client()
+            .table("outfits")
+            .update(updates)
+            .eq("id", outfit_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Outfit not found")
+
+    async def _update(self, user_id: str, outfit_id: str, updates: Dict[str, Any]) -> Outfit:
+        updates = dict(updates)
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        result = (
+            db.get_client()
+            .table("outfits")
+            .update(updates)
+            .eq("id", outfit_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Outfit not found")
+        return _to_outfit(result.data[0])
+
+    def _select_items(
+        self, items: List[Dict[str, Any]], occasion: str, weather_context: Optional[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        by_category: Dict[str, List[Dict[str, Any]]] = {}
+        for item in items:
+            by_category.setdefault(item.get("category") or "unknown", []).append(item)
+
+        temperature = weather_context.get("temperature") if weather_context else None
+        cold = isinstance(temperature, (int, float)) and temperature < 15
+        hot = isinstance(temperature, (int, float)) and temperature > 26
+
+        def pick(category: str) -> Optional[Dict[str, Any]]:
+            pool = by_category.get(category)
+            return random.choice(pool) if pool else None
+
+        selected: List[Dict[str, Any]] = []
+        filled = 0
+
+        if occasion == "workout" and by_category.get("activewear"):
+            for piece in (pick("activewear"), pick("footwear")):
+                if piece:
+                    selected.append(piece)
+                    filled += 1
+        elif occasion in ("dinner", "date") and by_category.get("dresses"):
+            for piece in (pick("dresses"), pick("footwear")):
+                if piece:
+                    selected.append(piece)
+                    filled += 1
+        else:
+            for piece in (pick("tops"), pick("bottoms"), pick("footwear")):
+                if piece:
+                    selected.append(piece)
+                    filled += 1
+
+        if (cold or occasion in ("travel", "work")) and not hot:
+            outer = pick("outerwear")
+            if outer and outer not in selected:
+                selected.append(outer)
+
+        if not hot and occasion in ("dinner", "date"):
+            accessory = pick("accessories")
+            if accessory:
+                selected.append(accessory)
+
+        return selected, filled
+
+    def _score(self, categories_filled: int, has_weather: bool, item_count: int) -> float:
+        if item_count == 0:
+            return 0.0
+        base = min(categories_filled / len(ESSENTIAL_CATEGORIES), 1.0) * 0.75
+        if item_count > categories_filled:
+            base += 0.15
+        if has_weather:
+            base += 0.10
+        return round(min(base, 0.98), 2)
+
+    def _explain(
+        self, selected: List[Dict[str, Any]], occasion: str, weather_context: Optional[Dict[str, Any]]
+    ) -> str:
+        if not selected:
+            return "Add a few more pieces to your closet and FitSync can start assembling full looks."
+        names = [item.get("name") or "a piece" for item in selected]
+        colors = sorted({c for item in selected for c in (item.get("colors") or [])})
+        pairing = ", ".join(names[:-1]) + (f" and {names[-1]}" if len(names) > 1 else names[0])
+        color_note = f" in {', '.join(colors)}" if colors else ""
+        weather_note = ""
+        temperature = weather_context.get("temperature") if weather_context else None
+        if isinstance(temperature, (int, float)):
+            weather_note = f" Built for about {round(temperature)}°C right now."
+        return f"{pairing}{color_note} — a straightforward pairing for {occasion}.{weather_note}"
+
+
+outfit_service = OutfitService()

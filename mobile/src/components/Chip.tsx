@@ -2,7 +2,7 @@ import { PropsWithChildren } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { AppText } from "@/components/AppText";
-import { colors, radius, spacing } from "@/theme";
+import { colors, fonts, spacing } from "@/theme";
 
 export function Chip({ children, active, onPress }: PropsWithChildren<{ active?: boolean; onPress?: () => void }>) {
   const label = typeof children === "string" ? children : "Filter";
@@ -15,7 +15,7 @@ export function Chip({ children, active, onPress }: PropsWithChildren<{ active?:
         if (process.env.EXPO_OS === "ios") Haptics.selectionAsync();
         onPress?.();
       }}
-      style={({ pressed }) => [styles.chip, active && styles.active, pressed && styles.pressed]}
+      style={[styles.chip, active && styles.active]}
     >
       <AppText style={[styles.label, active && styles.activeLabel]}>{children}</AppText>
     </Pressable>
@@ -24,16 +24,14 @@ export function Chip({ children, active, onPress }: PropsWithChildren<{ active?:
 
 const styles = StyleSheet.create({
   chip: {
-    minHeight: 44,
-    borderRadius: radius.pill,
+    minHeight: 40,
     borderWidth: 1,
     borderColor: colors.stroke,
-    backgroundColor: colors.surface,
+    backgroundColor: "transparent",
     justifyContent: "center",
-    paddingHorizontal: spacing.lg
+    paddingHorizontal: spacing.md
   },
-  active: { backgroundColor: colors.roseWash, borderColor: colors.rose },
-  pressed: { opacity: 0.72 },
-  label: { color: colors.inkSoft, fontSize: 14, fontWeight: "700", textTransform: "capitalize" },
-  activeLabel: { color: colors.roseSoft }
+  active: { backgroundColor: colors.rose, borderColor: colors.rose },
+  label: { color: colors.muted, fontSize: 10, lineHeight: 13, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
+  activeLabel: { color: colors.white }
 });

@@ -179,6 +179,55 @@ class GooglePlacesClient:
                 detail=f"Trending locations error: {str(e)}"
             )
     
+    async def text_search(
+        self,
+        query: str,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
+        user_id: str = "default"
+    ) -> Dict:
+        """Free-text place search, optionally biased toward a location"""
+
+        cache_key = f"places:textsearch:{query}:{lat}:{lon}"
+        cached = await self.redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        allowed, _ = await rate_limiter.check_rate_limit(
+            "google_places_search",
+            settings.GOOGLE_PLACES_RATE_LIMIT,
+            86400,
+            user_id
+        )
+
+        if not allowed:
+            raise HTTPException(
+                status_code=429,
+                detail="Google Places rate limit exceeded"
+            )
+
+        params = {"query": query, "key": self.api_key}
+        if lat is not None and lon is not None:
+            params["location"] = f"{lat},{lon}"
+            params["radius"] = 20000
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.base_url}/textsearch/json", params=params) as response:
+                    if response.status != 200:
+                        return {"places": [], "total_found": 0}
+                    data = await response.json()
+                    if data.get("status") != "OK":
+                        return {"places": [], "total_found": 0}
+                    places = [self._process_place_data(place, "search") for place in data.get("results", [])[:20]]
+
+            result = {"places": places, "total_found": len(places)}
+            await self.redis.setex(cache_key, settings.CACHE_TTL_PLACES, json.dumps(result))
+            return result
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Google Places search error: {str(e)}")
+
     async def get_place_details(self, place_id: str, user_id: str) -> Dict:
         """Get detailed information about a specific place"""
         

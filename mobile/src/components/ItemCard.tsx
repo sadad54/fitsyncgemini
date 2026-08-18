@@ -1,9 +1,8 @@
 import { Link } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/components/AppText";
-import { colors, radius, shadows, spacing } from "@/theme";
+import { Photo } from "@/components/Photo";
+import { colors, fonts, spacing } from "@/theme";
 import type { ClothingItem } from "@/types/api";
 import { mediaUrl } from "@/api/client";
 
@@ -17,7 +16,7 @@ export function ItemCard({ item, width = "48%" }: { item: ClothingItem; width?: 
         style={({ pressed }) => [styles.card, { width }, pressed && styles.pressed]}
       >
         <View style={styles.media}>
-          {imageUrl ? <Image accessible={false} source={imageUrl} style={styles.image} contentFit="cover" transition={180} cachePolicy="memory-disk" /> : <View style={styles.placeholder}><Ionicons name="shirt-outline" size={28} color={colors.faint} /></View>}
+          {imageUrl ? <Photo source={imageUrl} /> : <View style={styles.placeholder} />}
           <View style={styles.categoryPill}><AppText style={styles.category}>{item.category}</AppText></View>
         </View>
         <View style={styles.body}>
@@ -25,7 +24,6 @@ export function ItemCard({ item, width = "48%" }: { item: ClothingItem; width?: 
           <View style={styles.metaRow}>
             <View style={[styles.colorDot, { backgroundColor: colorFromName(item.colors[0]) }]} />
             <AppText numberOfLines={1} style={styles.meta}>{item.colors.slice(0, 2).join(" + ") || "neutral"}</AppText>
-            <Ionicons name="chevron-forward" size={14} color={colors.faint} />
           </View>
         </View>
       </Pressable>
@@ -41,16 +39,16 @@ export function colorFromName(name?: string) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderCurve: "continuous", borderWidth: 1, borderColor: colors.stroke, overflow: "hidden", boxShadow: shadows.card },
-  pressed: { opacity: 0.76, transform: [{ scale: 0.985 }] },
-  media: { width: "100%", aspectRatio: 0.88, backgroundColor: colors.surfaceElevated },
+  card: { backgroundColor: colors.canvas, overflow: "hidden", borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
+  pressed: { opacity: 0.8 },
+  media: { width: "100%", aspectRatio: 0.88, backgroundColor: colors.surface },
   image: { width: "100%", height: "100%" },
-  placeholder: { flex: 1, alignItems: "center", justifyContent: "center" },
-  categoryPill: { position: "absolute", top: spacing.sm, left: spacing.sm, borderRadius: radius.pill, backgroundColor: "rgba(16, 15, 20, 0.72)", paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  category: { color: colors.inkSoft, fontSize: 10, lineHeight: 13, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.7 },
-  body: { padding: spacing.md, gap: spacing.sm },
-  name: { fontWeight: "800", lineHeight: 21 },
+  placeholder: { flex: 1, backgroundColor: colors.surface },
+  categoryPill: { position: "absolute", top: 0, left: 0, backgroundColor: colors.strokeStrong, paddingHorizontal: 7, paddingVertical: 5 },
+  category: { color: colors.canvas, fontSize: 8, lineHeight: 10, fontFamily: fonts.bold, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.9 },
+  body: { paddingVertical: spacing.sm, paddingHorizontal: 2, gap: spacing.xs },
+  name: { fontFamily: fonts.black, fontWeight: "800", fontSize: 13, lineHeight: 16, letterSpacing: -0.2 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  colorDot: { width: 9, height: 9, borderRadius: 5, borderWidth: 1, borderColor: colors.strokeStrong },
-  meta: { flex: 1, color: colors.muted, fontSize: 12, lineHeight: 16, textTransform: "capitalize" }
+  colorDot: { width: 7, height: 7 },
+  meta: { flex: 1, color: colors.muted, fontSize: 10, lineHeight: 13, fontFamily: fonts.regular, textTransform: "uppercase", letterSpacing: 0.5 }
 });

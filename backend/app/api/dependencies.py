@@ -4,6 +4,7 @@ from app.models.user import User
 from app.services.unified_auth_service import auth_service
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
     """Get current authenticated user"""
@@ -17,8 +18,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Authentication failed"
         )
 
-async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User | None:
-    """Get current user if authenticated, None otherwise"""
+async def get_optional_user(credentials: HTTPAuthorizationCredentials | None = Depends(optional_security)) -> User | None:
+    """Get current user if authenticated, None otherwise. Never raises on missing/invalid auth."""
+    if credentials is None:
+        return None
     try:
         return await auth_service.get_current_user_from_token(credentials.credentials)
     except Exception:

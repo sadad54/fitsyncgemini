@@ -1,0 +1,4 @@
+[
+  {"person": "photos/person1.jpg", "garment": "clothes/dress1.jpg", "category": "dresses", "description": "a long sleeveless blue floral dress"},
+  {"person": "photos/person2.jpg", "garment": "clothes/top1.jpg", "category": "tops", "description": "a striped short sleeve shirt"}
+]

@@ -49,7 +49,9 @@ export type TryOnResult = {
   item_ids: string[];
   person_image_url?: string | null;
   result_image_url?: string | null;
-  status: "processing" | "completed" | "failed";
+  status: "queued" | "processing" | "completed" | "failed";
+  render_kind?: "diffusion" | "legacy_preview";
+  expires_at?: string | null;
   confidence_score?: number | null;
   error_message?: string | null;
   created_at: string;
@@ -70,3 +72,4 @@ export type Outfit = {
   created_at: string;
   updated_at: string;
 };
+

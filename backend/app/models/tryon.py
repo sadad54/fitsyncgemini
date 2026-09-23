@@ -10,6 +10,8 @@ class TryOnResult(BaseModel):
     item_ids: List[str] = []
     person_image_url: Optional[str] = None
     result_image_url: Optional[str] = None
+    render_kind: str = "legacy_preview"
+    expires_at: Optional[datetime] = None
     status: str
     confidence_score: Optional[float] = None
     error_message: Optional[str] = None
@@ -18,3 +20,4 @@ class TryOnResult(BaseModel):
 
     class Config:
         from_attributes = True
+

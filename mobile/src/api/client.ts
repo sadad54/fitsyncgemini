@@ -138,13 +138,11 @@ export const api = {
     const form = new FormData();
     form.append("item_ids", JSON.stringify(input.itemIds));
     form.append("person_image", await imagePart(input.imageUri, imageName("try-on", input.imageUri)));
-    // When the optional GPU worker is configured, the backend chains one
-    // diffusion call per garment (~35-90s each) — generous headroom for
-    // multi-item looks plus tunnel latency. Falls back to the fast local
-    // compositor automatically when the GPU worker isn't configured.
-    return request<TryOnResult>("/tryon/", { method: "POST", body: form }, 240000);
+    // Upload and durable admission only; generation is polled separately.
+    return request<TryOnResult>("/tryon/", { method: "POST", body: form }, 45000);
   },
   tryOns: () => request<{ results: TryOnResult[]; total: number }>("/tryon/"),
   tryOn: (id: string) => request<TryOnResult>(`/tryon/${id}`),
   deleteTryOn: (id: string) => request<{ deleted: boolean }>(`/tryon/${id}`, { method: "DELETE" })
 };
+

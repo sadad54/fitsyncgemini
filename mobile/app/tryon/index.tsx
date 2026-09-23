@@ -1,338 +1,170 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import * as Haptics from "expo-haptics";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from "react-native-reanimated";
-import { useCloset, useCreateTryOn, useDeleteTryOn } from "@/api/queries";
+import { useCloset, useCreateTryOn, useDeleteTryOn, useTryOn } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
 import { AppText, Eyebrow } from "@/components/AppText";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Photo } from "@/components/Photo";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
-import { FIT_MODES, FIT_PHASES, LAYER_ROLES, ZONES } from "@/data/discover";
 import { useAuthStore } from "@/store/auth";
 import { colors, fonts, spacing } from "@/theme";
-import type { ClothingItem } from "@/types/api";
 
 export default function VirtualTryOn() {
-  const params = useLocalSearchParams<{ items?: string; from?: string }>();
+  const params = useLocalSearchParams<{ items?: string; from?: string; job?: string }>();
   const token = useAuthStore((state) => state.token);
   const closet = useCloset();
   const create = useCreateTryOn();
   const remove = useDeleteTryOn();
-
-  const requestedIds = useMemo(() => {
-    const raw = Array.isArray(params.items) ? params.items[0] : params.items;
-    return raw ? raw.split(",").filter(Boolean) : [];
-  }, [params.items]);
-
-  const allItems = closet.data?.items ?? [];
-  const sourceItems = useMemo(
-    () => (requestedIds.length ? allItems.filter((item) => requestedIds.includes(item.id)) : allItems.slice(0, 1)),
-    [allItems, requestedIds]
-  );
-
-  const [dropped, setDropped] = useState<Record<string, boolean>>({});
-  const [layersOff, setLayersOff] = useState<Record<string, boolean>>({});
+  const [jobId, setJobId] = useState<string | undefined>(params.job);
+  const job = useTryOn(jobId);
   const [personUri, setPersonUri] = useState<string | null>(null);
-  const [fitMode, setFitMode] = useState("true");
-  const [fitSaved, setFitSaved] = useState(false);
+  const [dropped, setDropped] = useState<Record<string, boolean>>({});
+  const [showOriginal, setShowOriginal] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pickerError, setPickerError] = useState<string | null>(null);
-
-  const picks = sourceItems.filter((item) => !dropped[item.id]);
-  const result = create.data;
-  const stage: "idle" | "fitting" | "done" = create.isPending ? "fitting" : result ? "done" : "idle";
-
-  const resultItems = useMemo(
-    () => (result ? allItems.filter((item) => result.item_ids.includes(item.id)) : []),
-    [result, allItems]
-  );
-
-  const fitScore = useMemo(() => {
-    const base = result?.confidence_score ? Math.round(result.confidence_score * 100) : 92;
-    const offCount = Object.values(layersOff).filter(Boolean).length;
-    return Math.max(0, base - offCount * 7 - (fitMode === "up" ? 4 : 0));
-  }, [result, layersOff, fitMode]);
-
-  const fitLabel = FIT_MODES.find((mode) => mode.id === fitMode)?.label ?? FIT_MODES[0].label;
+  const allItems = closet.data?.items ?? [];
+  const requestedIds = useMemo(() => params.items?.split(",").filter(Boolean) ?? [], [params.items]);
+  const picks = (requestedIds.length ? allItems.filter((item) => requestedIds.includes(item.id)) : allItems.slice(0, 1))
+    .filter((item) => !dropped[item.id]);
+  const validPicks = picks.length >= 1 && picks.length <= 2 &&
+    picks.every((item) => ["tops", "outerwear", "bottoms", "dresses"].includes(item.category)) &&
+    (picks.length === 1 || (picks.filter((item) => item.category === "bottoms").length === 1 &&
+      picks.filter((item) => ["tops", "outerwear"].includes(item.category)).length === 1));
+  const result = job.data ?? (create.data?.id === jobId ? create.data : undefined);
+  const working = create.isPending || Boolean(jobId && !result && !job.error) ||
+    result?.status === "queued" || result?.status === "processing";
+  const image = showOriginal ? result?.person_image_url : result?.result_image_url;
+  const displayedImage = mediaUrl(image) ?? personUri ?? mediaUrl(result?.person_image_url);
+  useEffect(() => { setJobId(params.job); }, [params.job]);
 
   async function pickImage(source: "camera" | "library") {
     setPickerError(null);
-    if (source === "camera") {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        setPickerError("Camera permission is needed for a try-on photo. You can still choose one from your library.");
+    try {
+      if (source === "camera" && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
+        setPickerError("Camera access is needed. You can also choose a photo from your library.");
         return;
       }
-    }
-    const picked =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: [3, 4] })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: [3, 4] });
-    if (!picked.canceled) {
-      setPersonUri(picked.assets[0].uri);
-      if (process.env.EXPO_OS === "ios") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.85, allowsEditing: false };
+      const picked = source === "camera" ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+      if (!picked.canceled) setPersonUri(picked.assets[0].uri);
+    } catch { setPickerError("Could not open the photo picker. Please try again."); }
   }
 
   async function runTryOn() {
-    if (!personUri || create.isPending) return;
-    await create.mutateAsync({ imageUri: personUri, itemIds: picks.map((item) => item.id) });
-    if (process.env.EXPO_OS === "ios") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (!personUri || !validPicks || working) return;
+    try {
+      const accepted = await create.mutateAsync({ imageUri: personUri, itemIds: picks.map((item) => item.id) });
+      setJobId(accepted.id);
+      setShowOriginal(false);
+    } catch { /* Mutation errors are rendered below. */ }
   }
 
   function reset() {
+    if (create.isPending) return;
     create.reset();
-    setLayersOff({});
-    setFitSaved(false);
+    setJobId(undefined);
+    setShowOriginal(false);
+    router.setParams({ job: undefined });
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     setDeleteOpen(false);
-    if (result) remove.mutate(result.id);
-    reset();
-    router.replace("/tryon/history");
+    if (!result) return;
+    try {
+      await remove.mutateAsync(result.id);
+      reset();
+      router.replace("/tryon/history");
+    } catch { /* Retain the result until deletion succeeds. */ }
   }
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
-
-  const back = () => (params.from === "look" ? router.replace("/(tabs)/generate") : router.back());
-
   return (
     <Screen scroll bottomInset={false} contentStyle={styles.screen}>
       <View style={styles.headerWrap}>
-        <PushHeader title="Virtual try-on" onBack={back} actionGlyph="↻" onAction={reset} actionLabel="Start over" />
+        <PushHeader title="Virtual try-on" onBack={() => router.back()} actionGlyph="↻" onAction={reset} actionLabel="Start over" />
       </View>
-
       <View style={styles.hero}>
-        <Eyebrow>
-          {picks.length > 1 ? `Fitting the full edit — ${picks.length} pieces` : `Fitting one piece — ${picks[0]?.name ?? "your closet"}`}
-        </Eyebrow>
+        <Eyebrow>Prototype · your clothes, on you</Eyebrow>
         <AppText style={styles.heroTitle}>See it on you before you wear it.</AppText>
       </View>
-
       <View style={styles.stage}>
-        {result?.result_image_url ? (
-          <Photo source={mediaUrl(result.result_image_url)!} grayscale={false} />
-        ) : personUri ? (
-          <Photo source={personUri} grayscale={false} />
-        ) : (
+        {displayedImage ? <Photo source={displayedImage} grayscale={false} /> : (
           <View style={styles.stageEmpty}>
             <View style={styles.stageMark} />
             <AppText style={styles.stageEmptyTitle}>One full-body photo</AppText>
-            <AppText style={styles.stageEmptyNote}>Straight on, plain wall, shoes visible.</AppText>
+            <AppText style={styles.stageEmptyNote}>Straight on, plain wall, feet and garment hem visible.</AppText>
           </View>
         )}
-
-        {stage === "fitting" ? <FittingOverlay /> : null}
-
-        {stage === "done" ? (
-          <>
-            <View style={styles.layerStack} pointerEvents="none">
-              {resultItems.map((item, index) => (
-                <View key={item.id} style={[styles.layerChip, layersOff[item.id] && styles.layerChipOff]}>
-                  <AppText style={styles.layerChipText}>L{index + 1}</AppText>
-                </View>
-              ))}
-            </View>
-            <View style={styles.honestLabel} pointerEvents="none">
-              <AppText style={styles.honestLabelText}>Style preview — not a fitted render · {fitLabel}</AppText>
-            </View>
-          </>
-        ) : null}
+        {working ? <FittingOverlay status={result?.status} /> : null}
+        {result?.status === "completed" ? <View style={styles.honestLabel}>
+          <AppText style={styles.honestLabelText}>{showOriginal ? "Original photo" : result.render_kind === "diffusion" ? "AI try-on · sizing may differ" : "Legacy style preview"}</AppText>
+        </View> : null}
       </View>
-
-      {stage === "idle" ? (
-        <View>
-          <View style={styles.sourceRow}>
-            <Pressable style={styles.sourceBtn} onPress={() => pickImage("camera")}>
-              <AppText style={styles.sourceLabel}>Camera</AppText>
-            </Pressable>
-            <Pressable style={[styles.sourceBtn, styles.sourceBtnLast]} onPress={() => pickImage("library")}>
-              <AppText style={styles.sourceLabel}>Library</AppText>
-            </Pressable>
-          </View>
-          {pickerError ? <AppText selectable style={styles.warning}>{pickerError}</AppText> : null}
-
-          <View style={styles.picksHeader}>
-            <AppText style={styles.sectionLabel}>Pieces in this preview</AppText>
-            <AppText style={styles.picksHint}>Tap ✕ to drop one</AppText>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.picksRail}>
-            {picks.map((item, index) => (
-              <View key={item.id} style={styles.pick}>
-                {mediaUrl(item.image_url) ? <Photo source={mediaUrl(item.image_url)!} /> : <View style={styles.pickPlaceholder} />}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Drop ${item.name}`}
-                  onPress={() => setDropped((current) => ({ ...current, [item.id]: true }))}
-                  style={styles.pickDrop}
-                >
-                  <AppText style={styles.pickDropGlyph}>✕</AppText>
-                </Pressable>
-                <AppText style={styles.pickZone}>{ZONES[index] ?? "layer"}</AppText>
-              </View>
-            ))}
-            <Pressable accessibilityRole="button" accessibilityLabel="Choose from closet" onPress={() => router.push("/closet")} style={styles.pickAdd}>
-              <AppText style={styles.pickAddGlyph}>+</AppText>
-              <AppText style={styles.pickAddLabel}>Choose from closet</AppText>
-            </Pressable>
-          </ScrollView>
-
-          <View style={styles.idleCopy}>
-            <AppText style={styles.idleNote}>
-              Drop a straight-on full-body photo above and we layer these pieces onto it by body zone. It's a stylist's visual sketch, not a fitted render.
-            </AppText>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Preview this look"
-              disabled={!personUri || create.isPending}
-              onPress={runTryOn}
-              style={[styles.primary, (!personUri || create.isPending) && styles.primaryDisabled]}
-            >
-              <AppText style={styles.primaryLabel}>Preview this look</AppText>
-              <AppText style={styles.primaryGlyph}>→</AppText>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Past previews" onPress={() => router.push("/tryon/history")} style={styles.ghost}>
-              <AppText style={styles.ghostLabel}>Past previews</AppText>
-            </Pressable>
-          </View>
+      {!jobId && !working ? <>
+        <View style={styles.sourceRow}>
+          <Pressable accessibilityRole="button" style={styles.sourceBtn} onPress={() => pickImage("camera")}><AppText>Camera</AppText></Pressable>
+          <Pressable accessibilityRole="button" style={styles.sourceBtn} onPress={() => pickImage("library")}><AppText>Library</AppText></Pressable>
         </View>
-      ) : null}
-
-      {stage === "done" ? (
-        <View>
-          <View style={styles.scoreRow}>
-            <View style={styles.scoreCell}>
-              <AppText selectable style={styles.scoreValue}>
-                {fitScore}
-                <AppText style={styles.scorePct}>%</AppText>
-              </AppText>
-              <AppText style={styles.scoreLabel}>fit confidence</AppText>
-            </View>
-            <AppText style={styles.scoreNote}>
-              The trouser breaks slightly long over the boot. Everything else sits within your saved measurements.
-            </AppText>
-          </View>
-
-          <AppText style={[styles.sectionLabel, styles.layersLabel]}>Layers on you — tap to remove</AppText>
-          {resultItems.map((item, index) => {
-            const off = Boolean(layersOff[item.id]);
-            return (
-              <Pressable
-                key={item.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Toggle ${item.name}`}
-                onPress={() => setLayersOff((current) => ({ ...current, [item.id]: !current[item.id] }))}
-                style={styles.layerRow}
-              >
-                <View style={[styles.layerSwatch, off && styles.layerSwatchOff]}>
-                  {mediaUrl(item.image_url) ? <Photo source={mediaUrl(item.image_url)!} /> : null}
-                </View>
-                <View style={styles.layerCopy}>
-                  <AppText style={[styles.layerName, off && styles.layerDim]}>{item.name}</AppText>
-                  <AppText style={styles.layerRole}>{LAYER_ROLES[index] ?? "layer"}</AppText>
-                </View>
-                <View style={[styles.layerState, off ? styles.layerStateOff : styles.layerStateOn]}>
-                  <AppText style={[styles.layerStateText, off && styles.layerStateTextOff]}>{off ? "Off" : "On"}</AppText>
-                </View>
-              </Pressable>
-            );
-          })}
-
-          <View style={styles.fitCard}>
-            <AppText style={styles.sectionLabel}>How it should sit</AppText>
-            <View style={styles.fitModes}>
-              {FIT_MODES.map((mode) => {
-                const active = fitMode === mode.id;
-                return (
-                  <Pressable
-                    key={mode.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    onPress={() => setFitMode(mode.id)}
-                    style={[styles.fitMode, active && styles.fitModeActive]}
-                  >
-                    <AppText style={[styles.fitModeLabel, active && styles.fitModeLabelActive]}>{mode.label}</AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={styles.fitNoteRow}>
-              <View style={styles.fitTick} />
-              <AppText style={styles.fitNote}>A drape simulation, not a measurement. Confirm sizing before you buy or tailor.</AppText>
-            </View>
-          </View>
-
-          <View style={styles.resultActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Save this fit"
-              disabled={fitSaved}
-              onPress={() => setFitSaved(true)}
-              style={[styles.saveBtn, fitSaved && styles.saveBtnDone]}
-            >
-              <AppText style={[styles.saveLabel, fitSaved && styles.saveLabelDone]}>{fitSaved ? "Fit saved to look ✓" : "Save this fit"}</AppText>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Retry" onPress={runTryOn} style={styles.retryBtn}>
-              <AppText style={styles.retryLabel}>Retry</AppText>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Delete preview" onPress={() => setDeleteOpen(true)} style={styles.deleteBtn}>
-              <AppText style={styles.deleteGlyph}>✕</AppText>
-            </Pressable>
-          </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Past previews" onPress={() => router.push("/tryon/history")} style={styles.pastBtn}>
-            <AppText style={styles.ghostLabel}>Past previews</AppText>
+        <View style={styles.picksHeader}><AppText style={styles.sectionLabel}>Garments to try</AppText></View>
+        <ScrollView horizontal style={styles.picksRail}>
+          {picks.map((item) => <View key={item.id} style={styles.pick}>
+            {mediaUrl(item.image_url) ? <Photo source={mediaUrl(item.image_url)!} /> : null}
+            <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${item.name}`} style={styles.pickDrop}
+              onPress={() => setDropped((current) => ({ ...current, [item.id]: true }))}><AppText>✕</AppText></Pressable>
+            <AppText style={styles.pickZone}>{item.category}</AppText>
+          </View>)}
+          <Pressable accessibilityRole="button" onPress={() => router.push("/closet")} style={styles.pickAdd}><AppText>+ Choose from closet</AppText></Pressable>
+        </ScrollView>
+        <View style={styles.idleCopy}>
+          <AppText style={styles.idleNote}>Choose one dress, one top or bottom, or a top and bottom together. Shoes and accessories are not supported yet.</AppText>
+          {!validPicks ? <AppText style={styles.warning}>Adjust the selection above before generating.</AppText> : null}
+          <AppText style={styles.idleNote}>Your photo goes to our prototype GPU service and is kept for up to seven days. Only use photos you have permission to upload. AI may alter details and does not measure fit.</AppText>
+          <Pressable accessibilityRole="button" disabled={!personUri || !validPicks || working} onPress={runTryOn}
+            style={[styles.primary, (!personUri || !validPicks || working) && styles.primaryDisabled]}>
+            <AppText style={styles.primaryLabel}>Generate try-on →</AppText>
           </Pressable>
         </View>
-      ) : null}
-
-      {create.error ? <AppText selectable style={styles.error}>{create.error.message}</AppText> : null}
+      </> : null}
+      {working ? <View style={styles.idleCopy}>
+        <AppText accessibilityLiveRegion="polite" style={styles.idleNote}>The GPU can take a few minutes to wake up. You can leave this screen and reopen the job from history.</AppText>
+      </View> : null}
+      {result?.status === "completed" ? <View style={styles.idleCopy}>
+        <AppText style={styles.idleNote}>Saved automatically to history. New prototype photos expire after seven days. This image is a visual approximation, not a sizing recommendation.</AppText>
+        <Pressable accessibilityRole="button" onPress={() => setShowOriginal((value) => !value)} style={styles.primary}>
+          <AppText style={styles.primaryLabel}>{showOriginal ? "Show try-on" : "Compare original"}</AppText>
+        </Pressable>
+      </View> : null}
+      {result?.status === "failed" ? <AppText style={styles.error}>{result.error_message ?? "Generation failed. Please try again."}</AppText> : null}
+      {result && !working ? <View style={styles.idleCopy}>
+        <Pressable accessibilityRole="button" onPress={reset} style={styles.ghost}><AppText>Start another try-on</AppText></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setDeleteOpen(true)} style={styles.ghost}><AppText>Delete this job and photos</AppText></Pressable>
+      </View> : null}
+      {job.error ? <View style={styles.idleCopy}>
+        <AppText style={styles.error}>{job.error.message}</AppText>
+        <Pressable accessibilityRole="button" onPress={() => job.refetch()} style={styles.ghost}><AppText>Reconnect to job</AppText></Pressable>
+      </View> : null}
+      {[pickerError, closet.error?.message, create.error?.message, remove.error?.message].filter(Boolean).map((message, i) =>
+        <AppText key={i} style={styles.error}>{message}</AppText>)}
+      <Pressable accessibilityRole="button" onPress={() => router.push("/tryon/history")} style={styles.pastBtn}><AppText>Try-on history →</AppText></Pressable>
       <View style={{ height: 40 }} />
-
-      <ConfirmDialog
-        visible={deleteOpen}
-        title="Delete this preview?"
-        body="The preview image goes; the pieces stay in your closet and the outfit stays saved."
-        cancelLabel="Keep it"
-        confirmLabel="Delete"
-        destructive
-        onCancel={() => setDeleteOpen(false)}
-        onConfirm={confirmDelete}
-      />
+      <ConfirmDialog visible={deleteOpen} title="Delete this try-on?" body={result?.render_kind === "legacy_preview" ? "The legacy preview is removed from history. Your wardrobe stays in your closet." : "Your prototype photos will be removed. Your wardrobe items stay in your closet."}
+        cancelLabel="Keep it" confirmLabel="Delete" destructive onCancel={() => setDeleteOpen(false)} onConfirm={confirmDelete} />
     </Screen>
   );
 }
 
-function FittingOverlay() {
-  const [phase, setPhase] = useState(0);
-  const [caretOn, setCaretOn] = useState(true);
-  useEffect(() => {
-    const phaseTimer = setInterval(() => setPhase((p) => (p + 1) % FIT_PHASES.length), 750);
-    const caretTimer = setInterval(() => setCaretOn((v) => !v), 500);
-    return () => { clearInterval(phaseTimer); clearInterval(caretTimer); };
-  }, []);
-
-  return (
-    <View style={styles.fitting} pointerEvents="none">
-      <Wipe />
-      <View style={styles.fittingRail}>
-        <SwayBlock delay={0} height={74} />
-        <SwayBlock delay={180} height={96} accent />
-        <SwayBlock delay={360} height={64} />
-        <SwayBlock delay={540} height={84} />
-      </View>
-      <View style={styles.fittingBanner}>
-        <AppText style={styles.fittingText}>
-          {FIT_PHASES[phase]}
-          <AppText style={{ opacity: caretOn ? 1 : 0 }}>_</AppText>
-        </AppText>
-      </View>
-    </View>
-  );
+function FittingOverlay({ status }: { status?: string }) {
+  return <View style={styles.fitting} pointerEvents="none">
+    <Wipe />
+    <View style={styles.fittingRail}><SwayBlock delay={0} height={74} /><SwayBlock delay={180} height={96} accent /><SwayBlock delay={360} height={64} /></View>
+    <View style={styles.fittingBanner}><AppText style={styles.fittingText}>
+      {status === "queued" ? "Queued for the prototype GPU" : status === "processing" ? "Generating — first run can take longer" : "Connecting to your try-on"}
+    </AppText></View>
+  </View>;
 }
 
 function SwayBlock({ delay, height, accent }: { delay: number; height: number; accent?: boolean }) {
@@ -377,74 +209,25 @@ const styles = StyleSheet.create({
   swayBlockAccent: { backgroundColor: colors.rose, borderColor: colors.rose },
   fittingBanner: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.rose, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   fittingText: { color: colors.white, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase" },
-  layerStack: { position: "absolute", top: 0, right: 0, gap: 1 },
-  layerChip: { width: 66, height: 74, backgroundColor: colors.surfaceElevated },
-  layerChipOff: { opacity: 0.28 },
-  layerChipText: { position: "absolute", left: 0, top: 0, backgroundColor: colors.strokeStrong, color: colors.canvas, fontSize: 8, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, paddingHorizontal: 5, paddingVertical: 4 },
   honestLabel: { position: "absolute", left: 0, bottom: 0, backgroundColor: colors.strokeStrong, paddingHorizontal: 13, paddingVertical: 9 },
   honestLabelText: { color: colors.canvas, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase" },
   sourceRow: { flexDirection: "row" },
   sourceBtn: { flex: 1, height: 52, borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke, alignItems: "flex-start", justifyContent: "center", paddingHorizontal: spacing.lg },
-  sourceBtnLast: { borderRightWidth: 0 },
-  sourceLabel: { fontFamily: fonts.black, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" },
   warning: { color: colors.roseSoft, fontSize: 13, lineHeight: 19, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   picksHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
   sectionLabel: { color: colors.muted, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase" },
-  picksHint: { color: colors.muted, fontSize: 10 },
   picksRail: { flexGrow: 0, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
   pick: { width: 96, height: 124, borderRightWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface, overflow: "hidden" },
-  pickPlaceholder: { flex: 1, backgroundColor: colors.surface },
   pickDrop: { position: "absolute", top: 0, right: 0, width: 26, height: 26, backgroundColor: colors.rose, alignItems: "center", justifyContent: "center" },
-  pickDropGlyph: { color: colors.white, fontSize: 12 },
   pickZone: { position: "absolute", left: 6, bottom: 6, color: colors.white, fontSize: 8, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
   pickAdd: { width: 96, height: 124, alignItems: "flex-start", justifyContent: "flex-end", gap: spacing.sm, padding: spacing.md },
-  pickAddGlyph: { color: colors.roseSoft, fontSize: 20 },
-  pickAddLabel: { color: colors.muted, fontSize: 9, lineHeight: 12, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
   idleCopy: { padding: spacing.xl, gap: spacing.sm },
   idleNote: { color: colors.muted, fontSize: 13, lineHeight: 21 },
   primary: { height: 56, marginTop: spacing.lg, backgroundColor: colors.rose, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg },
   primaryDisabled: { opacity: 0.45 },
   primaryLabel: { color: colors.white, fontFamily: fonts.black, fontWeight: "800", fontSize: 13, letterSpacing: 1.3, textTransform: "uppercase" },
-  primaryGlyph: { color: colors.white, fontSize: 17 },
   ghost: { height: 52, borderBottomWidth: 1, borderColor: colors.stroke, justifyContent: "center" },
-  ghostLabel: { color: colors.muted, fontFamily: fonts.black, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" },
-  scoreRow: { flexDirection: "row", borderBottomWidth: 1, borderColor: colors.stroke },
-  scoreCell: { width: 118, paddingVertical: spacing.lg, paddingLeft: spacing.xl },
-  scoreValue: { fontSize: 44, lineHeight: 40, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -1.6, fontVariant: ["tabular-nums"] },
-  scorePct: { fontSize: 20, fontFamily: fonts.black, fontWeight: "800" },
-  scoreLabel: { color: colors.muted, fontSize: 9, lineHeight: 12, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", marginTop: spacing.sm },
-  scoreNote: { flex: 1, color: colors.ink, fontSize: 13, lineHeight: 20, paddingVertical: spacing.lg, paddingRight: spacing.xl, paddingLeft: spacing.md, borderLeftWidth: 1, borderColor: colors.stroke },
-  layersLabel: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
-  layerRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderColor: colors.stroke },
-  layerSwatch: { width: 34, height: 40, backgroundColor: colors.surfaceElevated, overflow: "hidden" },
-  layerSwatchOff: { opacity: 0.28 },
-  layerCopy: { flex: 1 },
-  layerName: { fontFamily: fonts.black, fontWeight: "800", fontSize: 14, lineHeight: 17 },
-  layerDim: { opacity: 0.28 },
-  layerRole: { color: colors.muted, fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", marginTop: 5 },
-  layerState: { paddingHorizontal: 9, paddingVertical: 8, borderWidth: 1 },
-  layerStateOn: { backgroundColor: colors.rose, borderColor: colors.rose },
-  layerStateOff: { backgroundColor: "transparent", borderColor: colors.stroke },
-  layerStateText: { color: colors.white, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
-  layerStateTextOff: { color: colors.muted },
-  fitCard: { backgroundColor: colors.surface, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
-  fitModes: { flexDirection: "row", borderWidth: 1, borderColor: colors.stroke, marginTop: spacing.md },
-  fitMode: { flex: 1, paddingVertical: spacing.md, paddingHorizontal: spacing.sm, borderRightWidth: 1, borderColor: colors.stroke, alignItems: "flex-start" },
-  fitModeActive: { backgroundColor: colors.rose },
-  fitModeLabel: { color: colors.muted, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
-  fitModeLabelActive: { color: colors.white },
-  fitNoteRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
-  fitTick: { width: 8, height: 8, backgroundColor: colors.rose },
-  fitNote: { flex: 1, color: colors.muted, fontSize: 11, lineHeight: 16 },
-  resultActions: { flexDirection: "row", borderBottomWidth: 1, borderColor: colors.stroke },
-  saveBtn: { flex: 1, height: 56, backgroundColor: colors.rose, borderRightWidth: 1, borderColor: colors.stroke, justifyContent: "center", paddingHorizontal: spacing.lg },
-  saveBtnDone: { backgroundColor: colors.surface },
-  saveLabel: { color: colors.white, fontFamily: fonts.black, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" },
-  saveLabelDone: { color: colors.muted },
-  retryBtn: { width: 104, height: 56, borderRightWidth: 1, borderColor: colors.stroke, justifyContent: "center", paddingHorizontal: spacing.lg },
-  retryLabel: { color: colors.ink, fontFamily: fonts.black, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" },
-  deleteBtn: { width: 52, height: 56, alignItems: "center", justifyContent: "center" },
-  deleteGlyph: { color: colors.roseSoft, fontSize: 15 },
   pastBtn: { height: 52, borderBottomWidth: 1, borderColor: colors.stroke, justifyContent: "center", paddingHorizontal: spacing.xl },
   error: { color: colors.roseSoft, paddingHorizontal: spacing.xl, paddingTop: spacing.md }
 });
+

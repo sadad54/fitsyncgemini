@@ -116,7 +116,10 @@ export function useOutfitFeedback() {
 }
 
 export function useTryOns() {
-  return useQuery({ queryKey: keys.tryonsRoot, queryFn: api.tryOns });
+  return useQuery({ queryKey: keys.tryonsRoot, queryFn: api.tryOns,
+    refetchInterval: (query) => query.state.data?.results.some((job) =>
+      job.status === "queued" || job.status === "processing") ? 5000 : false
+  });
 }
 
 export function useCreateTryOn() {
@@ -132,5 +135,17 @@ export function useDeleteTryOn() {
   return useMutation({
     mutationFn: api.deleteTryOn,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.tryonsRoot })
+  });
+}
+
+
+export function useTryOn(id?: string) {
+  return useQuery({
+    queryKey: keys.tryon(id ?? ""), queryFn: () => api.tryOn(id!), enabled: Boolean(id), retry: 2,
+    refetchInterval: (query) => {
+      if (query.state.error) return false;
+      const status = query.state.data?.status;
+      return !status || status === "queued" || status === "processing" ? 3000 : false;
+    }
   });
 }

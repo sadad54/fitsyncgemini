@@ -12,7 +12,7 @@ Note: FitSync ships as a native mobile app (Expo/React Native, targeting iOS and
 
 Mobile: Expo / React Native (TypeScript), `expo-router` file-based routing, `@tanstack/react-query`, `zustand`.
 Backend: FastAPI (Python) + Supabase (Postgres, Auth, Storage) — service code talks to Supabase directly via `supabase-py`, not an ORM.
-AI/ML: on-device `fashion-clip` (CLIP fine-tuned on fashion photos) for clothing classification, and a local PIL-based image compositor for virtual try-on — both chosen specifically to avoid paid third-party AI APIs in the core loop (see Capabilities and Constraints).
+AI/ML: on-device `fashion-clip` (CLIP fine-tuned on fashion photos) for clothing classification, and remote CatVTON prototype inference with a durable backend job queue for virtual try-on — chosen to avoid paid third-party AI APIs in the core loop (see Capabilities and Constraints).
 
 ## Users
 
@@ -24,13 +24,13 @@ FitSync turns a user's own physical wardrobe into a digital, AI-queryable closet
 
 ## Positioning
 
-The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfully copy: FitSync's AI outfit generation and virtual try-on operate on photos of clothes the user actually owns, not a product catalog — the recommendation is "wear item X with item Y from your own closet," not "buy this." That's paired with a technical commitment (see Constraints) to keep the core AI loop running on local/on-device inference rather than metered third-party AI APIs, so the closet-scanning and try-on loop has no per-use cost ceiling pushing the product toward upsells.
+The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfully copy: FitSync's AI outfit generation and virtual try-on operate on photos of clothes the user actually owns, not a product catalog — the recommendation is "wear item X with item Y from your own closet," not "buy this." That's paired with a technical commitment (see Constraints) to keep the core AI loop independent of metered third-party AI APIs, while GPU hosting remains subject to available free compute and conservative prototype limits.
 
 ## Operating Context
 
 - Adding a wardrobe item: photograph or pick from library → on-device ML suggests category/subcategory/colors → user confirms/edits → saved to their closet.
 - Generating an outfit: pick an occasion (optionally with live weather) → backend assembles a combination from the user's own `clothing_items`.
-- Virtual try-on: user's photo + selected wardrobe item(s) composited locally (no external try-on API).
+- Virtual try-on: user's photo + supported wardrobe items sent through FastAPI to a remote prototype GPU, with durable jobs, polling and explicit failures. Dresses use full-body masking. See docs/VIRTUAL_TRYON.md.
 - Community: posts, likes, comments, follows, and style challenges scoped to the user's own content and social graph — not a public content feed sourced from brands/retailers.
 - Trends: sourced from a backend `fashion_insights` table (editorial/seeded), not live social-media scraping.
 - Locations: nearby fashion retail via Google Places, with graceful empty-state fallback (not fabricated results) when the provider is unavailable.
@@ -38,7 +38,7 @@ The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfu
 
 ## Capabilities and Constraints
 
-- The core AI loop (clothing classification, virtual try-on) must keep running on local/on-device inference — no paid vision or try-on API — a deliberate cost and independence constraint, not a temporary placeholder.
+- No paid vision or try-on API for the current prototype. Clothing classification remains local to the backend; try-on inference runs remotely on supervised Kaggle or optionally Modal after free-credit controls are checked. Non-commercial model licenses require review before external testing or launch.
 - Stack is fixed: Supabase (Postgres/Auth/Storage) backend reached via FastAPI, Expo/React Native mobile client. Not open for reconsideration as part of design work.
 - Should stay usable on modest/budget Android hardware, not only flagship devices — a real constraint on animation/asset weight and on-device model cost, not just aspirational.
 - Community/Trends/Locations backend endpoints were only just rebuilt against the live Supabase schema this session and are not yet wired to the mobile screens, which currently render from local seed data (`mobile/src/data/discover.ts`) as placeholder content.
@@ -60,7 +60,7 @@ The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfu
 ## Product Principles
 
 1. The closet is real, not a catalog — every suggestion traces back to an item the user actually photographed and owns.
-2. No metered AI cost gates the core loop — classification and try-on stay local/on-device by design.
+2. No metered AI cost gates the core loop — classification stays local and try-on uses replaceable providers with conservative compute limits.
 3. One brand language everywhere — the Modernist system is not a per-platform default; it's the product's identity on both iOS and Android.
 4. Budget-hardware usable — a suggestion engine that only works well on a flagship phone fails the primary user.
 5. Ship the honest state — placeholder/seed content (Community/Trends/Locations screens) should read as such until real backend wiring lands, not be dressed up as live data.
@@ -68,3 +68,4 @@ The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfu
 ## Accessibility & Inclusion
 
 No product-specific accessibility requirement has been established yet beyond ordinary mobile platform baselines (font scaling, tap target sizing, color contrast). Not yet confirmed with the user — treat as an open gap, not a decided scope exclusion.
+

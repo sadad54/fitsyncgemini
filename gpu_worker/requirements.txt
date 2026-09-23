@@ -1,0 +1,22 @@
+# GPU worker — separate environment from backend/, runs on the CUDA machine.
+# Do not install this into backend/venv; it needs a CUDA-enabled torch build.
+
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+Pillow>=10.0.0
+mediapipe>=0.10.14
+huggingface_hub>=0.24.0
+
+# Install torch matching the cluster's actual CUDA version — check with
+# `nvidia-smi` first, then pick the matching command from
+# https://pytorch.org/get-started/locally/. Example for CUDA 12.1:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+# Do NOT `pip install torch` bare here — it may grab a CPU-only or
+# mismatched-CUDA build depending on the environment.
+
+# CatVTON itself is not on PyPI — clone it into ./CatVTON and install its
+# own requirements.txt separately:
+#   git clone https://github.com/Zheng-Chong/CatVTON.git
+#   pip install -r CatVTON/requirements.txt
+# See README.md for the full sequence.

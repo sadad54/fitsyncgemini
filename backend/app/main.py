@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -9,6 +11,7 @@ from app.api.endpoints.v1 import auth, clothing, tryon
 from app.api.endpoints import outfits, trends, community, weather, locations
 from app.core.database import init_db
 from app.core.cache import init_cache
+from app.ml.clothing_classifier import clothing_classifier
 
 
 @asynccontextmanager
@@ -16,6 +19,10 @@ async def lifespan(app: FastAPI):
     logger.info("Starting FitSync Backend...")
     await init_db()
     await init_cache()
+    # The local ML model takes ~15s to load its weights on first use — do
+    # that now instead of on a user's first "add item" request, where it
+    # risks exceeding the mobile client's request timeout.
+    asyncio.create_task(clothing_classifier.warmup())
     logger.info("FitSync Backend started successfully!")
     yield
     logger.info("Shutting down FitSync Backend...")

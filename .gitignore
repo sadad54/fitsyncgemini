@@ -125,3 +125,9 @@ test_endpoints.dart
 test_backend_connection.dart
 test_flutter_services.dart
 simple_test.dart
+
+# Personal / non-project artifacts and tool-cache dumps
+/Claude outputs/
+/brag-output-*/
+/.claude/
+/mobile/skills/

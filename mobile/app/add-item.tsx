@@ -20,6 +20,7 @@ export default function AddItem() {
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState<ClothingCategory | undefined>();
   const categoryTouched = useRef(false);
+  const nameTouched = useRef(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [detectedVision, setDetectedVision] = useState<unknown>(null);
@@ -43,20 +44,31 @@ export default function AddItem() {
       const uri = result.assets[0].uri;
       setImageUri(uri);
       categoryTouched.current = false;
+      nameTouched.current = false;
       setDetectedVision(null);
       if (process.env.EXPO_OS === "ios") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       detectCategory.mutate(uri, {
         onSuccess: (result) => {
           setDetectedVision(result);
           if (!categoryTouched.current && result.category && result.category !== "unknown") setCategory(result.category);
-        }
+          if (!nameTouched.current && result.suggested_name) setName(result.suggested_name);
+        },
+        // Detection is a nice-to-have — on failure/timeout the user can
+        // still pick a category manually, so just avoid an unhandled
+        // rejection rather than surfacing an error here.
+        onError: () => {}
       });
     }
   }
 
   async function submit() {
     if (!name.trim() || !imageUri) return;
-    await addItem.mutateAsync({ name, brand, category, imageUri, detectedVision });
+    try {
+      await addItem.mutateAsync({ name, brand, category, imageUri, detectedVision });
+    } catch {
+      // Surfaced via addItem.error below — nothing more to do here.
+      return;
+    }
     if (process.env.EXPO_OS === "ios") await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.replace("/(tabs)/closet");
   }
@@ -99,8 +111,8 @@ export default function AddItem() {
       {pickerError ? <AppText selectable style={styles.warning}>{pickerError}</AppText> : null}
 
       <View style={styles.form}>
-        <FieldLabel label="Item name" required />
-        <TextInput accessibilityLabel="Item name" value={name} onChangeText={setName} placeholder="Blue linen overshirt" placeholderTextColor={colors.faint} style={styles.input} />
+        <FieldLabel label="Item name" required note={imageUri && !nameTouched.current ? (detectCategory.isPending ? "Detecting from photo…" : "Auto-filled — editable") : undefined} />
+        <TextInput accessibilityLabel="Item name" value={name} onChangeText={(text) => { nameTouched.current = true; setName(text); }} placeholder="Blue linen overshirt" placeholderTextColor={colors.faint} style={styles.input} />
         <FieldLabel label="Brand" />
         <TextInput accessibilityLabel="Brand, optional" value={brand} onChangeText={setBrand} placeholder="Optional" placeholderTextColor={colors.faint} style={styles.input} />
         <FieldLabel label="Category" note={detectCategory.isPending ? "Detecting from photo…" : "Auto-filled — editable"} />

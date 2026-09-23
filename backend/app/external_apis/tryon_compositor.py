@@ -35,7 +35,7 @@ CATEGORY_ZONES = {
 }
 
 
-async def _download(url: str) -> bytes:
+async def download_image_bytes(url: str) -> bytes:
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             response.raise_for_status()
@@ -72,7 +72,7 @@ async def composite_tryon(person_image_bytes: bytes, garments: List[Dict]) -> Tu
         if not url:
             continue
         try:
-            garment_bytes = await _download(url)
+            garment_bytes = await download_image_bytes(url)
             garment_img = Image.open(io.BytesIO(garment_bytes))
         except Exception:
             continue

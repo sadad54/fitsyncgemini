@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -17,6 +17,16 @@ import { useAuthStore } from "@/store/auth";
 import { colors, spacing } from "@/theme";
 
 const queryClient = new QueryClient({
+  // A mutation that fails (timeout, network drop, 5xx) and has no local
+  // onError would otherwise become an unhandled promise rejection — which
+  // Hermes/Expo Go surfaces as a fatal-looking red screen. This always
+  // fires alongside any per-call onError, so every mutation is guaranteed
+  // to have its rejection observed somewhere.
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (__DEV__) console.warn("Mutation failed:", error instanceof Error ? error.message : error);
+    }
+  }),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 2,

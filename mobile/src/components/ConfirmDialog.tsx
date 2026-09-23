@@ -1,7 +1,11 @@
 import { Modal, Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, SlideInDown } from "react-native-reanimated";
 import { AppText } from "@/components/AppText";
 import { colors, fonts, spacing } from "@/theme";
+
+// Confident, architectural deceleration — no spring overshoot. Matches the
+// Modernist system's flat, measured character rather than a playful bounce.
+const ARRIVAL = Easing.bezier(0.16, 1, 0.3, 1);
 
 // The design's confirm dialog is a bottom sheet, not a system alert: dark
 // scrim, red 2px top rule, uppercase title, split Cancel/Confirm row.
@@ -28,7 +32,7 @@ export function ConfirmDialog({
     <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel}>
       <Animated.View entering={FadeIn.duration(200)} style={styles.scrim}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Dismiss" onPress={onCancel} />
-        <Animated.View entering={SlideInDown.duration(300).springify().damping(20)} style={styles.sheet}>
+        <Animated.View entering={SlideInDown.duration(300).easing(ARRIVAL)} style={styles.sheet}>
           <AppText style={styles.title}>{title}</AppText>
           <AppText style={styles.body}>{body}</AppText>
           <View style={styles.actions}>

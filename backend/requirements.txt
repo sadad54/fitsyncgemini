@@ -18,15 +18,20 @@ aiohttp==3.9.1
 googlemaps==4.10.0
 
 # Image Processing
-Pillow==10.1.0
-opencv-python==4.8.1.78
-numpy<2
+Pillow==12.3.0
+opencv-python==4.14.0.94
+numpy>=2.3.0,<3.0.0
 
-# Local ML — clothing category/color detection (patrickjohncyh/fashion-clip),
-# runs fully on-device after the one-time model download. CPU build; install
-# with --index-url https://download.pytorch.org/whl/cpu for a smaller download.
+# Local ML — clothing category/color detection (patrickjohncyh/fashion-clip)
+# and background removal (rembg/u2net) as a pre-classification step, both
+# fully on-device after the one-time model download. CPU build; install
+# torch with --index-url https://download.pytorch.org/whl/cpu for a smaller
+# download. rembg requires numpy>=2.3, which is why opencv-python/Pillow are
+# pinned to numpy-2-compatible builds above.
 torch==2.13.0
 transformers==5.15.0
+rembg==2.0.81
+onnxruntime==1.29.0
 
 # Caching & Rate Limiting
 redis==5.0.1

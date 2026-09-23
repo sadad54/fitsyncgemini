@@ -86,7 +86,10 @@ class GroqClient:
                     f"{self.base_url}/chat/completions",
                     headers=self.headers,
                     json=payload,
-                    timeout=60.0
+                    # Caller (add-item) treats this as best-effort and falls
+                    # back gracefully, but the mobile client has its own
+                    # request timeout — fail fast well before that.
+                    timeout=20.0
                 )
                 
                 if response.status_code == 200:

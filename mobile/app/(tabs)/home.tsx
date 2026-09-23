@@ -5,6 +5,7 @@ import { useCloset, useClosetStats, useProfile, useSavedOutfits } from "@/api/qu
 import { mediaUrl } from "@/api/client";
 import { AppText, Display, Eyebrow } from "@/components/AppText";
 import { Button } from "@/components/Button";
+import { Glyph } from "@/components/Glyph";
 import { SparkIcon } from "@/components/Icon";
 import { Photo } from "@/components/Photo";
 import { Reveal } from "@/components/motion";
@@ -23,6 +24,18 @@ export default function Home() {
   const railItems = (latestItems.length ? latestItems : items).slice(0, 6);
   const missing = stats.data?.missing_essentials ?? [];
   const firstName = profile.data?.display_name?.split(" ")[0] || "there";
+  const hasItems = items.length > 0;
+
+  const heroTitle = !hasItems
+    ? "Your closet starts here."
+    : latest
+      ? "Tonight's edit is already in your closet."
+      : "Your closet is stocked. Time to style it.";
+  const heroNote = !hasItems
+    ? "Photograph your first piece and FitSync starts styling from what you actually own — not a catalog."
+    : latest
+      ? "A living edit of your wardrobe—styled for real plans, real weather, and your own taste."
+      : `${items.length} ${items.length === 1 ? "piece" : "pieces"} logged. Let FitSync assemble your first look.`;
 
   return (
     <Screen scroll bottomInset={false} contentStyle={styles.screen}>
@@ -38,12 +51,28 @@ export default function Home() {
 
       <Reveal>
         <View style={styles.hero}>
-          <Display style={styles.heroTitle}>Tonight's edit is already in your closet.</Display>
-          <AppText style={styles.heroNote}>A living edit of your wardrobe—styled for real plans, real weather, and your own taste.</AppText>
+          <Display style={styles.heroTitle}>{heroTitle}</Display>
+          <AppText style={styles.heroNote}>{heroNote}</AppText>
         </View>
       </Reveal>
 
-      <Reveal delay={60}>
+      {latest ? (
+        <Reveal delay={60}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Open saved looks" onPress={() => router.push("/saved")} style={styles.latest}>
+            <View style={styles.latestMedia}>
+              {mediaUrl(latestItems[0]?.image_url) ? <Photo source={mediaUrl(latestItems[0]!.image_url)!} /> : null}
+            </View>
+            <View style={styles.latestCopy}>
+              <Eyebrow>{latest.occasion} · {Math.round(latest.score * 100)}% match</Eyebrow>
+              <AppText style={styles.latestName}>{latest.name}</AppText>
+              <AppText numberOfLines={2} style={styles.latestNote}>{latest.explanation}</AppText>
+              <AppText style={styles.latestCta}>Open saved looks →</AppText>
+            </View>
+          </Pressable>
+        </Reveal>
+      ) : null}
+
+      <Reveal delay={latest ? 100 : 60}>
         <View style={styles.railSection}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rail}>
             {railItems.length ? railItems.map((item) => {
@@ -55,7 +84,9 @@ export default function Home() {
                 </Pressable>
               );
             }) : (
-              <View style={styles.railEmpty}><AppText style={styles.railEmptyText}>Add your first piece</AppText></View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Add your first piece" onPress={() => router.push("/add-item")} style={styles.railEmpty}>
+                <AppText style={styles.railEmptyText}>Add your first piece →</AppText>
+              </Pressable>
             )}
           </ScrollView>
           <View style={styles.railFooter}>
@@ -65,12 +96,14 @@ export default function Home() {
         </View>
       </Reveal>
 
-      <View style={styles.metrics}>
-        <Metric value={stats.data?.total_items ?? 0} label="pieces catalogued" />
-        <Metric value={saved.data?.total ?? 0} label="looks on repeat" />
-      </View>
+      {hasItems ? (
+        <View style={styles.metrics}>
+          <Metric value={stats.data?.total_items ?? 0} label="pieces catalogued" />
+          <Metric value={saved.data?.total ?? 0} label="looks on repeat" />
+        </View>
+      ) : null}
 
-      <Reveal delay={120}>
+      <Reveal delay={hasItems ? 140 : 100}>
         <View style={styles.stylistCard}>
           <View style={styles.stylistTop}>
             <SparkIcon size={13} color={colors.roseSoft} />
@@ -86,26 +119,13 @@ export default function Home() {
         <AppText style={styles.sectionLabel}>Shortcuts</AppText>
         <QuickAction num="01" title="Add a piece" note="Camera or library" onPress={() => router.push("/add-item")} />
         <QuickAction num="02" title="Open closet" note={`${items.length} pieces logged`} onPress={() => router.push("/closet")} />
-        <QuickAction num="03" title="Saved looks" note={`${saved.data?.total ?? 0} ready to repeat`} onPress={() => router.push("/saved")} />
-        <QuickAction num="04" title="Virtual try-on" note="Preview a look on your photo" onPress={() => router.push("/tryon?from=look")} />
-        <QuickAction num="05" title="Community" note="See what people are wearing" onPress={() => router.push("/community")} />
-        <QuickAction num="06" title="Trends & nearby" note="Quiet crimson is up 34%" onPress={() => router.push("/trends")} />
+        <View style={styles.tileGrid}>
+          <Tile shape="diamond" title="Saved looks" note={`${saved.data?.total ?? 0} ready`} onPress={() => router.push("/saved")} />
+          <Tile shape="moonLeft" title="Try-on" note="Preview a look" onPress={() => router.push("/tryon?from=look")} />
+          <Tile shape="leaf" title="Community" note="What people wear" onPress={() => router.push("/community")} />
+          <Tile shape="drop" title="Trends" note="What's rising" onPress={() => router.push("/trends")} />
+        </View>
       </View>
-
-      {latest ? (
-        <Reveal delay={180}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open saved looks" onPress={() => router.push("/saved")} style={styles.latest}>
-            <View style={styles.latestCopy}>
-              <Eyebrow>{latest.occasion} · {Math.round(latest.score * 100)}% match</Eyebrow>
-              <AppText style={styles.latestName}>{latest.name}</AppText>
-              <AppText numberOfLines={3} style={styles.latestNote}>{latest.explanation}</AppText>
-            </View>
-            <View style={styles.latestMedia}>
-              {mediaUrl(latestItems[0]?.image_url) ? <Photo source={mediaUrl(latestItems[0]!.image_url)!} /> : null}
-            </View>
-          </Pressable>
-        </Reveal>
-      ) : null}
       <View style={{ height: 40 }} />
     </Screen>
   );
@@ -133,6 +153,16 @@ function QuickAction({ num, title, note, onPress }: { num: string; title: string
   );
 }
 
+function Tile({ shape, title, note, onPress }: { shape: Parameters<typeof Glyph>[0]["shape"]; title: string; note: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={styles.tile}>
+      <Glyph shape={shape} size={18} strokeWidth={2} color={colors.roseSoft} />
+      <AppText style={styles.tileTitle}>{title}</AppText>
+      <AppText style={styles.tileNote}>{note}</AppText>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
   topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.lg, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
@@ -142,16 +172,20 @@ const styles = StyleSheet.create({
   hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, borderBottomWidth: 2, borderColor: colors.strokeStrong, gap: spacing.md },
   heroTitle: { fontSize: 42, lineHeight: 40 },
   heroNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  latest: { borderBottomWidth: 2, borderColor: colors.strokeStrong },
+  latestMedia: { width: "100%", height: 240, backgroundColor: colors.surface },
+  latestCopy: { padding: spacing.xl, gap: spacing.sm },
+  latestName: { fontSize: 26, lineHeight: 27, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.6, textTransform: "uppercase" },
+  latestNote: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  latestCta: { color: colors.roseSoft, fontSize: 11, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginTop: spacing.xs },
   railSection: { borderBottomWidth: 1, borderColor: colors.stroke },
   rail: { flexGrow: 0 },
   railItem: { width: 126, height: 168, borderRightWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface, justifyContent: "flex-end" },
-  railImage: { ...StyleSheet.absoluteFillObject },
   railPlaceholder: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.surface },
   railLabel: { position: "absolute", left: spacing.sm, bottom: spacing.sm, color: colors.white, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
   railEmpty: { width: "100%", height: 168, alignItems: "center", justifyContent: "center" },
-  railEmptyText: { color: colors.muted, fontSize: 13 },
+  railEmptyText: { color: colors.roseSoft, fontSize: 13, fontFamily: fonts.bold, fontWeight: "700" },
   railFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderColor: colors.stroke },
-  spark: { width: 8, height: 8, backgroundColor: colors.roseSoft, transform: [{ rotate: "45deg" }] },
   railFooterText: { color: colors.muted, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
   metrics: { flexDirection: "row", borderBottomWidth: 1, borderColor: colors.stroke },
   metric: { flex: 1, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderRightWidth: 1, borderColor: colors.stroke },
@@ -169,9 +203,8 @@ const styles = StyleSheet.create({
   quickTitle: { fontFamily: fonts.black, fontWeight: "800", fontSize: 15, letterSpacing: -0.2 },
   quickNote: { color: colors.muted, fontSize: 11, lineHeight: 15, marginTop: 2 },
   quickArrow: { color: colors.muted, fontSize: 15 },
-  latest: { flexDirection: "row", borderTopWidth: 2, borderColor: colors.strokeStrong, marginTop: spacing.lg },
-  latestCopy: { flex: 1, padding: spacing.xl, gap: spacing.sm },
-  latestName: { fontSize: 21, lineHeight: 23, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.5, textTransform: "uppercase" },
-  latestNote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  latestMedia: { width: 104, backgroundColor: colors.surface, borderLeftWidth: 1, borderColor: colors.stroke, overflow: "hidden" }
+  tileGrid: { flexDirection: "row", flexWrap: "wrap", borderTopWidth: 1, borderColor: colors.stroke },
+  tile: { width: "50%", paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, gap: spacing.xs, borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
+  tileTitle: { fontFamily: fonts.black, fontWeight: "800", fontSize: 13, letterSpacing: -0.1, marginTop: spacing.xs },
+  tileNote: { color: colors.muted, fontSize: 10, lineHeight: 14 }
 });

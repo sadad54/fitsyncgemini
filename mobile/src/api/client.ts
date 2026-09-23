@@ -55,10 +55,10 @@ async function imagePart(uri: string, name: string) {
   return { uri, name, type: "image/jpeg" } as unknown as Blob;
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, timeoutMs = 15000): Promise<T> {
   const token = useAuthStore.getState().token;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1${path}`, {
@@ -97,7 +97,10 @@ export const api = {
     if (params?.category && params.category !== "all") qs.set("category", params.category);
     if (params?.search) qs.set("search", params.search);
     const suffix = qs.toString() ? `?${qs}` : "";
-    return request<{ items: ClothingItem[]; total: number }>(`/clothing${suffix}`);
+    // Trailing slash matters here: without it FastAPI 307-redirects to the
+    // slash form, and the redirected request can lose the Authorization
+    // header, surfacing as "not authenticated" instead of real data.
+    return request<{ items: ClothingItem[]; total: number }>(`/clothing/${suffix}`);
   },
   closetItem: (id: string) => request<ClothingItem>(`/clothing/${id}`),
   closetStats: () => request<ClosetStats>("/clothing/stats"),
@@ -111,19 +114,21 @@ export const api = {
     if (input.notes?.trim()) form.append("notes", input.notes.trim());
     if (input.detectedVision) form.append("detected_vision", JSON.stringify(input.detectedVision));
     form.append("image", await imagePart(input.imageUri, filename));
-    return request<ClothingItem>("/clothing", { method: "POST", body: form });
+    // Photo upload + on-device ML classification + a style-analysis call
+    // can comfortably exceed the default timeout on a slow connection.
+    return request<ClothingItem>("/clothing/", { method: "POST", body: form }, 45000);
   },
   detectClosetItemCategory: async (imageUri: string) => {
     const filename = imageName("detect", imageUri);
     const form = new FormData();
     form.append("image", await imagePart(imageUri, filename));
-    return request<{ category: ClothingCategory; sub_category?: string; colors?: string[]; confidence?: number }>("/clothing/detect", { method: "POST", body: form });
+    return request<{ category: ClothingCategory; sub_category?: string; colors?: string[]; confidence?: number; suggested_name?: string }>("/clothing/detect", { method: "POST", body: form }, 30000);
   },
   updateClosetItem: (id: string, input: Partial<ClothingItem>) => request<ClothingItem>(`/clothing/${id}`, { method: "PUT", body: JSON.stringify(input) }),
   deleteClosetItem: (id: string) => request<{ deleted: boolean }>(`/clothing/${id}`, { method: "DELETE" }),
   generateOutfit: (input: { occasion: string; use_weather?: boolean; latitude?: number; longitude?: number }) =>
     request<Outfit>("/outfits/generate", { method: "POST", body: JSON.stringify(input) }),
-  outfits: (savedOnly = false) => request<{ outfits: Outfit[]; total: number }>(`/outfits?saved_only=${savedOnly}`),
+  outfits: (savedOnly = false) => request<{ outfits: Outfit[]; total: number }>(`/outfits/?saved_only=${savedOnly}`),
   saveOutfit: (id: string) => request<Outfit>(`/outfits/${id}/save`, { method: "POST" }),
   favoriteOutfit: (id: string) => request<Outfit>(`/outfits/${id}/favorite`, { method: "POST" }),
   feedbackOutfit: (id: string, rating: number, reason?: string) =>
@@ -133,7 +138,11 @@ export const api = {
     const form = new FormData();
     form.append("item_ids", JSON.stringify(input.itemIds));
     form.append("person_image", await imagePart(input.imageUri, imageName("try-on", input.imageUri)));
-    return request<TryOnResult>("/tryon/", { method: "POST", body: form });
+    // When the optional GPU worker is configured, the backend chains one
+    // diffusion call per garment (~35-90s each) — generous headroom for
+    // multi-item looks plus tunnel latency. Falls back to the fast local
+    // compositor automatically when the GPU worker isn't configured.
+    return request<TryOnResult>("/tryon/", { method: "POST", body: form }, 240000);
   },
   tryOns: () => request<{ results: TryOnResult[]; total: number }>("/tryon/"),
   tryOn: (id: string) => request<TryOnResult>(`/tryon/${id}`),

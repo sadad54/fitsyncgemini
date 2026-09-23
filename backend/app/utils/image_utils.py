@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from typing import Tuple
 
@@ -51,9 +52,19 @@ def upload_to_supabase(image_bytes: bytes, user_id: str, bucket: str = BUCKET) -
 
 
 def process_and_upload_image(image_bytes: bytes, user_id: str, bucket: str = BUCKET, resize: bool = True) -> Tuple[str, str]:
-    """Full pipeline: resize/process the image, then upload it. Returns (public_url, image_path)."""
+    """Full pipeline: resize/process the image, then upload it. Returns (public_url, image_path).
+
+    Synchronous by design (cv2 + a blocking HTTP upload) — call via
+    process_and_upload_image_async from any async request handler, or this
+    will block the whole event loop for the duration of the upload."""
     try:
         processed_image = process_image(image_bytes) if resize else image_bytes
         return upload_to_supabase(processed_image, user_id, bucket=bucket)
     except Exception as e:
         raise RuntimeError(f"process_and_upload_image failed: {str(e)}")
+
+
+async def process_and_upload_image_async(image_bytes: bytes, user_id: str, bucket: str = BUCKET, resize: bool = True) -> Tuple[str, str]:
+    """Event-loop-safe wrapper — runs the blocking pipeline on a worker thread."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, process_and_upload_image, image_bytes, user_id, bucket, resize)

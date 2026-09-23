@@ -85,4 +85,12 @@ class Settings(BaseSettings):
     GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+    # ---- Remote GPU try-on (optional) ----
+    # Base URL of the gpu_worker/ service (e.g. a Tailscale address on a
+    # GPU machine/cluster). Empty means "not configured" — tryon_service
+    # then always uses the local PIL compositor, no error.
+    GPU_TRYON_URL: str = os.getenv("GPU_TRYON_URL", "")
+    GPU_TRYON_SHARED_SECRET: str = os.getenv("GPU_TRYON_SHARED_SECRET", "")
+    GPU_TRYON_TIMEOUT_SECONDS: float = float(os.getenv("GPU_TRYON_TIMEOUT_SECONDS", "90"))
+
 settings = Settings()

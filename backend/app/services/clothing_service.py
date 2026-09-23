@@ -7,7 +7,7 @@ from app.core.database import db
 from app.external_apis.groq_client import groq_client
 from app.ml.clothing_classifier import clothing_classifier
 from app.models.clothing import ClothingItem
-from app.utils.image_utils import process_and_upload_image
+from app.utils.image_utils import process_and_upload_image_async
 
 CORE_CATEGORIES = ["tops", "bottoms", "footwear", "outerwear"]
 
@@ -67,7 +67,7 @@ class ClothingService:
         notes: Optional[str] = None,
         precomputed_vision: Optional[Dict[str, Any]] = None,
     ) -> ClothingItem:
-        image_url, _ = process_and_upload_image(image_bytes, user_id)
+        image_url, _ = await process_and_upload_image_async(image_bytes, user_id)
 
         vision_result = precomputed_vision or await _safe_vision_analysis(image_bytes, user_id)
 

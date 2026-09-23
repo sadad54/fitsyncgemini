@@ -1,84 +1,70 @@
-"""GPU-side virtual try-on inference service (CatVTON).
-
-Deployed separately from the main FitSync backend — runs on a CUDA machine
-(e.g. a university GPU cluster reached via AnyDesk) and exposed to the main
-backend over a private tunnel (Tailscale recommended: it reaches out from
-this machine rather than needing an inbound port opened on the cluster's
-firewall, which most university clusters won't allow). Never designed to be
-reachable from the public internet; a shared-secret header is required
-regardless as a second layer.
-
-See README.md for setup. Run with:
-    uvicorn app:app --host 0.0.0.0 --port 8100
-"""
-
+"""Authenticated, bounded GPU inference. The backend owns durable jobs."""
+import asyncio
 import io
 import os
-from typing import Optional
-
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+import secrets
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import Response
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
+from catvton_pipeline import generate_image
 
-from catvton_pipeline import get_pipeline
-from masking import CATEGORY_TO_REGION, build_mask
-
-SHARED_SECRET = os.getenv("GPU_TRYON_SHARED_SECRET", "")
-
-app = FastAPI(title="FitSync GPU Try-On Worker")
+app = FastAPI(title="FitSync prototype GPU worker", docs_url=None, redoc_url=None)
+_gate = asyncio.Lock()
+MAX_BYTES = 10 * 1024 * 1024
 
 
-def _check_auth(shared_secret_header: Optional[str]) -> None:
-    if not SHARED_SECRET:
-        # Unconfigured = auth disabled. Fine for a quick local test over
-        # Tailscale's own private network, but set GPU_TRYON_SHARED_SECRET
-        # before treating this as a real deployment.
-        return
-    if shared_secret_header != SHARED_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing shared secret")
+@app.middleware("http")
+async def authenticate(request: Request, call_next):
+    # Authenticate before parsing uploads; fail closed even in local tests.
+    secret = os.getenv("GPU_TRYON_SHARED_SECRET", "")
+    if len(secret) < 32:
+        return Response(status_code=503, content="Worker secret not configured")
+    if not secrets.compare_digest(request.headers.get("X-Shared-Secret", ""), secret):
+        return Response(status_code=401, content="Unauthorized")
+    length = request.headers.get("content-length")
+    if length and (not length.isdigit() or int(length) > 2 * MAX_BYTES + 65536):
+        return Response(status_code=413, content="Upload too large")
+    return await call_next(request)
 
 
-@app.on_event("startup")
-async def warmup() -> None:
-    # Loads model weights once at process start (first run also downloads
-    # them — see catvton_pipeline.py) so the first real request doesn't pay
-    # that cost on top of tunnel latency.
-    get_pipeline()
+async def read_image(upload):
+    data = await upload.read(MAX_BYTES + 1)
+    if not data or len(data) > MAX_BYTES:
+        raise HTTPException(413, "Image must be no larger than 10 MB")
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            if image.width * image.height > 20_000_000:
+                raise ValueError()
+            image.verify()
+    except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError):
+        raise HTTPException(422, "Invalid image")
+    return data
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "model": "catvton", "prototype": True}
 
 
 @app.post("/generate")
 async def generate(
-    person_image: UploadFile = File(...),
-    garment_image: UploadFile = File(...),
-    category: str = Form("tops"),
-    num_inference_steps: int = Form(35),
-    x_shared_secret: Optional[str] = Header(default=None, alias="X-Shared-Secret"),
+    person_image: UploadFile = File(...), garment_image: UploadFile = File(...),
+    category: str = Form(..., pattern="^(tops|outerwear|bottoms|dresses)$"),
+    num_inference_steps: int = Form(50, ge=10, le=60),
+    seed: int = Form(42, ge=0, le=2147483647),
+    guidance_scale: float = Form(2.5, ge=1, le=5),
 ):
-    _check_auth(x_shared_secret)
-
-    person = Image.open(io.BytesIO(await person_image.read())).convert("RGB")
-    garment = Image.open(io.BytesIO(await garment_image.read())).convert("RGB")
-
-    region = CATEGORY_TO_REGION.get(category, "upper")
-    try:
-        mask = build_mask(person, region)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-
-    pipeline = get_pipeline()
-    result = pipeline(
-        image=person,
-        condition_image=garment,
-        mask=mask,
-        num_inference_steps=num_inference_steps,
-        guidance_scale=2.5,
-    )[0]
-
-    buf = io.BytesIO()
-    result.save(buf, format="JPEG", quality=90)
-    return Response(content=buf.getvalue(), media_type="image/jpeg")
+    if os.getenv("TRYON_NONCOMMERCIAL_ACK", "").lower() != "true":
+        raise HTTPException(503, "Non-commercial prototype acknowledgment required")
+    if _gate.locked():
+        raise HTTPException(429, "GPU is busy")
+    person, garment = await read_image(person_image), await read_image(garment_image)
+    async with _gate:
+        try:
+            result = await asyncio.to_thread(generate_image, person, garment, category,
+                num_inference_steps, seed, guidance_scale)
+        except ValueError:
+            raise HTTPException(422, "Could not detect clothing. Use a clear full-body photo.")
+        except Exception:
+            raise HTTPException(503, "GPU inference unavailable")
+    return Response(content=result, media_type="image/jpeg")

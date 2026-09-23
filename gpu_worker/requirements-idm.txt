@@ -1,0 +1,13 @@
+# Isolated IDM benchmark environment (Python 3.10), based on upstream environment.yaml.
+torch==2.0.1
+torchvision==0.15.2
+accelerate==0.25.0
+transformers==4.36.2
+diffusers==0.25.0
+huggingface-hub==0.25.2
+numpy==1.26.4
+scipy==1.11.1
+Pillow==10.4.0
+omegaconf==2.3.0
+einops==0.7.0
+safetensors==0.4.5

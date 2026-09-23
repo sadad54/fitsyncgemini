@@ -1,3 +1,7 @@
+> **Current app:** Expo / React Native in `mobile/`, with FastAPI + Supabase in `backend/`.
+> The Flutter instructions below are historical. For the new asynchronous virtual try-on prototype,
+> follow [docs/VIRTUAL_TRYON.md](docs/VIRTUAL_TRYON.md).
+
 # FitSync - AI-Powered Fashion Community App
 
 A modern, user-centric fashion application that combines AI-powered outfit suggestions, virtual try-on capabilities, and a vibrant community platform. Built with Flutter and designed for the future of fashion technology.
@@ -135,3 +139,4 @@ For support, email support@fitsync.com or join our Discord community.
 ---
 
 **FitSync** - Where AI meets fashion, and community inspires style. ✨
+

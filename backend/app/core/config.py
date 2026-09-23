@@ -85,12 +85,21 @@ class Settings(BaseSettings):
     GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-    # ---- Remote GPU try-on (optional) ----
-    # Base URL of the gpu_worker/ service (e.g. a Tailscale address on a
-    # GPU machine/cluster). Empty means "not configured" — tryon_service
-    # then always uses the local PIL compositor, no error.
-    GPU_TRYON_URL: str = os.getenv("GPU_TRYON_URL", "")
-    GPU_TRYON_SHARED_SECRET: str = os.getenv("GPU_TRYON_SHARED_SECRET", "")
-    GPU_TRYON_TIMEOUT_SECONDS: float = float(os.getenv("GPU_TRYON_TIMEOUT_SECONDS", "90"))
+    # Explicit opt-in; never falls back to paid APIs or a pasted preview.
+    TRYON_PROVIDER: str = "disabled"  # disabled | kaggle | modal
+    TRYON_ENDPOINT: str = ""
+    TRYON_SHARED_SECRET: str = ""
+    TRYON_MODAL_KEY: str = ""
+    TRYON_MODAL_SECRET: str = ""
+    TRYON_NONCOMMERCIAL_ACK: bool = False
+    TRYON_MODEL_VERSION: str = "catvton-mix-automask-fp16-v1"
+    TRYON_TIMEOUT_SECONDS: float = Field(default=240, ge=30, le=300)
+    TRYON_MONTHLY_JOB_LIMIT: int = Field(default=100, ge=0, le=10000)
+    TRYON_DAILY_USER_LIMIT: int = Field(default=5, ge=0, le=100)
+
+    # Legacy client settings retained for compatibility; unused by new jobs.
+    GPU_TRYON_URL: str = ""
+    GPU_TRYON_SHARED_SECRET: str = ""
+    GPU_TRYON_TIMEOUT_SECONDS: float = 90
 
 settings = Settings()

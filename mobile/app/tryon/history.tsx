@@ -33,8 +33,8 @@ export default function TryOnHistory() {
       </View>
 
       <View style={styles.hero}>
-        <Title style={styles.heroTitle}>Every preview you kept</Title>
-        <AppText style={styles.heroNote}>Saved previews stay on your account so you can compare two versions of the same evening.</AppText>
+        <Title style={styles.heroTitle}>Your try-ons</Title>
+        <AppText style={styles.heroNote}>Open a job to see its progress or result. New prototype photos expire after seven days.</AppText>
       </View>
 
       {tryons.isError ? (
@@ -56,7 +56,7 @@ export default function TryOnHistory() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Preview from ${formatDate(item.created_at)}`}
-                onPress={() => router.push(`/tryon?items=${item.item_ids.join(",")}`)}
+                onPress={() => router.push(`/tryon?job=${item.id}&items=${item.item_ids.join(",")}`)}
                 style={styles.tile}
               >
                 <View style={[styles.tileMedia, { height: HEIGHTS[index % HEIGHTS.length] }]}>
@@ -113,3 +113,4 @@ const styles = StyleSheet.create({
   tileName: { fontFamily: fonts.black, fontWeight: "800", fontSize: 13, lineHeight: 16, letterSpacing: -0.2 },
   tileMeta: { color: colors.muted, fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", marginTop: 6 }
 });
+

@@ -28,7 +28,7 @@ def _sample_result(**overrides):
 
 
 def test_create_tryon_returns_result(client, monkeypatch):
-    async def fake_create(user_id, person_image_bytes, item_ids):
+    async def fake_create(user_id, person_image_bytes, item_ids, seed=42):
         assert user_id == TEST_USER_ID
         assert item_ids == ["11111111-1111-1111-1111-111111111111"]
         return _sample_result()
@@ -41,14 +41,14 @@ def test_create_tryon_returns_result(client, monkeypatch):
         files={"person_image": ("person.jpg", BytesIO(b"fake-image-bytes"), "image/jpeg")},
         headers={"Authorization": "Bearer test-token"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
     body = response.json()
     assert body["status"] == "completed"
     assert body["result_image_url"] == "https://example.com/result.jpg"
 
 
 def test_create_tryon_without_items(client, monkeypatch):
-    async def fake_create(user_id, person_image_bytes, item_ids):
+    async def fake_create(user_id, person_image_bytes, item_ids, seed=42):
         assert item_ids == []
         return _sample_result(item_ids=[])
 
@@ -59,8 +59,7 @@ def test_create_tryon_without_items(client, monkeypatch):
         files={"person_image": ("person.jpg", BytesIO(b"fake-image-bytes"), "image/jpeg")},
         headers={"Authorization": "Bearer test-token"},
     )
-    assert response.status_code == 200
-    assert response.json()["item_ids"] == []
+    assert response.status_code == 422
 
 
 def test_list_tryons_returns_results_and_total(client, monkeypatch):
@@ -83,7 +82,7 @@ def test_get_tryon_not_found_returns_404(client, monkeypatch):
 
     monkeypatch.setattr(tryon_module.tryon_service, "get_tryon", fake_get)
 
-    response = client.get("/api/v1/tryon/does-not-exist", headers={"Authorization": "Bearer test-token"})
+    response = client.get("/api/v1/tryon/33333333-3333-3333-3333-333333333333", headers={"Authorization": "Bearer test-token"})
     assert response.status_code == 404
 
 
@@ -99,3 +98,4 @@ def test_delete_tryon_returns_deleted_true(client, monkeypatch):
     )
     assert response.status_code == 200
     assert response.json() == {"deleted": True}
+

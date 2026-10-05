@@ -24,5 +24,5 @@ export default function Index() {
   // First-run access is local-first. A missing development backend should never
   // strand a person behind a network timeout before they can enter the app.
   if (!onboardingComplete) return <Redirect href="/onboarding" />;
-  return <Redirect href="/(tabs)/home" />;
+  return <Redirect href="/today" />;
 }

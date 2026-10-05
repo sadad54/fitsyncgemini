@@ -3,18 +3,12 @@ import { Stack } from "expo-router";
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import {
-  Archivo_400Regular,
-  Archivo_500Medium,
-  Archivo_600SemiBold,
-  Archivo_700Bold,
-  Archivo_800ExtraBold,
-  useFonts
-} from "@expo-google-fonts/archivo";
-import { AppText, Eyebrow } from "@/components/AppText";
+import { useFonts } from "expo-font";
+import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold } from "@expo-google-fonts/geist";
+import { InstrumentSerif_400Regular } from "@expo-google-fonts/instrument-serif";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/auth";
-import { colors, spacing } from "@/theme";
+import { colors } from "@/theme";
 
 const queryClient = new QueryClient({
   // A mutation that fails (timeout, network drop, 5xx) and has no local
@@ -44,11 +38,11 @@ export default function RootLayout() {
   const hydrate = useAuthStore((state) => state.hydrate);
   const hydrated = useAuthStore((state) => state.hydrated);
   const [fontsLoaded] = useFonts({
-    Archivo_400Regular,
-    Archivo_500Medium,
-    Archivo_600SemiBold,
-    Archivo_700Bold,
-    Archivo_800ExtraBold
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    InstrumentSerif_400Regular
   });
 
   useEffect(() => {
@@ -58,10 +52,8 @@ export default function RootLayout() {
   if (!hydrated || !fontsLoaded) {
     return (
       <View style={styles.boot}>
-        <StatusBar style="light" />
-        <ActivityIndicator color={colors.rose} />
-        <Eyebrow>FitSync</Eyebrow>
-        <AppText style={styles.bootText}>Restoring your style space…</AppText>
+        <StatusBar style="dark" />
+        <ActivityIndicator color={colors.ink} />
       </View>
     );
   }
@@ -69,7 +61,7 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -85,7 +77,9 @@ export default function RootLayout() {
           <Stack.Screen name="add-item" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
           <Stack.Screen name="item/[id]" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="tryon/index" options={{ animation: "slide_from_right" }} />
-          <Stack.Screen name="tryon/history" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="style/index" options={{ presentation: "fullScreenModal", animation: "slide_from_bottom", gestureEnabled: true }} />
+          <Stack.Screen name="look/[id]" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="profile" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="community/index" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="community/post/[id]" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="community/create" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
@@ -102,6 +96,5 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  boot: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md, backgroundColor: colors.canvas },
-  bootText: { color: colors.muted, fontSize: 14 }
+  boot: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.canvas }
 });

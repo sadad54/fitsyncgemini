@@ -1,14 +1,11 @@
 import { Modal, Pressable, StyleSheet, View } from "react-native";
-import Animated, { Easing, FadeIn, SlideInDown } from "react-native-reanimated";
-import { AppText } from "@/components/AppText";
-import { colors, fonts, spacing } from "@/theme";
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
+import { Title, AppText } from "@/components/AppText";
+import { Button } from "@/components/Button";
+import { SETTLE } from "@/components/motion";
+import { colors, radius, spacing } from "@/theme";
 
-// Confident, architectural deceleration — no spring overshoot. Matches the
-// Modernist system's flat, measured character rather than a playful bounce.
-const ARRIVAL = Easing.bezier(0.16, 1, 0.3, 1);
-
-// The design's confirm dialog is a bottom sheet, not a system alert: dark
-// scrim, red 2px top rule, uppercase title, split Cancel/Confirm row.
+/** Bottom-sheet confirmation; the destructive action sits in the thumb zone. */
 export function ConfirmDialog({
   visible,
   title,
@@ -29,19 +26,16 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel}>
-      <Animated.View entering={FadeIn.duration(200)} style={styles.scrim}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel} statusBarTranslucent>
+      <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(160)} style={styles.scrim}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Dismiss" onPress={onCancel} />
-        <Animated.View entering={SlideInDown.duration(300).easing(ARRIVAL)} style={styles.sheet}>
-          <AppText style={styles.title}>{title}</AppText>
+        <Animated.View entering={SlideInDown.duration(380).easing(SETTLE)} exiting={SlideOutDown.duration(200)} style={styles.sheet}>
+          <View style={styles.grabber} />
+          <Title style={styles.title}>{title}</Title>
           <AppText style={styles.body}>{body}</AppText>
           <View style={styles.actions}>
-            <Pressable accessibilityRole="button" accessibilityLabel={cancelLabel} onPress={onCancel} style={styles.cancel}>
-              <AppText style={styles.cancelLabel}>{cancelLabel}</AppText>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={confirmLabel} onPress={onConfirm} style={[styles.confirm, destructive && styles.confirmDestructive]}>
-              <AppText style={styles.confirmLabel}>{confirmLabel}</AppText>
-            </Pressable>
+            <Button title={confirmLabel} variant={destructive ? "danger" : "primary"} onPress={onConfirm} />
+            <Button title={cancelLabel} variant="ghost" onPress={onCancel} />
           </View>
         </Animated.View>
       </Animated.View>
@@ -50,14 +44,13 @@ export function ConfirmDialog({
 }
 
 const styles = StyleSheet.create({
-  scrim: { flex: 1, backgroundColor: "rgba(13, 12, 11, 0.72)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: colors.canvas, borderTopWidth: 2, borderColor: colors.rose, paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
-  title: { fontSize: 26, lineHeight: 26, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.6, textTransform: "uppercase" },
-  body: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: spacing.sm },
-  actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
-  cancel: { flex: 1, height: 50, borderWidth: 2, borderColor: colors.strokeStrong, alignItems: "flex-start", justifyContent: "center", paddingHorizontal: spacing.md },
-  cancelLabel: { color: colors.ink, fontFamily: fonts.black, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" },
-  confirm: { flex: 1, height: 50, backgroundColor: colors.rose, alignItems: "flex-start", justifyContent: "center", paddingHorizontal: spacing.md },
-  confirmDestructive: { backgroundColor: colors.rose },
-  confirmLabel: { color: colors.white, fontFamily: fonts.black, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }
+  scrim: { flex: 1, backgroundColor: colors.scrim, justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: colors.canvas, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxxl, gap: spacing.sm
+  },
+  grabber: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: colors.strokeStrong, marginBottom: spacing.md },
+  title: { fontSize: 26, lineHeight: 30 },
+  body: { color: colors.inkSoft, fontSize: 15, lineHeight: 22 },
+  actions: { marginTop: spacing.lg, gap: spacing.xs }
 });

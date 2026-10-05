@@ -1,119 +1,113 @@
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, TextInput, View } from "react-native";
 import { Redirect, router } from "expo-router";
-import { AppText, Display, Eyebrow } from "@/components/AppText";
+import Animated, { FadeInRight, FadeOutLeft, useAnimatedStyle, useDerivedValue, withSpring } from "react-native-reanimated";
+import { ArrowRight, Check } from "lucide-react-native";
+import { AppText, Caption, Display, Eyebrow } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
-import { Reveal } from "@/components/motion";
+import { PressableScale, SETTLE, SPRING } from "@/components/motion";
 import { Screen } from "@/components/Screen";
 import { useUpdateProfile } from "@/api/queries";
 import { useAuthStore } from "@/store/auth";
-import { colors, fonts, spacing } from "@/theme";
+import { colors, fonts, radius, spacing } from "@/theme";
 
 const styleAnchors = ["minimal", "streetwear", "classic", "athleisure", "soft glam", "workwear", "tailored", "weekend"];
 const colorAnchors = [
-  { name: "ink", value: "#242128" },
-  { name: "cream", value: "#E8D9C8" },
-  { name: "denim", value: "#496B83" },
-  { name: "berry", value: "#9B3F61" },
-  { name: "olive", value: "#6E7552" },
-  { name: "cobalt", value: "#3C56B8" },
-  { name: "gold", value: "#C79043" },
-  { name: "lilac", value: "#9D85B6" }
+  { name: "ink", value: "#242128" }, { name: "cream", value: "#E8D9C8" }, { name: "denim", value: "#496B83" }, { name: "berry", value: "#9B3F61" },
+  { name: "olive", value: "#6E7552" }, { name: "cobalt", value: "#3C56B8" }, { name: "gold", value: "#C79043" }, { name: "lilac", value: "#9D85B6" }
 ];
+const STEPS = 3;
 
 export default function Onboarding() {
-  const storedName = "";
   const token = useAuthStore((state) => state.token);
   const onboardingComplete = useAuthStore((state) => state.onboardingComplete);
   const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
-  const [name, setName] = useState(storedName);
-  const [styles, setStyles] = useState<string[]>([]);
-  const [colorsSelected, setColorsSelected] = useState<string[]>([]);
   const update = useUpdateProfile();
-  const ready = name.trim().length > 1 && styles.length > 0 && colorsSelected.length > 0;
-  const progress = useMemo(() => [name.trim().length > 1, styles.length > 0, colorsSelected.length > 0].filter(Boolean).length / 3, [name, styles, colorsSelected]);
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [anchors, setAnchors] = useState<string[]>([]);
+  const [palette, setPalette] = useState<string[]>([]);
+  const progress = useDerivedValue(() => withSpring((step + 1) / STEPS, SPRING), [step]);
+  const bar = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
-  function toggle(value: string, setter: React.Dispatch<React.SetStateAction<string[]>>) {
+  const toggle = (value: string, setter: React.Dispatch<React.SetStateAction<string[]>>) =>
     setter((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  }
 
   async function finish() {
-    if (!ready || update.isPending) return;
     await completeOnboarding();
-    router.replace("/(tabs)/home");
-    update.mutate({ display_name: name.trim(), style_preferences: styles, favorite_colors: colorsSelected, onboarding_complete: true });
+    update.mutate({ display_name: name.trim() || undefined, style_preferences: anchors, favorite_colors: palette, onboarding_complete: true });
+    router.replace("/today");
   }
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
-  if (onboardingComplete) return <Redirect href="/(tabs)/home" />;
+  if (onboardingComplete) return <Redirect href="/today" />;
+
+  const canNext = step !== 0 || name.trim().length > 0;
+  const footer = (
+    <View style={styles.footer}>
+      {step > 0 ? <Button title="Skip" variant="ghost" stretch={false} onPress={() => step < STEPS - 1 ? setStep(step + 1) : finish()} /> : <View />}
+      <View style={styles.flex}>
+        <Button title={step < STEPS - 1 ? "Continue" : "Start styling"} icon={step < STEPS - 1 ? ArrowRight : Check}
+          disabled={!canNext} onPress={() => step < STEPS - 1 ? setStep(step + 1) : finish()} />
+      </View>
+    </View>
+  );
 
   return (
-    <Screen bottomInset={false}>
-      <View style={stylesSheet.progressTrack}><View style={[stylesSheet.progress, { width: `${progress * 100}%` }]} /></View>
-      <Reveal>
-        <View style={stylesSheet.header}>
-          <Eyebrow>Three details, better looks</Eyebrow>
-          <Display>Tune the{"\n"}stylist.</Display>
-          <AppText style={stylesSheet.note}>We use these anchors to rank outfit combinations—not to put your taste in a box.</AppText>
-        </View>
-      </Reveal>
-
-      <Reveal delay={80}>
-        <View style={stylesSheet.section}>
-          <View style={stylesSheet.stepRow}><AppText style={stylesSheet.step}>01</AppText><AppText style={stylesSheet.sectionTitle}>Your name</AppText></View>
-          <TextInput accessibilityLabel="Display name" value={name} onChangeText={setName} placeholder="What should we call you?" placeholderTextColor={colors.faint} style={stylesSheet.input} />
-        </View>
-      </Reveal>
-
-      <Reveal delay={140}>
-        <View style={stylesSheet.section}>
-          <View style={stylesSheet.stepRow}><AppText style={stylesSheet.step}>02</AppText><AppText style={stylesSheet.sectionTitle}>Your style energy</AppText></View>
-          <AppText style={stylesSheet.helper}>Pick at least one. Three or four gives the best range.</AppText>
-          <View style={stylesSheet.chips}>{styleAnchors.map((style) => <Chip key={style} active={styles.includes(style)} onPress={() => toggle(style, setStyles)}>{style}</Chip>)}</View>
-        </View>
-      </Reveal>
-
-      <Reveal delay={200}>
-        <View style={stylesSheet.section}>
-          <View style={stylesSheet.stepRow}><AppText style={stylesSheet.step}>03</AppText><AppText style={stylesSheet.sectionTitle}>Colors you reach for</AppText></View>
-          <View style={stylesSheet.palette}>
-            {colorAnchors.map((color) => {
-              const active = colorsSelected.includes(color.name);
-              return (
-                <Pressable key={color.name} accessibilityRole="button" accessibilityLabel={color.name} accessibilityState={{ selected: active }} style={stylesSheet.colorWrap} onPress={() => toggle(color.name, setColorsSelected)}>
-                  <View style={[stylesSheet.colorSwatch, { backgroundColor: color.value }, active && stylesSheet.colorSwatchActive]} />
-                  <AppText style={[stylesSheet.colorName, active && stylesSheet.colorNameActive]}>{color.name}</AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      </Reveal>
-
-      <Button title={update.isPending ? "Building your profile…" : "Enter my closet"} icon="arrow" disabled={!ready || update.isPending} onPress={finish} />
-      {update.error ? <AppText selectable style={stylesSheet.error}>{update.error.message}</AppText> : null}
+    <Screen footer={footer}>
+      <View style={styles.track}><Animated.View style={[styles.fill, bar]} /></View>
+      <Animated.View key={step} entering={FadeInRight.duration(420).easing(SETTLE)} exiting={FadeOutLeft.duration(200)} style={styles.step}>
+        {step === 0 ? (
+          <>
+            <Eyebrow>1 of 3</Eyebrow>
+            <Display>What should we call you?</Display>
+            <TextInput accessibilityLabel="Your name" autoFocus value={name} onChangeText={setName} placeholder="First name" placeholderTextColor={colors.faint}
+              returnKeyType="next" onSubmitEditing={() => canNext && setStep(1)} style={styles.input} />
+          </>
+        ) : step === 1 ? (
+          <>
+            <Eyebrow>2 of 3</Eyebrow>
+            <Display>How do you like to dress?</Display>
+            <Caption>Pick any that feel like you. We use them to rank outfits.</Caption>
+            <View style={styles.chips}>{styleAnchors.map((value) => <Chip key={value} active={anchors.includes(value)} onPress={() => toggle(value, setAnchors)}>{value}</Chip>)}</View>
+          </>
+        ) : (
+          <>
+            <Eyebrow>3 of 3</Eyebrow>
+            <Display>Colours you reach for</Display>
+            <Caption>Tap the ones already in your closet.</Caption>
+            <View style={styles.palette}>
+              {colorAnchors.map((color) => {
+                const active = palette.includes(color.name);
+                return (
+                  <PressableScale key={color.name} accessibilityRole="checkbox" accessibilityLabel={color.name} accessibilityState={{ checked: active }} scaleTo={0.9}
+                    onPress={() => toggle(color.name, setPalette)} style={styles.colorCell}>
+                    <View style={[styles.swatch, { backgroundColor: color.value }, active && styles.swatchOn]}>{active ? <Check size={20} color={colors.white} strokeWidth={3} /> : null}</View>
+                    <AppText style={[styles.colorName, active && styles.colorNameOn]}>{color.name}</AppText>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          </>
+        )}
+      </Animated.View>
     </Screen>
   );
 }
 
-const stylesSheet = StyleSheet.create({
-  progressTrack: { height: 3, backgroundColor: colors.surfaceElevated },
-  progress: { height: "100%", backgroundColor: colors.rose },
-  header: { gap: spacing.md, borderBottomWidth: 2, borderColor: colors.strokeStrong, paddingBottom: spacing.lg },
-  note: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  section: { gap: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderColor: colors.stroke },
-  stepRow: { flexDirection: "row", alignItems: "baseline", gap: spacing.md },
-  step: { color: colors.roseSoft, fontSize: 11, fontFamily: fonts.black, fontWeight: "800" },
-  sectionTitle: { fontSize: 17, lineHeight: 21, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.2 },
-  helper: { color: colors.muted, fontSize: 12, lineHeight: 17 },
-  input: { height: 50, borderWidth: 1, borderColor: colors.stroke, borderLeftWidth: 2, borderLeftColor: colors.strokeStrong, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: spacing.md, fontSize: 15, fontFamily: fonts.medium },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  palette: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  colorWrap: { alignItems: "flex-start", gap: spacing.xs, width: 66 },
-  colorSwatch: { width: "100%", height: 44, borderWidth: 1, borderColor: colors.stroke },
-  colorSwatchActive: { borderWidth: 2, borderColor: colors.rose },
-  colorName: { color: colors.muted, fontSize: 9, lineHeight: 12, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
-  colorNameActive: { color: colors.ink },
-  error: { color: colors.roseSoft }
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  track: { height: 4, borderRadius: 2, backgroundColor: colors.canvasSoft, overflow: "hidden", marginTop: spacing.md },
+  fill: { height: 4, borderRadius: 2, backgroundColor: colors.ink },
+  step: { gap: spacing.lg },
+  input: { height: 60, borderRadius: radius.md, backgroundColor: colors.surface, paddingHorizontal: spacing.lg, fontSize: 20, color: colors.ink, fontFamily: fonts.regular, borderWidth: 1, borderColor: colors.stroke },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  palette: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -spacing.sm },
+  colorCell: { width: "25%", alignItems: "center", gap: spacing.xs, paddingVertical: spacing.sm },
+  swatch: { width: 60, height: 60, borderRadius: 30, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: "transparent" },
+  swatchOn: { borderColor: colors.canvas, boxShadow: "0 0 0 2px #17140F" },
+  colorName: { fontSize: 13, color: colors.muted, textTransform: "capitalize" },
+  colorNameOn: { color: colors.ink, fontFamily: fonts.semibold },
+  footer: { flexDirection: "row", alignItems: "center", gap: spacing.sm }
 });

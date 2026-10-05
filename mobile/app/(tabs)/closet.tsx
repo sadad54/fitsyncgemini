@@ -1,102 +1,140 @@
 import { useState } from "react";
-import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
+import { FlatList, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
+import { Plus, Search, Shirt, Sparkles, X } from "lucide-react-native";
 import { useCloset } from "@/api/queries";
-import { AppText, Eyebrow, Title } from "@/components/AppText";
+import { AppText, Caption, Display, Eyebrow } from "@/components/AppText";
+import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
-import { SearchIcon } from "@/components/Icon";
+import { IconButton } from "@/components/IconButton";
 import { ItemCard } from "@/components/ItemCard";
-import { Screen } from "@/components/Screen";
+import { PressableScale, Reveal, SETTLE, Skeleton } from "@/components/motion";
 import { StatePanel } from "@/components/state-panel";
-import { colors, fonts, spacing } from "@/theme";
+import { isValidTryOnSelection } from "@/lib/tryon";
 import type { ClothingCategory } from "@/types/api";
+import { colors, fonts, layout, radius, spacing } from "@/theme";
 
-const categories: Array<ClothingCategory | "all"> = ["all", "tops", "bottoms", "outerwear", "footwear", "dresses", "accessories", "activewear"];
+const categories: Array<ClothingCategory | "all"> = ["all", "tops", "bottoms", "dresses", "outerwear", "footwear", "accessories", "activewear"];
 
 export default function Closet() {
   const [category, setCategory] = useState<ClothingCategory | "all">("all");
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
   const closet = useCloset(category, search);
+  const all = useCloset();
   const { width } = useWindowDimensions();
   const columns = width >= 760 ? 3 : 2;
+  const selecting = selected.length > 0;
+  const picks = (all.data?.items ?? []).filter((item) => selected.includes(item.id));
+  const valid = isValidTryOnSelection(picks);
+
+  const toggle = (id: string) => setSelected((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
 
   return (
-    <Screen scroll={false} bottomInset={false} contentStyle={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Eyebrow>Your wardrobe</Eyebrow>
-          <Title style={styles.title}>The rail</Title>
-          <AppText style={styles.subtitle}>{closet.data?.total ?? 0} pieces, ready to remix.</AppText>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Add a closet item" onPress={() => router.push("/add-item")} style={styles.addButton}>
-          <AppText style={styles.addGlyph}>+</AppText>
-        </Pressable>
-      </View>
-
-      <View style={styles.searchShell}>
-        <SearchIcon size={16} color={colors.muted} />
-        <TextInput
-          accessibilityLabel="Search your closet"
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search by name or color"
-          placeholderTextColor={colors.faint}
-          returnKeyType="search"
-          style={styles.input}
-        />
-        {search ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setSearch("")} style={styles.clear}><AppText style={styles.clearGlyph}>✕</AppText></Pressable> : null}
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={styles.chipsContent}>
-        {categories.map((item) => <Chip key={item} active={category === item} onPress={() => setCategory(item)}>{item}</Chip>)}
-      </ScrollView>
-
-      {closet.isError ? (
-        <View style={styles.padded}>
-          <StatePanel title="Your closet could not sync" message={closet.error.message} action="Try again" onAction={() => closet.refetch()} />
-        </View>
-      ) : (
+    <View style={styles.root}>
+      <StatusBar style="dark" />
+      <SafeAreaView edges={["top"]} style={styles.flex}>
         <FlatList
           key={columns}
           data={closet.data?.items ?? []}
           numColumns={columns}
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.list}
           keyExtractor={(item) => item.id}
           refreshing={closet.isRefetching}
           onRefresh={() => closet.refetch()}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => <ItemCard item={item} width={`${100 / columns}%`} />}
-          ListEmptyComponent={
-            <View style={styles.padded}>
-              <StatePanel
-                title={closet.isLoading ? "Opening your closet" : search || category !== "all" ? "No pieces match" : "Your rail is waiting"}
-                message={closet.isLoading ? "Fetching your pieces and their AI tags…" : search || category !== "all" ? "Try a broader search or another category." : "Add a clear garment photo and FitSync will tag it for styling."}
-                action={!closet.isLoading && !search && category === "all" ? "Add first piece" : undefined}
-                onAction={() => router.push("/add-item")}
-              />
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <Reveal>
+                <View style={styles.titleRow}>
+                  <View style={styles.flex}>
+                    <Eyebrow>{all.data?.total ?? 0} pieces</Eyebrow>
+                    <Display>Closet</Display>
+                  </View>
+                  <IconButton icon={Plus} label="Add a piece" tone="ink" size={48} onPress={() => router.push("/add-item")} />
+                </View>
+              </Reveal>
+              <Reveal delay={60}>
+                <View style={styles.search}>
+                  <Search size={18} color={colors.muted} />
+                  <TextInput accessibilityLabel="Search your closet" value={search} onChangeText={setSearch} placeholder="Search by name or colour"
+                    placeholderTextColor={colors.faint} returnKeyType="search" style={styles.input} />
+                  {search ? <IconButton icon={X} label="Clear search" size={32} onPress={() => setSearch("")} /> : null}
+                </View>
+              </Reveal>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chips}>
+                {categories.map((item) => <Chip key={item} active={category === item} onPress={() => setCategory(item)}>{item === "all" ? "All" : item}</Chip>)}
+              </ScrollView>
+              {!selecting && (all.data?.total ?? 0) > 1 ? <Caption>Tip: press and hold pieces to try them on together.</Caption> : null}
             </View>
           }
+          renderItem={({ item, index }) => (
+            <Reveal index={index % 8} delay={80} style={{ width: `${100 / columns}%` }}>
+              <ItemCard
+                item={item}
+                width="100%"
+                selecting={selecting}
+                selected={selected.includes(item.id)}
+                onPress={selecting ? () => toggle(item.id) : undefined}
+                onLongPress={() => toggle(item.id)}
+              />
+            </Reveal>
+          )}
+          ListEmptyComponent={
+            closet.isLoading ? (
+              <View style={styles.skeletons}>{[0, 1, 2, 3].map((i) => <Skeleton key={i} style={styles.skeleton} />)}</View>
+            ) : closet.isError ? (
+              <StatePanel title="Your closet didn't load" message={closet.error.message} action="Try again" onAction={() => closet.refetch()} />
+            ) : (
+              <StatePanel
+                icon={Shirt}
+                title={search || category !== "all" ? "Nothing matches" : "Your closet is empty"}
+                message={search || category !== "all" ? "Try a broader search or another category." : "Photograph a piece you own. FitSync tags it and starts styling."}
+                action={!search && category === "all" ? "Add a piece" : undefined}
+                onAction={() => router.push("/add-item")}
+              />
+            )
+          }
         />
-      )}
-    </Screen>
+      </SafeAreaView>
+
+      {selecting ? (
+        <Animated.View entering={FadeInDown.duration(320).easing(SETTLE)} exiting={FadeOutDown.duration(200)} style={styles.selectBar}>
+          <PressableScale accessibilityRole="button" accessibilityLabel="Cancel selection" onPress={() => setSelected([])} style={styles.selectCancel}>
+            <X size={18} color={colors.onInk} />
+          </PressableScale>
+          <View style={styles.flex}>
+            <AppText style={styles.selectTitle}>{selected.length} selected</AppText>
+            <AppText style={styles.selectNote}>{valid ? "Ready to try on" : "Pick a dress, or a top + bottom"}</AppText>
+          </View>
+          <Button title="Try on" icon={Sparkles} variant="accent" compact stretch={false} disabled={!valid}
+            onPress={() => { const ids = selected.join(","); setSelected([]); router.push(`/tryon?items=${ids}&auto=1`); }} />
+        </Animated.View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
-  header: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: spacing.lg, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, borderBottomWidth: 2, borderColor: colors.strokeStrong },
-  headerCopy: { flex: 1, gap: spacing.xs },
-  title: { fontSize: 40 },
-  subtitle: { color: colors.muted, fontSize: 12, marginTop: spacing.xs, fontFamily: fonts.regular },
-  addButton: { width: 48, height: 48, backgroundColor: colors.rose, alignItems: "center", justifyContent: "center" },
-  addGlyph: { color: colors.white, fontSize: 26, lineHeight: 26, fontFamily: fonts.regular },
-  searchShell: { height: 52, borderBottomWidth: 1, borderColor: colors.stroke, paddingHorizontal: spacing.xl, flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  input: { flex: 1, color: colors.ink, fontSize: 14, fontFamily: fonts.medium },
-  clear: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  clearGlyph: { color: colors.muted, fontSize: 15 },
-  chipsRow: { flexGrow: 0, borderBottomWidth: 1, borderColor: colors.stroke },
-  chipsContent: { gap: spacing.xs, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
-  padded: { paddingHorizontal: spacing.xl },
-  list: { flexGrow: 1, paddingBottom: 40 }
+  root: { flex: 1, backgroundColor: colors.canvas },
+  flex: { flex: 1 },
+  list: { paddingHorizontal: layout.gutter - 6, paddingBottom: 140 },
+  header: { paddingHorizontal: 6, paddingTop: spacing.md, gap: spacing.lg, marginBottom: spacing.sm },
+  titleRow: { flexDirection: "row", alignItems: "flex-end", gap: spacing.md },
+  search: { flexDirection: "row", alignItems: "center", gap: spacing.sm, height: 50, paddingLeft: spacing.lg, paddingRight: spacing.xs, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.stroke },
+  input: { flex: 1, color: colors.ink, fontSize: 16, fontFamily: fonts.regular, height: "100%" },
+  chipScroll: { marginHorizontal: -layout.gutter },
+  chips: { gap: spacing.xs, paddingHorizontal: layout.gutter },
+  skeletons: { flexDirection: "row", flexWrap: "wrap" },
+  skeleton: { width: "46%", margin: "2%", aspectRatio: 0.8, borderRadius: radius.lg },
+  selectBar: {
+    position: "absolute", left: 14, right: 14, bottom: 100, flexDirection: "row", alignItems: "center", gap: spacing.md,
+    backgroundColor: colors.ink, borderRadius: radius.pill, padding: 6, paddingLeft: 6, boxShadow: "0 12px 30px rgba(23,20,15,0.3)"
+  },
+  selectCancel: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
+  selectTitle: { color: colors.onInk, fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600" },
+  selectNote: { color: "rgba(250,248,244,0.65)", fontSize: 12 }
 });

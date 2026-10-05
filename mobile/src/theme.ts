@@ -1,53 +1,78 @@
-// Modernist — flat, architectural, one family (Archivo), one signal color.
-// Atelier-at-night: ink ground, bone type, signal red. Zero radius, no shadows,
-// full-bleed bands divided by rules instead of floating cards.
-export const colors = {
-  canvas: "#131211",
-  canvasSoft: "#131211",
-  surface: "#1c1a19",
-  surfaceElevated: "#232120",
-  surfaceMuted: "#232120",
-  ink: "#f3f2f2",
-  inkSoft: "#f3f2f2",
-  muted: "#9b9797",
-  faint: "rgba(243, 242, 242, 0.42)",
-  stroke: "rgba(243, 242, 242, 0.18)",
-  strokeStrong: "#f3f2f2",
-  rose: "#ec3013",
-  roseSoft: "#ff563c",
-  roseWash: "transparent",
-  plum: "#9b9797",
-  plumWash: "transparent",
-  gold: "#ec3013",
-  goldWash: "transparent",
-  sage: "#5fae8c",
-  sageWash: "transparent",
-  danger: "#ec3013",
-  dangerWash: "transparent",
-  white: "#ffffff",
-  black: "#000000",
-  scrim: "rgba(13, 12, 11, 0.72)",
-
-  // Compatibility aliases while legacy components migrate to semantic tokens.
-  paper: "#131211",
-  cotton: "#1c1a19",
-  bone: "#232120",
-  stitch: "rgba(243, 242, 242, 0.18)",
-  moss: "#5fae8c",
-  denim: "#9b9797",
-  tomato: "#ec3013",
-  brass: "#ec3013",
-  success: "#5fae8c"
+// FitSync "Daylight Atelier".
+// Warm paper ground, ink type, garments shown in true colour. One accent —
+// cobalt "sync" — reserved for AI and try-on moments, so it always means
+// "FitSync is doing something for you". Editorial serif for headlines,
+// Geist for everything functional.
+const palette = {
+  paper: "#F5F2EC",
+  paperDeep: "#ECE7DE",
+  card: "#FFFFFF",
+  ink: "#17140F",
+  ink2: "#4B463E",
+  stone: "#8A8379",
+  hairline: "rgba(23, 20, 15, 0.09)",
+  hairlineStrong: "rgba(23, 20, 15, 0.18)",
+  sync: "#2E44D6",
+  syncSoft: "#E6E9FB",
+  clay: "#B5502B",
+  claySoft: "#F6E6DF",
+  moss: "#3F6B4E",
+  mossSoft: "#E3EDE5"
 };
 
-// Flat fills — same-stop arrays so LinearGradient renders as a solid color.
-// Kept as gradients only so call sites don't need touching.
+export const colors = {
+  canvas: palette.paper,
+  canvasSoft: palette.paperDeep,
+  surface: palette.card,
+  surfaceElevated: palette.card,
+  surfaceMuted: palette.paperDeep,
+  ink: palette.ink,
+  inkSoft: palette.ink2,
+  muted: palette.stone,
+  faint: "rgba(23, 20, 15, 0.38)",
+  stroke: palette.hairline,
+  strokeStrong: palette.hairlineStrong,
+
+  accent: palette.sync,
+  accentWash: palette.syncSoft,
+  onAccent: "#FFFFFF",
+  onInk: "#FAF8F4",
+
+  danger: palette.clay,
+  dangerWash: palette.claySoft,
+  success: palette.moss,
+  successWash: palette.mossSoft,
+  white: "#FFFFFF",
+  black: "#000000",
+  scrim: "rgba(23, 20, 15, 0.45)",
+
+  // Legacy names still referenced by older screens, mapped onto the new system.
+  rose: palette.sync,
+  roseSoft: palette.sync,
+  roseWash: palette.syncSoft,
+  plum: palette.stone,
+  plumWash: palette.paperDeep,
+  gold: palette.clay,
+  goldWash: palette.claySoft,
+  sage: palette.moss,
+  sageWash: palette.mossSoft,
+  paper: palette.paper,
+  cotton: palette.card,
+  bone: palette.paperDeep,
+  stitch: palette.hairline,
+  moss: palette.moss,
+  denim: palette.stone,
+  tomato: palette.clay,
+  brass: palette.clay
+};
+
 export const gradients = {
-  hero: ["#131211", "#131211"] as const,
-  rose: ["#ec3013", "#ec3013"] as const,
-  plum: ["#232120", "#232120"] as const,
-  gold: ["#ec3013", "#ec3013"] as const,
-  surface: ["#1c1a19", "#1c1a19"] as const
+  hero: [palette.paper, palette.paperDeep] as const,
+  rose: [palette.sync, "#4A5DE8"] as const,
+  plum: [palette.paperDeep, palette.paperDeep] as const,
+  gold: [palette.clay, palette.clay] as const,
+  surface: [palette.card, palette.card] as const,
+  photoFade: ["rgba(23,20,15,0)", "rgba(23,20,15,0.55)"] as const
 };
 
 export const spacing = {
@@ -56,54 +81,40 @@ export const spacing = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 22,
-  xxl: 32,
+  xl: 20,
+  xxl: 28,
   xxxl: 40,
   display: 56
 };
 
-// Every radius is 0 on purpose — nothing rounds in this system.
 export const radius = {
-  sm: 0,
-  md: 0,
-  lg: 0,
-  xl: 0,
-  pill: 0
+  sm: 10,
+  md: 14,
+  lg: 20,
+  xl: 28,
+  pill: 999
 };
 
 export const fonts = {
-  regular: "Archivo_400Regular",
-  medium: "Archivo_500Medium",
-  semibold: "Archivo_600SemiBold",
-  bold: "Archivo_700Bold",
-  black: "Archivo_800ExtraBold"
+  serif: "InstrumentSerif_400Regular",
+  regular: "Geist_400Regular",
+  medium: "Geist_500Medium",
+  semibold: "Geist_600SemiBold",
+  bold: "Geist_700Bold",
+  black: "Geist_700Bold"
 };
 
 export const typography = {
-  display: {
-    fontFamily: fonts.black,
-    fontWeight: "800" as const,
-    letterSpacing: -1.6
-  },
-  body: {
-    fontFamily: fonts.regular,
-    fontWeight: "400" as const
-  },
-  label: {
-    fontFamily: fonts.bold,
-    fontWeight: "700" as const,
-    letterSpacing: 1.6
-  }
+  display: { fontFamily: fonts.serif, fontWeight: "400" as const, letterSpacing: -0.6 },
+  body: { fontFamily: fonts.regular, fontWeight: "400" as const },
+  label: { fontFamily: fonts.medium, fontWeight: "500" as const, letterSpacing: 0.2 }
 };
 
-export const motion = {
-  quick: 160,
-  standard: 260,
-  reveal: 300
-};
+export const motion = { quick: 160, standard: 240, reveal: 320 };
 
-// No elevation in this system — bands are separated by rules, not shadow.
 export const shadows = {
-  card: "none",
-  floating: "none"
+  card: "0 1px 2px rgba(23,20,15,0.04), 0 8px 24px rgba(23,20,15,0.06)",
+  floating: "0 10px 30px rgba(23,20,15,0.18)"
 };
+
+export const layout = { gutter: 20, tabBarHeight: 64 };

@@ -95,7 +95,7 @@ export default function TrendDetail() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Style a look around this"
-        onPress={() => router.push("/generate")}
+        onPress={() => router.push("/style")}
         style={styles.primary}
       >
         <AppText style={styles.primaryLabel}>Style a look around this</AppText>
@@ -112,25 +112,25 @@ const styles = StyleSheet.create({
   hero: { height: 232, backgroundColor: colors.surface, overflow: "hidden" },
   mediaPlaceholder: { flex: 1, backgroundColor: colors.surface },
   growthBadge: { position: "absolute", left: 0, bottom: 0, backgroundColor: colors.rose, paddingHorizontal: 11, paddingVertical: 8 },
-  growthBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase" },
+  growthBadgeText: { color: colors.white, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
   body: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.lg, borderBottomWidth: 1, borderColor: colors.stroke },
   category: { color: colors.muted },
-  title: { fontSize: 36, lineHeight: 34, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -1.4, textTransform: "uppercase", marginTop: spacing.md },
+  title: { fontSize: 36, lineHeight: 34, fontFamily: fonts.semibold, fontWeight: "600", letterSpacing: 0, marginTop: spacing.md },
   description: { color: colors.muted, fontSize: 14, lineHeight: 22, marginTop: spacing.md },
   paletteSection: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderBottomWidth: 1, borderColor: colors.stroke },
-  sectionLabel: { color: colors.muted, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase" },
+  sectionLabel: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
   palette: { flexDirection: "row", gap: spacing.md, marginTop: 13 },
   paletteCell: { flex: 1, gap: 6 },
   paletteSwatch: { width: "100%", height: 44 },
-  paletteName: { color: colors.muted, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
+  paletteName: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
   tagRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.lg },
   tag: { borderWidth: 1, borderColor: colors.stroke, paddingHorizontal: 10, paddingVertical: 8 },
-  tagText: { color: colors.muted, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
-  closetLabel: { color: colors.roseSoft, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase", paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  tagText: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
+  closetLabel: { color: colors.roseSoft, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
   closetRail: { flexGrow: 0, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
   closetTile: { width: 118, height: 154, borderRightWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface, overflow: "hidden" },
-  closetName: { position: "absolute", left: spacing.sm, bottom: spacing.sm, color: colors.white, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
+  closetName: { position: "absolute", left: spacing.sm, bottom: spacing.sm, color: colors.white, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
   primary: { height: 56, backgroundColor: colors.rose, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.xl },
-  primaryLabel: { color: colors.white, fontFamily: fonts.black, fontWeight: "800", fontSize: 13, letterSpacing: 1.3, textTransform: "uppercase" },
+  primaryLabel: { color: colors.white, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 13, letterSpacing: 0 },
   primaryGlyph: { color: colors.white, fontSize: 17 }
 });

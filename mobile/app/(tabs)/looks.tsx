@@ -1,122 +1,149 @@
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { useCloset, useFavoriteOutfit, useOutfitFeedback, useSavedOutfits } from "@/api/queries";
-import { AppText, Eyebrow, Title } from "@/components/AppText";
-import { Chip } from "@/components/Chip";
-import { OutfitRail } from "@/components/outfit-rail";
-import { RatingRow } from "@/components/rating-row";
+import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
+import { Heart, Images, Sparkles } from "lucide-react-native";
+import { useCloset, useSavedOutfits, useTryOns } from "@/api/queries";
+import { mediaUrl } from "@/api/client";
+import { AppText, Caption, Display, Eyebrow } from "@/components/AppText";
+import { Breathe, PressableScale, Reveal, Skeleton } from "@/components/motion";
+import { OutfitCollage } from "@/components/outfit-rail";
+import { Photo } from "@/components/Photo";
 import { Screen } from "@/components/Screen";
+import { Segmented } from "@/components/Segmented";
 import { StatePanel } from "@/components/state-panel";
-import { colors, fonts, spacing } from "@/theme";
-import type { Outfit } from "@/types/api";
+import type { ClothingItem, Outfit, TryOnResult } from "@/types/api";
+import { colors, fonts, radius, spacing } from "@/theme";
 
-export default function Saved() {
-  const [filter, setFilter] = useState<"all" | "favorites">("all");
-  const [ratings, setRatings] = useState<Record<string, number>>({});
+type Filter = "all" | "onme" | "favorites";
+type Entry = { kind: "look"; at: string; outfit: Outfit } | { kind: "tryon"; at: string; job: TryOnResult };
+
+export default function Looks() {
+  const [filter, setFilter] = useState<Filter>("all");
   const saved = useSavedOutfits();
+  const tryons = useTryOns();
   const closet = useCloset();
-  const favorite = useFavoriteOutfit();
-  const feedback = useOutfitFeedback();
-  const outfits = useMemo(() => (saved.data?.outfits ?? []).filter((item) => filter === "all" || item.favorited), [saved.data, filter]);
+  const items = closet.data?.items ?? [];
 
-  function rate(outfit: Outfit, value: number) {
-    setRatings((current) => ({ ...current, [outfit.id]: value }));
-    feedback.mutate({ id: outfit.id, rating: value });
-  }
+  const entries = useMemo(() => {
+    const looks: Entry[] = (saved.data?.outfits ?? []).map((outfit) => ({ kind: "look", at: outfit.updated_at ?? outfit.created_at, outfit }));
+    const jobs: Entry[] = (tryons.data?.results ?? []).map((job) => ({ kind: "tryon", at: job.created_at, job }));
+    const pool = filter === "onme" ? jobs : filter === "favorites" ? looks.filter((e) => e.kind === "look" && e.outfit.favorited) : [...looks, ...jobs];
+    return pool.sort((a, b) => b.at.localeCompare(a.at));
+  }, [saved.data, tryons.data, filter]);
+
+  const fitting = entries.filter((e) => e.kind === "tryon" && (e.job.status === "queued" || e.job.status === "processing"));
+  const rest = entries.filter((e) => !fitting.includes(e));
+  const columns = [rest.filter((_, i) => i % 2 === 0), rest.filter((_, i) => i % 2 === 1)];
+  const loading = saved.isLoading || tryons.isLoading;
 
   return (
-    <Screen scroll={false} bottomInset={false} contentStyle={styles.screen}>
-      <View style={styles.header}>
-        <Eyebrow>Your lookbook</Eyebrow>
-        <Title style={styles.title}>Outfits worth repeating</Title>
-        <AppText style={styles.subtitle}>A personal rail of combinations that already earned a yes.</AppText>
-      </View>
-      <View style={styles.filters}>
-        <Pressable style={[styles.filter, filter === "all" && styles.filterActive]} onPress={() => setFilter("all")}>
-          <AppText style={[styles.filterLabel, filter === "all" && styles.filterLabelActive]}>All saved</AppText>
-        </Pressable>
-        <Pressable style={[styles.filter, filter === "favorites" && styles.filterActive]} onPress={() => setFilter("favorites")}>
-          <AppText style={[styles.filterLabel, filter === "favorites" && styles.filterLabelActive]}>Favorites</AppText>
-        </Pressable>
-      </View>
-
-      {saved.isError ? (
-        <View style={styles.padded}>
-          <StatePanel title="Your lookbook could not sync" message={saved.error.message} action="Try again" onAction={() => saved.refetch()} />
+    <Screen tabbed refreshing={saved.isRefetching || tryons.isRefetching} onRefresh={() => { saved.refetch(); tryons.refetch(); closet.refetch(); }}>
+      <Reveal>
+        <View style={styles.header}>
+          <Eyebrow>{(saved.data?.total ?? 0) + (tryons.data?.total ?? 0)} saved</Eyebrow>
+          <Display>Looks</Display>
         </View>
-      ) : (
-        <FlatList
-          data={outfits}
-          keyExtractor={(item) => item.id}
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshing={saved.isRefetching}
-          onRefresh={() => Promise.all([saved.refetch(), closet.refetch()])}
-          renderItem={({ item }) => {
-            const pieces = (closet.data?.items ?? []).filter((piece) => item.item_ids.includes(piece.id));
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardTop}>
-                  <View style={styles.cardCopy}>
-                    <Eyebrow>{item.occasion} · {Math.round(item.score * 100)}% match</Eyebrow>
-                    <AppText style={styles.name}>{item.name}</AppText>
-                  </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={item.favorited ? "Favorite look" : "Mark as favorite"}
-                    accessibilityState={{ selected: item.favorited }}
-                    disabled={item.favorited || favorite.isPending}
-                    onPress={() => favorite.mutate(item.id)}
-                    style={[styles.heart, item.favorited && styles.heartActive]}
-                  >
-                    <AppText style={[styles.heartGlyph, item.favorited && styles.heartGlyphActive]}>♥</AppText>
-                  </Pressable>
-                </View>
-                <View style={styles.railWrap}><OutfitRail items={pieces} /></View>
-                <AppText style={styles.note}>{item.explanation}</AppText>
-                <View style={styles.ratingRow}><RatingRow value={ratings[item.id] ?? 0} onChange={(value) => rate(item, value)} disabled={feedback.isPending} /></View>
-              </View>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.padded}>
-              <StatePanel
-                title={saved.isLoading ? "Opening your lookbook" : filter === "favorites" ? "No favorites yet" : "No saved looks yet"}
-                message={saved.isLoading ? "Syncing your saved edits…" : filter === "favorites" ? "Tap the heart on a saved outfit to keep the best at the top of your mind." : "Generate one strong look, save it, and it will live here."}
-                action={!saved.isLoading ? "Create a look" : undefined}
-                onAction={() => router.push("/generate")}
-              />
+      </Reveal>
+      <Reveal delay={60}>
+        <Segmented<Filter> value={filter} onChange={setFilter} options={[
+          { value: "all", label: "All" }, { value: "onme", label: "On me" }, { value: "favorites", label: "Favourites" }
+        ]} />
+      </Reveal>
+
+      {fitting.map((entry) => entry.kind === "tryon" ? (
+        <Animated.View key={entry.job.id} entering={FadeIn} layout={LinearTransition}>
+          <PressableScale accessibilityRole="button" accessibilityLabel="Try-on in progress" onPress={() => router.push(`/tryon?job=${entry.job.id}`)} style={styles.fitting}>
+            <Breathe><Sparkles size={18} color={colors.accent} /></Breathe>
+            <View style={styles.flex}>
+              <AppText style={styles.fittingTitle}>Fitting a look on you…</AppText>
+              <Caption>Usually under a minute. Tap to watch.</Caption>
             </View>
-          }
+          </PressableScale>
+        </Animated.View>
+      ) : null)}
+
+      {saved.isError || tryons.isError ? (
+        <StatePanel title="Looks didn't load" message={(saved.error ?? tryons.error)!.message} action="Try again" onAction={() => { saved.refetch(); tryons.refetch(); }} />
+      ) : loading ? (
+        <View style={styles.grid}>
+          {[0, 1].map((c) => <View key={c} style={styles.column}>{[220, 280, 200].map((h, i) => <Skeleton key={i} style={{ height: c ? h + 40 : h, borderRadius: radius.lg }} />)}</View>)}
+        </View>
+      ) : !rest.length && !fitting.length ? (
+        <StatePanel
+          icon={filter === "favorites" ? Heart : Images}
+          title={filter === "onme" ? "Nothing on you yet" : filter === "favorites" ? "No favourites yet" : "Your looks live here"}
+          message={filter === "onme" ? "Try a look on and it lands here automatically." : filter === "favorites" ? "Heart a saved look to keep it at the top." : "Style a look and save it, or try one on."}
+          action="Style me"
+          onAction={() => router.push("/style")}
         />
+      ) : (
+        <View style={styles.grid}>
+          {columns.map((column, c) => (
+            <View key={c} style={styles.column}>
+              {column.map((entry, i) => (
+                <Reveal key={entry.kind === "look" ? entry.outfit.id : entry.job.id} index={i * 2 + c} delay={100}>
+                  {entry.kind === "look" ? <LookCard outfit={entry.outfit} items={items} /> : <TryOnCard job={entry.job} />}
+                </Reveal>
+              ))}
+            </View>
+          ))}
+        </View>
       )}
     </Screen>
   );
 }
 
+function LookCard({ outfit, items }: { outfit: Outfit; items: ClothingItem[] }) {
+  const pieces = items.filter((item) => outfit.item_ids.includes(item.id));
+  return (
+    <PressableScale accessibilityRole="button" accessibilityLabel={outfit.name} onPress={() => router.push(`/look/${outfit.id}`)} style={styles.card}>
+      <View style={styles.collage}><OutfitCollage items={pieces} height={200} /></View>
+      <View style={styles.cardBody}>
+        <AppText numberOfLines={2} style={styles.cardTitle}>{outfit.name}</AppText>
+        <View style={styles.cardMeta}>
+          <Caption style={styles.capitalize}>{outfit.occasion}</Caption>
+          {outfit.favorited ? <Heart size={13} color={colors.danger} fill={colors.danger} /> : null}
+        </View>
+      </View>
+    </PressableScale>
+  );
+}
+
+function TryOnCard({ job }: { job: TryOnResult }) {
+  const image = mediaUrl(job.result_image_url) ?? mediaUrl(job.person_image_url);
+  const failed = job.status === "failed";
+  return (
+    <PressableScale accessibilityRole="button" accessibilityLabel="Open try-on" onPress={() => router.push(`/tryon?job=${job.id}`)} style={styles.card}>
+      <View style={styles.tryon}>
+        {image ? <Photo source={image} /> : null}
+        <View style={[styles.onYou, failed && styles.onYouFailed]}>
+          {failed ? null : <Sparkles size={11} color={colors.onAccent} strokeWidth={2.4} />}
+          <AppText style={styles.onYouText}>{failed ? "Didn't finish" : "On you"}</AppText>
+        </View>
+      </View>
+      <View style={styles.cardBody}>
+        <Caption>{new Date(job.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · {job.item_ids.length} {job.item_ids.length === 1 ? "piece" : "pieces"}</Caption>
+      </View>
+    </PressableScale>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
-  header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, borderBottomWidth: 2, borderColor: colors.strokeStrong, gap: spacing.xs },
-  title: { fontSize: 40 },
-  subtitle: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
-  filters: { flexDirection: "row", borderBottomWidth: 1, borderColor: colors.stroke },
-  filter: { flex: 1, paddingVertical: spacing.md, alignItems: "flex-start", paddingHorizontal: spacing.xl, borderRightWidth: 1, borderColor: colors.stroke },
-  filterActive: { backgroundColor: colors.rose, borderColor: colors.rose },
-  filterLabel: { color: colors.muted, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
-  filterLabelActive: { color: colors.white },
-  padded: { paddingHorizontal: spacing.xl },
-  list: { flexGrow: 1, paddingBottom: 40 },
-  card: { borderBottomWidth: 1, borderColor: colors.stroke },
-  cardTop: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md },
-  cardCopy: { flex: 1, gap: spacing.xs },
-  name: { fontSize: 25, lineHeight: 25, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.6, textTransform: "uppercase" },
-  heart: { width: 40, height: 40, borderWidth: 1, borderColor: colors.stroke, alignItems: "center", justifyContent: "center" },
-  heartActive: { backgroundColor: colors.rose, borderColor: colors.rose },
-  heartGlyph: { color: colors.muted, fontSize: 15 },
-  heartGlyphActive: { color: colors.white },
-  railWrap: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
-  note: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  ratingRow: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg }
+  flex: { flex: 1 },
+  header: { paddingTop: spacing.md, gap: 2 },
+  fitting: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.accentWash },
+  fittingTitle: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", color: colors.ink },
+  grid: { flexDirection: "row", gap: spacing.md, marginTop: -spacing.sm },
+  column: { flex: 1, gap: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: "hidden" },
+  collage: { padding: 6 },
+  tryon: { width: "100%", aspectRatio: 3 / 4, backgroundColor: colors.canvasSoft },
+  onYou: { position: "absolute", left: 8, top: 8, flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.accent },
+  onYouFailed: { backgroundColor: colors.danger },
+  onYouText: { color: colors.onAccent, fontSize: 11, fontFamily: fonts.semibold, fontWeight: "600" },
+  cardBody: { paddingHorizontal: spacing.md, paddingTop: spacing.xs, paddingBottom: spacing.md, gap: 2 },
+  cardTitle: { fontSize: 15, lineHeight: 20, fontFamily: fonts.semibold, fontWeight: "600" },
+  cardMeta: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  capitalize: { textTransform: "capitalize" }
 });

@@ -1,61 +1,46 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ChevronLeft, RotateCcw, X, type LucideIcon } from "lucide-react-native";
 import { AppText } from "@/components/AppText";
+import { IconButton } from "@/components/IconButton";
 import { colors, fonts, spacing } from "@/theme";
 
-/**
- * The header every pushed (non-tab) screen shares: a square outlined back
- * control, a tracked-out micro label, and an optional trailing action that
- * keeps the title optically centered when absent.
- */
+/** Shared header for pushed screens: back, centred title, optional action. */
 export function PushHeader({
   title,
   onBack,
-  backGlyph = "←",
+  backGlyph,
+  actionIcon,
   actionGlyph,
   onAction,
-  actionLabel,
-  actionAccent = false,
-  rule = "strong"
+  actionLabel
 }: {
   title: string;
   onBack: () => void;
+  /** "✕" renders a close control for modals; anything else renders back. */
   backGlyph?: string;
+  actionIcon?: LucideIcon;
+  /** Legacy glyph; "↻" maps to a reset icon. */
   actionGlyph?: string;
   onAction?: () => void;
   actionLabel?: string;
   actionAccent?: boolean;
   rule?: "strong" | "none";
 }) {
+  const close = backGlyph === "✕";
+  const Action = actionIcon ?? (actionGlyph === "↻" ? RotateCcw : undefined);
   return (
-    <View style={[styles.row, rule === "strong" && styles.ruled]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={styles.iconButton}>
-        <AppText style={styles.backGlyph}>{backGlyph}</AppText>
-      </Pressable>
-      <AppText style={styles.title}>{title}</AppText>
-      {actionGlyph && onAction ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={actionLabel ?? "Action"}
-          onPress={onAction}
-          style={[styles.iconButton, actionAccent && styles.iconButtonAccent]}
-        >
-          <AppText style={[styles.actionGlyph, actionAccent && styles.actionGlyphAccent]}>{actionGlyph}</AppText>
-        </Pressable>
-      ) : (
-        <View style={styles.spacer} />
-      )}
+    <View style={styles.row}>
+      <IconButton icon={close ? X : ChevronLeft} label={close ? "Close" : "Back"} onPress={onBack} tone="solid" />
+      <AppText numberOfLines={1} style={styles.title}>{title}</AppText>
+      {Action && onAction ? (
+        <IconButton icon={Action} label={actionLabel ?? "Action"} onPress={onAction} tone="solid" />
+      ) : <View style={styles.spacer} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: spacing.lg },
-  ruled: { borderBottomWidth: 2, borderColor: colors.strokeStrong },
-  iconButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.stroke },
-  iconButtonAccent: { borderColor: colors.rose },
-  backGlyph: { color: colors.ink, fontSize: 16 },
-  actionGlyph: { color: colors.muted, fontSize: 14 },
-  actionGlyphAccent: { color: colors.roseSoft },
-  title: { color: colors.muted, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase" },
-  spacer: { width: 40 }
+  row: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
+  title: { flex: 1, textAlign: "center", color: colors.ink, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
+  spacer: { width: 44 }
 });

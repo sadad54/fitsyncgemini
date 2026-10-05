@@ -1,210 +1,242 @@
-import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { useCloset, useClosetStats, useProfile, useSavedOutfits } from "@/api/queries";
+import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
+import { ArrowRight, Check, CloudSun, Heart, ImagePlus, Shirt, Shuffle, Sparkles, UserRound } from "lucide-react-native";
+import { useCloset, useOutfits, useProfile, useSaveOutfit, useTryOns } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
-import { AppText, Display, Eyebrow } from "@/components/AppText";
+import { AppText, Caption, Display, Eyebrow, Heading, Title } from "@/components/AppText";
 import { Button } from "@/components/Button";
-import { Glyph } from "@/components/Glyph";
-import { SparkIcon } from "@/components/Icon";
+import { IconButton } from "@/components/IconButton";
 import { Photo } from "@/components/Photo";
-import { Reveal } from "@/components/motion";
+import { PressableScale, Reveal, SETTLE, Skeleton } from "@/components/motion";
+import { OutfitCollage } from "@/components/outfit-rail";
 import { Screen } from "@/components/Screen";
-import { colors, fonts, spacing } from "@/theme";
+import { SectionHeader } from "@/components/section-header";
+import { tryOnHref, tryOnSubset } from "@/lib/tryon";
+import { useStyleOutfit, weatherLabel } from "@/lib/useStyleOutfit";
+import { useFitPhoto } from "@/store/fitPhoto";
+import { colors, fonts, radius, spacing } from "@/theme";
 
-export default function Home() {
+function greeting() {
+  const hour = new Date().getHours();
+  return hour < 5 ? "Good evening" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
+
+export default function Today() {
   const profile = useProfile();
-  const stats = useClosetStats();
-  const saved = useSavedOutfits();
   const closet = useCloset();
+  const outfits = useOutfits(false);
+  const saved = useOutfits(true);
+  const tryons = useTryOns();
+  const save = useSaveOutfit();
+  const fitPhoto = useFitPhoto();
+  const { style, generate } = useStyleOutfit();
+  const autoStyled = useRef(false);
 
-  const latest = saved.data?.outfits[0];
+  useEffect(() => { fitPhoto.load(); }, []);
+
   const items = closet.data?.items ?? [];
-  const latestItems = useMemo(() => latest ? items.filter((item) => latest.item_ids.includes(item.id)) : [], [latest, items]);
-  const railItems = (latestItems.length ? latestItems : items).slice(0, 6);
-  const missing = stats.data?.missing_essentials ?? [];
-  const firstName = profile.data?.display_name?.split(" ")[0] || "there";
-  const hasItems = items.length > 0;
+  const todays = generate.data ?? outfits.data?.outfits.find((outfit) => isToday(outfit.created_at));
+  const lookItems = useMemo(() => todays ? items.filter((item) => todays.item_ids.includes(item.id)) : [], [todays, items]);
+  const canTry = tryOnSubset(lookItems).length > 0;
+  const firstName = profile.data?.display_name?.split(" ")[0];
+  const isSaved = Boolean(todays?.saved || save.data?.id === todays?.id);
+  const lastTryOn = tryons.data?.results.find((job) => job.status === "completed" && job.result_image_url);
+  const fitting = tryons.data?.results.find((job) => job.status === "queued" || job.status === "processing");
+  const weather = weatherLabel(todays?.weather_context);
 
-  const heroTitle = !hasItems
-    ? "Your closet starts here."
-    : latest
-      ? "Tonight's edit is already in your closet."
-      : "Your closet is stocked. Time to style it.";
-  const heroNote = !hasItems
-    ? "Photograph your first piece and FitSync starts styling from what you actually own — not a catalog."
-    : latest
-      ? "A living edit of your wardrobe—styled for real plans, real weather, and your own taste."
-      : `${items.length} ${items.length === 1 ? "piece" : "pieces"} logged. Let FitSync assemble your first look.`;
+  // Today's look is ready when you open the app: style one quietly if the
+  // closet can support it and nothing was styled yet today.
+  useEffect(() => {
+    if (autoStyled.current || !outfits.isSuccess || !closet.isSuccess || todays || items.length < 2) return;
+    autoStyled.current = true;
+    style({ occasion: "casual", weather: true, askForLocation: false }).catch(() => {});
+  }, [outfits.isSuccess, closet.isSuccess, todays, items.length]);
+
+  const steps = [
+    { done: items.length >= 3, label: "Add 3 pieces to your closet", action: () => router.push("/add-item") },
+    { done: Boolean(fitPhoto.uri), label: "Add your fit photo", action: () => router.push("/profile") },
+    { done: (tryons.data?.total ?? 0) > 0, label: "Try on your first look", action: () => router.push(todays && canTry ? tryOnHref(lookItems) : "/style") },
+    { done: (saved.data?.total ?? 0) > 0, label: "Save a look you love", action: () => router.push("/style") }
+  ];
+  const showChecklist = closet.isSuccess && tryons.isSuccess && steps.some((step) => !step.done);
+  const dateLine = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <Screen scroll bottomInset={false} contentStyle={styles.screen}>
-      <View style={styles.topRow}>
-        <View>
-          <Eyebrow>Good to see you, {firstName}</Eyebrow>
-          <AppText style={styles.date}>Your closet is ready</AppText>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => router.push("/profile")} style={styles.avatar}>
-          <AppText style={styles.avatarText}>{firstName.slice(0, 1).toUpperCase()}</AppText>
-        </Pressable>
-      </View>
-
+    <Screen tabbed refreshing={outfits.isRefetching} onRefresh={() => { outfits.refetch(); closet.refetch(); tryons.refetch(); }}>
       <Reveal>
-        <View style={styles.hero}>
-          <Display style={styles.heroTitle}>{heroTitle}</Display>
-          <AppText style={styles.heroNote}>{heroNote}</AppText>
+        <View style={styles.header}>
+          <View style={styles.headerCopy}>
+            <Eyebrow>{dateLine}</Eyebrow>
+            <Display style={styles.hello}>{greeting()}{firstName ? `,\n${firstName}` : ""}</Display>
+          </View>
+          <IconButton icon={UserRound} label="Profile and settings" tone="solid" onPress={() => router.push("/profile")} />
         </View>
       </Reveal>
 
-      {latest ? (
-        <Reveal delay={60}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open saved looks" onPress={() => router.push("/saved")} style={styles.latest}>
-            <View style={styles.latestMedia}>
-              {mediaUrl(latestItems[0]?.image_url) ? <Photo source={mediaUrl(latestItems[0]!.image_url)!} /> : null}
+      <Reveal delay={80}>
+        {closet.isLoading || outfits.isLoading ? (
+          <View style={styles.card}><Skeleton style={{ height: 320, borderRadius: radius.lg }} /><Skeleton style={{ height: 22, width: "60%" }} /></View>
+        ) : items.length < 2 ? (
+          <EmptyCloset count={items.length} />
+        ) : (
+          <View style={styles.card}>
+            <View style={styles.cardTop}>
+              <View style={styles.badge}><Sparkles size={13} color={colors.accent} strokeWidth={2.2} /><AppText style={styles.badgeText}>Today's look</AppText></View>
+              {weather ? <View style={styles.weather}><CloudSun size={14} color={colors.inkSoft} /><AppText style={styles.weatherText}>{weather}</AppText></View> : null}
             </View>
-            <View style={styles.latestCopy}>
-              <Eyebrow>{latest.occasion} · {Math.round(latest.score * 100)}% match</Eyebrow>
-              <AppText style={styles.latestName}>{latest.name}</AppText>
-              <AppText numberOfLines={2} style={styles.latestNote}>{latest.explanation}</AppText>
-              <AppText style={styles.latestCta}>Open saved looks →</AppText>
-            </View>
-          </Pressable>
+            {todays && !generate.isPending ? (
+              <>
+                <OutfitCollage items={lookItems} animateKey={todays.id} height={330} />
+                <View style={styles.copy}>
+                  <Title style={styles.lookName}>{todays.name}</Title>
+                  <AppText numberOfLines={3} style={styles.explain}>{todays.explanation}</AppText>
+                </View>
+                <View style={styles.actions}>
+                  <View style={styles.flex}>
+                    <Button title="Try it on" icon={Sparkles} variant="accent" disabled={!canTry}
+                      onPress={() => router.push(tryOnHref(lookItems, "&auto=1"))} />
+                  </View>
+                  <IconButton icon={Shuffle} label="Style a different look" tone="solid" size={54}
+                    onPress={() => style({ occasion: todays.occasion || "casual", weather: true, askForLocation: false }).catch(() => {})} />
+                  <IconButton icon={Heart} label={isSaved ? "Saved to Looks" : "Save to Looks"} tone="solid" size={54}
+                    color={isSaved ? colors.danger : colors.ink} filled={isSaved}
+                    onPress={() => !isSaved && save.mutate(todays.id)} />
+                </View>
+                {!canTry ? <Caption>Try-on works with tops, bottoms and dresses — this look has none.</Caption> : null}
+              </>
+            ) : (
+              <View style={styles.styling}>
+                <Skeleton style={{ height: 330, borderRadius: radius.lg }} />
+                <View style={styles.stylingRow}>
+                  <Sparkles size={16} color={colors.accent} />
+                  <AppText style={styles.stylingText}>{generate.isPending ? "Styling today's look from your closet…" : "Your look for today isn't styled yet."}</AppText>
+                </View>
+                {!generate.isPending ? <Button title="Style today's look" icon={Sparkles} onPress={() => style({ occasion: "casual", weather: true, askForLocation: true }).catch(() => {})} /> : null}
+              </View>
+            )}
+            {generate.error ? <AppText selectable style={styles.error}>{generate.error.message}</AppText> : null}
+          </View>
+        )}
+      </Reveal>
+
+      {showChecklist ? <Reveal delay={140}><Checklist steps={steps} /></Reveal> : null}
+
+      {fitting || lastTryOn ? (
+        <Reveal delay={190}>
+          <View style={styles.section}>
+            <SectionHeader title="Continue" action="All looks" onAction={() => router.navigate("/looks")} />
+            <PressableScale accessibilityRole="button" accessibilityLabel={fitting ? "Try-on in progress" : "Open your last try-on"}
+              onPress={() => router.push(`/tryon?job=${(fitting ?? lastTryOn)!.id}`)} style={styles.continueRow}>
+              <View style={styles.continueThumb}>
+                {mediaUrl((fitting ?? lastTryOn)!.result_image_url ?? (fitting ?? lastTryOn)!.person_image_url)
+                  ? <Photo source={mediaUrl((fitting ?? lastTryOn)!.result_image_url ?? (fitting ?? lastTryOn)!.person_image_url)!} /> : null}
+              </View>
+              <View style={styles.flex}>
+                <Heading>{fitting ? "Fitting in progress" : "Your last try-on"}</Heading>
+                <Caption>{fitting ? "We'll keep working if you leave." : new Date(lastTryOn!.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</Caption>
+              </View>
+              <ArrowRight size={18} color={colors.inkSoft} />
+            </PressableScale>
+          </View>
         </Reveal>
       ) : null}
 
-      <Reveal delay={latest ? 100 : 60}>
-        <View style={styles.railSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rail}>
-            {railItems.length ? railItems.map((item) => {
-              const url = mediaUrl(item.image_url);
-              return (
-                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.name} onPress={() => router.push(`/item/${item.id}`)} style={styles.railItem}>
-                  {url ? <Photo source={url} /> : <View style={styles.railPlaceholder} />}
-                  <AppText numberOfLines={1} style={styles.railLabel}>{item.name}</AppText>
-                </Pressable>
-              );
-            }) : (
-              <Pressable accessibilityRole="button" accessibilityLabel="Add your first piece" onPress={() => router.push("/add-item")} style={styles.railEmpty}>
-                <AppText style={styles.railEmptyText}>Add your first piece →</AppText>
-              </Pressable>
-            )}
-          </ScrollView>
-          <View style={styles.railFooter}>
-            <SparkIcon size={13} color={colors.roseSoft} />
-            <AppText style={styles.railFooterText}>{latest ? `Latest saved edit · ${latestItems.length} pieces` : items.length ? "Your wardrobe rail" : "Add your first piece"}</AppText>
+      <Reveal delay={240}>
+        <PressableScale accessibilityRole="button" accessibilityLabel="Open Discover" onPress={() => router.navigate("/discover")} style={styles.discover}>
+          <View style={styles.flex}>
+            <Eyebrow style={styles.discoverEyebrow}>This week</Eyebrow>
+            <Title style={styles.discoverTitle}>Monochrome week</Title>
+            <AppText style={styles.discoverNote}>Style one colour head to toe — from what you already own.</AppText>
           </View>
-        </View>
+          <View style={styles.discoverArrow}><ArrowRight size={20} color={colors.ink} /></View>
+        </PressableScale>
       </Reveal>
-
-      {hasItems ? (
-        <View style={styles.metrics}>
-          <Metric value={stats.data?.total_items ?? 0} label="pieces catalogued" />
-          <Metric value={saved.data?.total ?? 0} label="looks on repeat" />
-        </View>
-      ) : null}
-
-      <Reveal delay={hasItems ? 140 : 100}>
-        <View style={styles.stylistCard}>
-          <View style={styles.stylistTop}>
-            <SparkIcon size={13} color={colors.roseSoft} />
-            <Eyebrow>Today's stylist note</Eyebrow>
-          </View>
-          <AppText style={styles.stylistTitle}>{missing.length ? "Your next useful additions" : "Your closet is ready to style"}</AppText>
-          <AppText style={styles.stylistNote}>{missing.length ? `Adding ${missing.slice(0, 2).join(" and ")} would unlock more complete combinations.` : "Pick the occasion and let FitSync assemble a wearable look from your logged pieces."}</AppText>
-          <Button title={items.length ? "Style my next look" : "Add my first piece"} icon="sparkles" onPress={() => router.push(items.length ? "/generate" : "/add-item")} />
-        </View>
-      </Reveal>
-
-      <View style={styles.section}>
-        <AppText style={styles.sectionLabel}>Shortcuts</AppText>
-        <QuickAction num="01" title="Add a piece" note="Camera or library" onPress={() => router.push("/add-item")} />
-        <QuickAction num="02" title="Open closet" note={`${items.length} pieces logged`} onPress={() => router.push("/closet")} />
-        <View style={styles.tileGrid}>
-          <Tile shape="diamond" title="Saved looks" note={`${saved.data?.total ?? 0} ready`} onPress={() => router.push("/saved")} />
-          <Tile shape="moonLeft" title="Try-on" note="Preview a look" onPress={() => router.push("/tryon?from=look")} />
-          <Tile shape="leaf" title="Community" note="What people wear" onPress={() => router.push("/community")} />
-          <Tile shape="drop" title="Trends" note="What's rising" onPress={() => router.push("/trends")} />
-        </View>
-      </View>
-      <View style={{ height: 40 }} />
     </Screen>
   );
 }
 
-function Metric({ value, label }: { value: number; label: string }) {
+function EmptyCloset({ count }: { count: number }) {
   return (
-    <View style={styles.metric}>
-      <AppText selectable style={styles.metricValue}>{value}</AppText>
-      <AppText style={styles.metricLabel}>{label}</AppText>
+    <View style={[styles.card, styles.emptyCard]}>
+      <View style={styles.emptyArt}>
+        <View style={[styles.emptyTile, { transform: [{ rotate: "-8deg" }] }]}><Shirt size={30} color={colors.inkSoft} strokeWidth={1.4} /></View>
+        <View style={[styles.emptyTile, styles.emptyTileFront, { transform: [{ rotate: "6deg" }] }]}><ImagePlus size={30} color={colors.accent} strokeWidth={1.4} /></View>
+      </View>
+      <Title style={styles.emptyTitle}>{count ? "One more piece and we can style you" : "Start with three pieces"}</Title>
+      <AppText style={styles.emptyNote}>Photograph clothes you already own. FitSync styles outfits from them and shows them on you.</AppText>
+      <Button title={count ? "Add another piece" : "Add your first piece"} icon={ImagePlus} onPress={() => router.push("/add-item")} />
     </View>
   );
 }
 
-function QuickAction({ num, title, note, onPress }: { num: string; title: string; note: string; onPress: () => void }) {
+function Checklist({ steps }: { steps: { done: boolean; label: string; action: () => void }[] }) {
+  const done = steps.filter((step) => step.done).length;
+  const progress = useDerivedValue(() => withTiming(done / steps.length, { duration: 900, easing: SETTLE }), [done]);
+  const bar = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={styles.quick}>
-      <AppText style={styles.quickNum}>{num}</AppText>
-      <View style={styles.quickCopy}>
-        <AppText style={styles.quickTitle}>{title}</AppText>
-        <AppText style={styles.quickNote}>{note}</AppText>
+    <View style={styles.checklist}>
+      <View style={styles.checkHead}>
+        <Heading>Getting started</Heading>
+        <AppText style={styles.checkCount}>{done} of {steps.length}</AppText>
       </View>
-      <AppText style={styles.quickArrow}>→</AppText>
-    </Pressable>
-  );
-}
-
-function Tile({ shape, title, note, onPress }: { shape: Parameters<typeof Glyph>[0]["shape"]; title: string; note: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={styles.tile}>
-      <Glyph shape={shape} size={18} strokeWidth={2} color={colors.roseSoft} />
-      <AppText style={styles.tileTitle}>{title}</AppText>
-      <AppText style={styles.tileNote}>{note}</AppText>
-    </Pressable>
+      <View style={styles.track}><Animated.View style={[styles.trackFill, bar]} /></View>
+      {steps.map((step) => (
+        <PressableScale key={step.label} accessibilityRole="button" accessibilityLabel={step.label} accessibilityState={{ checked: step.done }}
+          disabled={step.done} onPress={step.action} style={styles.checkRow}>
+          <View style={[styles.checkDot, step.done && styles.checkDotDone]}>{step.done ? <Check size={13} color={colors.onInk} strokeWidth={3} /> : null}</View>
+          <AppText style={[styles.checkLabel, step.done && styles.checkLabelDone]}>{step.label}</AppText>
+          {!step.done ? <ArrowRight size={16} color={colors.muted} /> : null}
+        </PressableScale>
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.lg, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
-  date: { color: colors.ink, fontSize: 13, lineHeight: 18, marginTop: spacing.xs, fontFamily: fonts.medium },
-  avatar: { width: 42, height: 42, borderWidth: 2, borderColor: colors.strokeStrong, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: colors.ink, fontFamily: fonts.black, fontWeight: "800", fontSize: 15 },
-  hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, borderBottomWidth: 2, borderColor: colors.strokeStrong, gap: spacing.md },
-  heroTitle: { fontSize: 42, lineHeight: 40 },
-  heroNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  latest: { borderBottomWidth: 2, borderColor: colors.strokeStrong },
-  latestMedia: { width: "100%", height: 240, backgroundColor: colors.surface },
-  latestCopy: { padding: spacing.xl, gap: spacing.sm },
-  latestName: { fontSize: 26, lineHeight: 27, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.6, textTransform: "uppercase" },
-  latestNote: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  latestCta: { color: colors.roseSoft, fontSize: 11, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginTop: spacing.xs },
-  railSection: { borderBottomWidth: 1, borderColor: colors.stroke },
-  rail: { flexGrow: 0 },
-  railItem: { width: 126, height: 168, borderRightWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface, justifyContent: "flex-end" },
-  railPlaceholder: { ...StyleSheet.absoluteFill, backgroundColor: colors.surface },
-  railLabel: { position: "absolute", left: spacing.sm, bottom: spacing.sm, color: colors.white, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
-  railEmpty: { width: "100%", height: 168, alignItems: "center", justifyContent: "center" },
-  railEmptyText: { color: colors.roseSoft, fontSize: 13, fontFamily: fonts.bold, fontWeight: "700" },
-  railFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderColor: colors.stroke },
-  railFooterText: { color: colors.muted, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
-  metrics: { flexDirection: "row", borderBottomWidth: 1, borderColor: colors.stroke },
-  metric: { flex: 1, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderRightWidth: 1, borderColor: colors.stroke },
-  metricValue: { fontSize: 46, lineHeight: 42, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -1.4, fontVariant: ["tabular-nums"] },
-  metricLabel: { color: colors.muted, fontSize: 9, lineHeight: 13, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginTop: spacing.xs },
-  stylistCard: { backgroundColor: colors.surface, borderBottomWidth: 1, borderColor: colors.stroke, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, gap: spacing.sm },
-  stylistTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  stylistTitle: { fontSize: 24, lineHeight: 26, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -0.6, marginTop: spacing.xs },
-  stylistNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  section: { paddingTop: spacing.xs },
-  sectionLabel: { color: colors.muted, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase", paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
-  quick: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderTopWidth: 1, borderColor: colors.stroke },
-  quickNum: { color: colors.roseSoft, fontFamily: fonts.black, fontWeight: "800", fontSize: 11, fontVariant: ["tabular-nums"] },
-  quickCopy: { flex: 1, gap: spacing.xxs },
-  quickTitle: { fontFamily: fonts.black, fontWeight: "800", fontSize: 15, letterSpacing: -0.2 },
-  quickNote: { color: colors.muted, fontSize: 11, lineHeight: 15, marginTop: 2 },
-  quickArrow: { color: colors.muted, fontSize: 15 },
-  tileGrid: { flexDirection: "row", flexWrap: "wrap", borderTopWidth: 1, borderColor: colors.stroke },
-  tile: { width: "50%", paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, gap: spacing.xs, borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
-  tileTitle: { fontFamily: fonts.black, fontWeight: "800", fontSize: 13, letterSpacing: -0.1, marginTop: spacing.xs },
-  tileNote: { color: colors.muted, fontSize: 10, lineHeight: 14 }
+  flex: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md, paddingTop: spacing.md },
+  headerCopy: { flex: 1, gap: spacing.xs },
+  hello: { fontSize: 42, lineHeight: 44 },
+  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.md, gap: spacing.lg, boxShadow: "0 1px 2px rgba(23,20,15,0.04), 0 12px 32px rgba(23,20,15,0.07)" },
+  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.xs, paddingTop: spacing.xs },
+  badge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.accentWash, paddingHorizontal: spacing.md, height: 30, borderRadius: radius.pill },
+  badgeText: { color: colors.accent, fontSize: 13, fontFamily: fonts.semibold, fontWeight: "600" },
+  weather: { flexDirection: "row", alignItems: "center", gap: 6 },
+  weatherText: { color: colors.inkSoft, fontSize: 13, fontFamily: fonts.medium, textTransform: "capitalize" },
+  copy: { gap: spacing.xs, paddingHorizontal: spacing.xs },
+  lookName: { fontSize: 30, lineHeight: 34 },
+  explain: { color: colors.inkSoft, fontSize: 15, lineHeight: 22 },
+  actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  styling: { gap: spacing.lg },
+  stylingRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.xs },
+  stylingText: { flex: 1, color: colors.inkSoft, fontSize: 15, fontFamily: fonts.medium },
+  error: { color: colors.danger, fontSize: 14, paddingHorizontal: spacing.xs },
+  emptyCard: { padding: spacing.xl, alignItems: "center" },
+  emptyArt: { height: 130, width: 180, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
+  emptyTile: { position: "absolute", width: 92, height: 116, borderRadius: radius.lg, backgroundColor: colors.canvas, alignItems: "center", justifyContent: "center", left: 22, borderWidth: 1, borderColor: colors.stroke },
+  emptyTileFront: { left: 70, top: 18, backgroundColor: colors.accentWash, borderColor: "transparent" },
+  emptyTitle: { textAlign: "center", fontSize: 28, lineHeight: 32 },
+  emptyNote: { textAlign: "center", color: colors.inkSoft, fontSize: 15, lineHeight: 22, marginBottom: spacing.sm },
+  checklist: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },
+  checkHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  checkCount: { color: colors.muted, fontSize: 14, fontFamily: fonts.medium, fontVariant: ["tabular-nums"] },
+  track: { height: 6, borderRadius: 3, backgroundColor: colors.canvasSoft, overflow: "hidden", marginBottom: spacing.xs },
+  trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
+  checkRow: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: spacing.md },
+  checkDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.strokeStrong, alignItems: "center", justifyContent: "center" },
+  checkDotDone: { backgroundColor: colors.ink, borderColor: colors.ink },
+  checkLabel: { flex: 1, fontSize: 15, fontFamily: fonts.medium },
+  checkLabelDone: { color: colors.muted, textDecorationLine: "line-through" },
+  section: { gap: spacing.md },
+  continueRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.sm, paddingRight: spacing.lg },
+  continueThumb: { width: 64, height: 80, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.canvasSoft },
+  discover: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.ink, borderRadius: radius.xl, padding: spacing.xl },
+  discoverEyebrow: { color: "rgba(250,248,244,0.6)" },
+  discoverTitle: { color: colors.onInk, fontSize: 30, lineHeight: 34, marginTop: 2 },
+  discoverNote: { color: "rgba(250,248,244,0.75)", fontSize: 15, lineHeight: 21, marginTop: spacing.xs },
+  discoverArrow: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.onInk, alignItems: "center", justifyContent: "center" }
 });

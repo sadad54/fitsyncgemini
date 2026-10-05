@@ -1,21 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ScrollView, Share, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
+import { Camera, Check, ImagePlus, Images, Plus, Share2, Trash2, UserRound, X } from "lucide-react-native";
 import { useCloset, useCreateTryOn, useDeleteTryOn, useTryOn } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
-import { AppText, Eyebrow } from "@/components/AppText";
+import { AppText, Caption, Heading, Title } from "@/components/AppText";
+import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { FittingRoom } from "@/components/FittingRoom";
+import { IconButton } from "@/components/IconButton";
 import { Photo } from "@/components/Photo";
+import { PressableScale, Reveal } from "@/components/motion";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
+import { isValidTryOnSelection } from "@/lib/tryon";
 import { useAuthStore } from "@/store/auth";
-import { colors, fonts, spacing } from "@/theme";
+import { useFitPhoto } from "@/store/fitPhoto";
+import { colors, fonts, radius, spacing } from "@/theme";
 
-export default function VirtualTryOn() {
-  const params = useLocalSearchParams<{ items?: string; from?: string; job?: string }>();
+export default function TryOn() {
+  const params = useLocalSearchParams<{ items?: string; job?: string; auto?: string }>();
   const token = useAuthStore((state) => state.token);
+  const fitPhoto = useFitPhoto();
   const closet = useCloset();
   const create = useCreateTryOn();
   const remove = useDeleteTryOn();
@@ -23,52 +31,61 @@ export default function VirtualTryOn() {
   const job = useTryOn(jobId);
   const [personUri, setPersonUri] = useState<string | null>(null);
   const [dropped, setDropped] = useState<Record<string, boolean>>({});
-  const [showOriginal, setShowOriginal] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pickerError, setPickerError] = useState<string | null>(null);
+  const autoStarted = useRef(false);
+
+  useEffect(() => { fitPhoto.load(); }, []);
+  useEffect(() => { setJobId(params.job); }, [params.job]);
+  const photo = personUri ?? fitPhoto.uri;
+
   const allItems = closet.data?.items ?? [];
   const requestedIds = useMemo(() => params.items?.split(",").filter(Boolean) ?? [], [params.items]);
-  const picks = (requestedIds.length ? allItems.filter((item) => requestedIds.includes(item.id)) : allItems.slice(0, 1))
-    .filter((item) => !dropped[item.id]);
-  const validPicks = picks.length >= 1 && picks.length <= 2 &&
-    picks.every((item) => ["tops", "outerwear", "bottoms", "dresses"].includes(item.category)) &&
-    (picks.length === 1 || (picks.filter((item) => item.category === "bottoms").length === 1 &&
-      picks.filter((item) => ["tops", "outerwear"].includes(item.category)).length === 1));
+  const picks = allItems.filter((item) => requestedIds.includes(item.id) && !dropped[item.id]);
+  const validPicks = isValidTryOnSelection(picks);
   const result = job.data ?? (create.data?.id === jobId ? create.data : undefined);
-  const working = create.isPending || Boolean(jobId && !result && !job.error) ||
-    result?.status === "queued" || result?.status === "processing";
-  const image = showOriginal ? result?.person_image_url : result?.result_image_url;
-  const displayedImage = mediaUrl(image) ?? personUri ?? mediaUrl(result?.person_image_url);
-  useEffect(() => { setJobId(params.job); }, [params.job]);
+  const working = create.isPending || Boolean(jobId && !result && !job.error) || result?.status === "queued" || result?.status === "processing";
+  const completed = result?.status === "completed";
+  const resultUri = completed ? mediaUrl(result?.result_image_url) : null;
+  const shownPerson = jobId ? mediaUrl(result?.person_image_url) ?? photo : photo;
 
-  async function pickImage(source: "camera" | "library") {
+  async function start(uri = photo) {
+    if (!uri || !validPicks || working) return;
+    try {
+      const accepted = await create.mutateAsync({ imageUri: uri, itemIds: picks.map((item) => item.id) });
+      setJobId(accepted.id);
+      router.setParams({ job: accepted.id });
+    } catch { /* rendered below */ }
+  }
+
+  // One-tap path from Today / Style me: start as soon as everything is ready.
+  useEffect(() => {
+    if (params.auto !== "1" || autoStarted.current || jobId || !fitPhoto.loaded || !fitPhoto.uri || !closet.isSuccess || !validPicks) return;
+    autoStarted.current = true;
+    start(fitPhoto.uri);
+  }, [params.auto, jobId, fitPhoto.loaded, fitPhoto.uri, closet.isSuccess, validPicks]);
+
+  async function pick(source: "camera" | "library") {
     setPickerError(null);
     try {
       if (source === "camera" && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
-        setPickerError("Camera access is needed. You can also choose a photo from your library.");
+        setPickerError("Camera access is off. You can choose a photo from your library instead.");
         return;
       }
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.85, allowsEditing: false };
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.85 };
       const picked = source === "camera" ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
-      if (!picked.canceled) setPersonUri(picked.assets[0].uri);
-    } catch { setPickerError("Could not open the photo picker. Please try again."); }
+      if (picked.canceled) return;
+      const uri = picked.assets[0].uri;
+      // The first photo becomes the default fit photo, so next time is one tap.
+      if (!fitPhoto.uri) setPersonUri(await fitPhoto.save(uri)); else setPersonUri(uri);
+    } catch { setPickerError("Couldn't open the photo picker. Please try again."); }
   }
 
-  async function runTryOn() {
-    if (!personUri || !validPicks || working) return;
-    try {
-      const accepted = await create.mutateAsync({ imageUri: personUri, itemIds: picks.map((item) => item.id) });
-      setJobId(accepted.id);
-      setShowOriginal(false);
-    } catch { /* Mutation errors are rendered below. */ }
-  }
-
-  function reset() {
-    if (create.isPending) return;
+  function again() {
     create.reset();
     setJobId(undefined);
-    setShowOriginal(false);
-    router.setParams({ job: undefined });
+    autoStarted.current = true;
+    router.setParams({ job: undefined, auto: undefined });
   }
 
   async function confirmDelete() {
@@ -76,158 +93,141 @@ export default function VirtualTryOn() {
     if (!result) return;
     try {
       await remove.mutateAsync(result.id);
-      reset();
-      router.replace("/tryon/history");
-    } catch { /* Retain the result until deletion succeeds. */ }
+      router.replace("/looks");
+    } catch { /* rendered below */ }
   }
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
+
+  const footer = completed ? (
+    <View style={styles.footerRow}>
+      <IconButton icon={Share2} label="Share" tone="solid" size={54} onPress={() => resultUri && Share.share({ url: resultUri, message: "Styled with FitSync" })} />
+      <View style={styles.flex}><Button title="Done" icon={Check} onPress={() => router.navigate("/looks")} /></View>
+    </View>
+  ) : working ? (
+    <Button title="Keep browsing — we'll keep fitting" variant="secondary" onPress={() => router.navigate("/today")} />
+  ) : (
+    <Button title="Try it on" icon={ImagePlus} variant="accent" disabled={!photo || !validPicks} onPress={() => start()} />
+  );
+
   return (
-    <Screen scroll bottomInset={false} contentStyle={styles.screen}>
-      <View style={styles.headerWrap}>
-        <PushHeader title="Virtual try-on" onBack={() => router.back()} actionGlyph="↻" onAction={reset} actionLabel="Start over" />
-      </View>
-      <View style={styles.hero}>
-        <Eyebrow>Prototype · your clothes, on you</Eyebrow>
-        <AppText style={styles.heroTitle}>See it on you before you wear it.</AppText>
-      </View>
-      <View style={styles.stage}>
-        {displayedImage ? <Photo source={displayedImage} grayscale={false} /> : (
-          <View style={styles.stageEmpty}>
-            <View style={styles.stageMark} />
-            <AppText style={styles.stageEmptyTitle}>One full-body photo</AppText>
-            <AppText style={styles.stageEmptyNote}>Straight on, plain wall, feet and garment hem visible.</AppText>
+    <Screen footer={footer} contentStyle={styles.content}>
+      <PushHeader title={completed ? "On you" : working ? "Fitting" : "Try on"} onBack={() => router.back()}
+        actionIcon={result && !working ? Trash2 : undefined} actionLabel="Delete this try-on" onAction={() => setDeleteOpen(true)} />
+
+      <Reveal>
+        <FittingRoom
+          personUri={shownPerson}
+          resultUri={resultUri}
+          working={working}
+          status={result?.status}
+          placeholder={<PhotoPrompt onCamera={() => pick("camera")} onLibrary={() => pick("library")} />}
+        />
+      </Reveal>
+
+      {result?.status === "failed" ? (
+        <Animated.View entering={FadeInDown} style={styles.failed}>
+          <Heading>{result.error_message?.includes("usage limit") ? "Try-on is busy" : "That one didn't fit"}</Heading>
+          <AppText style={styles.failedNote}>
+            {result.error_message ?? "The try-on couldn't finish."}
+            {result.error_message?.includes("usage limit") ? "" : " A straight-on, full-body photo in good light works best."}
+          </AppText>
+          <Button title="Try again" compact stretch={false} onPress={again} />
+        </Animated.View>
+      ) : null}
+
+      {!jobId ? (
+        <Animated.View entering={FadeIn} style={styles.section}>
+          {photo ? (
+            <View style={styles.photoRow}>
+              <View style={styles.flex}>
+                <Heading>{personUri && personUri !== fitPhoto.uri ? "Using this photo" : "Your fit photo"}</Heading>
+                <Caption>Full body, facing the camera, plain background.</Caption>
+              </View>
+              <IconButton icon={Camera} label="Take a new photo" tone="solid" onPress={() => pick("camera")} />
+              <IconButton icon={Images} label="Choose from library" tone="solid" onPress={() => pick("library")} />
+            </View>
+          ) : null}
+
+          <View style={styles.garmentsHead}>
+            <Heading>Trying on</Heading>
+            <Caption>{validPicks ? `${picks.length} ${picks.length === 1 ? "piece" : "pieces"}` : "Pick a dress, or a top and bottom"}</Caption>
           </View>
-        )}
-        {working ? <FittingOverlay status={result?.status} /> : null}
-        {result?.status === "completed" ? <View style={styles.honestLabel}>
-          <AppText style={styles.honestLabelText}>{showOriginal ? "Original photo" : result.render_kind === "diffusion" ? "AI try-on · sizing may differ" : "Legacy style preview"}</AppText>
-        </View> : null}
-      </View>
-      {!jobId && !working ? <>
-        <View style={styles.sourceRow}>
-          <Pressable accessibilityRole="button" style={styles.sourceBtn} onPress={() => pickImage("camera")}><AppText>Camera</AppText></Pressable>
-          <Pressable accessibilityRole="button" style={styles.sourceBtn} onPress={() => pickImage("library")}><AppText>Library</AppText></Pressable>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.garments}>
+            {picks.map((item) => (
+              <Animated.View key={item.id} layout={LinearTransition} entering={FadeIn} style={styles.garment}>
+                {mediaUrl(item.image_url) ? <Photo source={mediaUrl(item.image_url)!} /> : null}
+                <View style={styles.garmentDrop}>
+                  <IconButton icon={X} label={`Remove ${item.name}`} tone="glass" size={30} onPress={() => setDropped((d) => ({ ...d, [item.id]: true }))} />
+                </View>
+              </Animated.View>
+            ))}
+            <PressableScale accessibilityRole="button" accessibilityLabel="Choose pieces from your closet" onPress={() => router.navigate("/closet")} style={[styles.garment, styles.garmentAdd]}>
+              <Plus size={22} color={colors.inkSoft} />
+              <AppText style={styles.garmentAddText}>Closet</AppText>
+            </PressableScale>
+          </ScrollView>
+          <Caption>Your photo is sent securely to generate the image and kept for up to 7 days. Results are a visual preview, not a size guide.</Caption>
+        </Animated.View>
+      ) : null}
+
+      {completed ? (
+        <Reveal delay={900}>
+          <View style={styles.doneRow}>
+            <Title style={styles.flex}>Saved to Looks</Title>
+            <Button title="Try another" variant="secondary" compact stretch={false} onPress={again} />
+          </View>
+        </Reveal>
+      ) : null}
+
+      {job.error ? (
+        <View style={styles.failed}>
+          <AppText style={styles.failedNote}>{job.error.message}</AppText>
+          <Button title="Reconnect" compact stretch={false} variant="secondary" onPress={() => job.refetch()} />
         </View>
-        <View style={styles.picksHeader}><AppText style={styles.sectionLabel}>Garments to try</AppText></View>
-        <ScrollView horizontal style={styles.picksRail}>
-          {picks.map((item) => <View key={item.id} style={styles.pick}>
-            {mediaUrl(item.image_url) ? <Photo source={mediaUrl(item.image_url)!} /> : null}
-            <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${item.name}`} style={styles.pickDrop}
-              onPress={() => setDropped((current) => ({ ...current, [item.id]: true }))}><AppText>✕</AppText></Pressable>
-            <AppText style={styles.pickZone}>{item.category}</AppText>
-          </View>)}
-          <Pressable accessibilityRole="button" onPress={() => router.push("/closet")} style={styles.pickAdd}><AppText>+ Choose from closet</AppText></Pressable>
-        </ScrollView>
-        <View style={styles.idleCopy}>
-          <AppText style={styles.idleNote}>Choose one dress, one top or bottom, or a top and bottom together. Shoes and accessories are not supported yet.</AppText>
-          {!validPicks ? <AppText style={styles.warning}>Adjust the selection above before generating.</AppText> : null}
-          <AppText style={styles.idleNote}>Your photo goes to our prototype GPU service and is kept for up to seven days. Only use photos you have permission to upload. AI may alter details and does not measure fit.</AppText>
-          <Pressable accessibilityRole="button" disabled={!personUri || !validPicks || working} onPress={runTryOn}
-            style={[styles.primary, (!personUri || !validPicks || working) && styles.primaryDisabled]}>
-            <AppText style={styles.primaryLabel}>Generate try-on →</AppText>
-          </Pressable>
-        </View>
-      </> : null}
-      {working ? <View style={styles.idleCopy}>
-        <AppText accessibilityLiveRegion="polite" style={styles.idleNote}>The GPU can take a few minutes to wake up. You can leave this screen and reopen the job from history.</AppText>
-      </View> : null}
-      {result?.status === "completed" ? <View style={styles.idleCopy}>
-        <AppText style={styles.idleNote}>Saved automatically to history. New prototype photos expire after seven days. This image is a visual approximation, not a sizing recommendation.</AppText>
-        <Pressable accessibilityRole="button" onPress={() => setShowOriginal((value) => !value)} style={styles.primary}>
-          <AppText style={styles.primaryLabel}>{showOriginal ? "Show try-on" : "Compare original"}</AppText>
-        </Pressable>
-      </View> : null}
-      {result?.status === "failed" ? <AppText style={styles.error}>{result.error_message ?? "Generation failed. Please try again."}</AppText> : null}
-      {result && !working ? <View style={styles.idleCopy}>
-        <Pressable accessibilityRole="button" onPress={reset} style={styles.ghost}><AppText>Start another try-on</AppText></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setDeleteOpen(true)} style={styles.ghost}><AppText>Delete this job and photos</AppText></Pressable>
-      </View> : null}
-      {job.error ? <View style={styles.idleCopy}>
-        <AppText style={styles.error}>{job.error.message}</AppText>
-        <Pressable accessibilityRole="button" onPress={() => job.refetch()} style={styles.ghost}><AppText>Reconnect to job</AppText></Pressable>
-      </View> : null}
+      ) : null}
       {[pickerError, closet.error?.message, create.error?.message, remove.error?.message].filter(Boolean).map((message, i) =>
-        <AppText key={i} style={styles.error}>{message}</AppText>)}
-      <Pressable accessibilityRole="button" onPress={() => router.push("/tryon/history")} style={styles.pastBtn}><AppText>Try-on history →</AppText></Pressable>
-      <View style={{ height: 40 }} />
-      <ConfirmDialog visible={deleteOpen} title="Delete this try-on?" body={result?.render_kind === "legacy_preview" ? "The legacy preview is removed from history. Your wardrobe stays in your closet." : "Your prototype photos will be removed. Your wardrobe items stay in your closet."}
+        <AppText key={i} selectable style={styles.error}>{message}</AppText>)}
+
+      <ConfirmDialog visible={deleteOpen} title="Delete this try-on?" body="The photos for this try-on are removed. Your clothes stay in your closet."
         cancelLabel="Keep it" confirmLabel="Delete" destructive onCancel={() => setDeleteOpen(false)} onConfirm={confirmDelete} />
     </Screen>
   );
 }
 
-function FittingOverlay({ status }: { status?: string }) {
-  return <View style={styles.fitting} pointerEvents="none">
-    <Wipe />
-    <View style={styles.fittingRail}><SwayBlock delay={0} height={74} /><SwayBlock delay={180} height={96} accent /><SwayBlock delay={360} height={64} /></View>
-    <View style={styles.fittingBanner}><AppText style={styles.fittingText}>
-      {status === "queued" ? "Queued for the prototype GPU" : status === "processing" ? "Generating — first run can take longer" : "Connecting to your try-on"}
-    </AppText></View>
-  </View>;
-}
-
-function SwayBlock({ delay, height, accent }: { delay: number; height: number; accent?: boolean }) {
-  const t = useSharedValue(0);
-  useEffect(() => {
-    t.value = withDelay(delay, withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) }), -1, true));
-  }, []);
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: -14 * t.value }, { rotate: `${-2 + 4 * t.value}deg` }]
-  }));
-  return <Animated.View style={[styles.swayBlock, { height }, accent && styles.swayBlockAccent, style]} />;
-}
-
-function Wipe() {
-  const x = useSharedValue(-1);
-  useEffect(() => {
-    x.value = withRepeat(withTiming(2, { duration: 1400, easing: Easing.linear }), -1, false);
-  }, []);
-  const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * 260 }] }));
+function PhotoPrompt({ onCamera, onLibrary }: { onCamera: () => void; onLibrary: () => void }) {
   return (
-    <View style={styles.wipeMask} pointerEvents="none">
-      <Animated.View style={[styles.wipeBar, style]} />
+    <View style={styles.prompt}>
+      <View style={styles.promptIcon}><UserRound size={30} color={colors.ink} strokeWidth={1.5} /></View>
+      <Title style={styles.promptTitle}>Add your fit photo</Title>
+      <AppText style={styles.promptNote}>One full-body photo, saved on this phone and reused for every try-on.</AppText>
+      <View style={styles.promptActions}>
+        <Button title="Camera" icon={Camera} compact stretch={false} onPress={onCamera} />
+        <Button title="Library" icon={Images} compact stretch={false} variant="secondary" onPress={onLibrary} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
-  headerWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
-  hero: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.lg, gap: spacing.md },
-  heroTitle: { fontSize: 36, lineHeight: 34, fontFamily: fonts.black, fontWeight: "800", letterSpacing: -1.4, textTransform: "uppercase" },
-  stage: { height: 430, backgroundColor: colors.surface, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke, overflow: "hidden" },
-  stageEmpty: { flex: 1, justifyContent: "flex-end", padding: spacing.xl, gap: spacing.sm },
-  stageMark: { width: 44, height: 44, borderWidth: 2, borderColor: colors.strokeStrong, marginBottom: spacing.sm },
-  stageEmptyTitle: { fontSize: 20, lineHeight: 21, fontFamily: fonts.black, fontWeight: "800", textTransform: "uppercase" },
-  stageEmptyNote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  fitting: { ...StyleSheet.absoluteFill, backgroundColor: colors.surface, overflow: "hidden" },
-  wipeMask: { ...StyleSheet.absoluteFill, overflow: "hidden" },
-  wipeBar: { position: "absolute", top: 0, bottom: 0, width: 130, backgroundColor: "rgba(236, 48, 19, 0.14)" },
-  fittingRail: { position: "absolute", left: spacing.xl, right: spacing.xl, bottom: 74, flexDirection: "row", gap: spacing.sm, alignItems: "flex-end", height: 120 },
-  swayBlock: { width: 48, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.stroke },
-  swayBlockAccent: { backgroundColor: colors.rose, borderColor: colors.rose },
-  fittingBanner: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.rose, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  fittingText: { color: colors.white, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase" },
-  honestLabel: { position: "absolute", left: 0, bottom: 0, backgroundColor: colors.strokeStrong, paddingHorizontal: 13, paddingVertical: 9 },
-  honestLabelText: { color: colors.canvas, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase" },
-  sourceRow: { flexDirection: "row" },
-  sourceBtn: { flex: 1, height: 52, borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke, alignItems: "flex-start", justifyContent: "center", paddingHorizontal: spacing.lg },
-  warning: { color: colors.roseSoft, fontSize: 13, lineHeight: 19, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  picksHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
-  sectionLabel: { color: colors.muted, fontSize: 10, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase" },
-  picksRail: { flexGrow: 0, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
-  pick: { width: 96, height: 124, borderRightWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface, overflow: "hidden" },
-  pickDrop: { position: "absolute", top: 0, right: 0, width: 26, height: 26, backgroundColor: colors.rose, alignItems: "center", justifyContent: "center" },
-  pickZone: { position: "absolute", left: 6, bottom: 6, color: colors.white, fontSize: 8, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
-  pickAdd: { width: 96, height: 124, alignItems: "flex-start", justifyContent: "flex-end", gap: spacing.sm, padding: spacing.md },
-  idleCopy: { padding: spacing.xl, gap: spacing.sm },
-  idleNote: { color: colors.muted, fontSize: 13, lineHeight: 21 },
-  primary: { height: 56, marginTop: spacing.lg, backgroundColor: colors.rose, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg },
-  primaryDisabled: { opacity: 0.45 },
-  primaryLabel: { color: colors.white, fontFamily: fonts.black, fontWeight: "800", fontSize: 13, letterSpacing: 1.3, textTransform: "uppercase" },
-  ghost: { height: 52, borderBottomWidth: 1, borderColor: colors.stroke, justifyContent: "center" },
-  pastBtn: { height: 52, borderBottomWidth: 1, borderColor: colors.stroke, justifyContent: "center", paddingHorizontal: spacing.xl },
-  error: { color: colors.roseSoft, paddingHorizontal: spacing.xl, paddingTop: spacing.md }
+  flex: { flex: 1 },
+  content: { gap: spacing.xl },
+  section: { gap: spacing.md },
+  photoRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  garmentsHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginTop: spacing.sm },
+  garments: { gap: spacing.sm },
+  garment: { width: 96, height: 120, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.surface },
+  garmentDrop: { position: "absolute", top: 4, right: 4 },
+  garmentAdd: { alignItems: "center", justifyContent: "center", gap: 4, borderWidth: 1, borderStyle: "dashed", borderColor: colors.strokeStrong, backgroundColor: "transparent" },
+  garmentAddText: { fontSize: 13, color: colors.inkSoft, fontFamily: fonts.medium },
+  failed: { gap: spacing.sm, backgroundColor: colors.dangerWash, borderRadius: radius.lg, padding: spacing.lg, alignItems: "flex-start" },
+  failedNote: { color: colors.inkSoft, fontSize: 15, lineHeight: 22 },
+  doneRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  footerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  error: { color: colors.danger, fontSize: 14 },
+  prompt: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, gap: spacing.md },
+  promptIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  promptTitle: { textAlign: "center" },
+  promptNote: { textAlign: "center", color: colors.inkSoft, fontSize: 15, lineHeight: 22, maxWidth: 260 },
+  promptActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }
 });
-

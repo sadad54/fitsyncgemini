@@ -1,54 +1,82 @@
-import { Link } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import { StyleSheet, View } from "react-native";
+import { Check } from "lucide-react-native";
 import { AppText } from "@/components/AppText";
 import { Photo } from "@/components/Photo";
-import { colors, fonts, spacing } from "@/theme";
+import { PressableScale } from "@/components/motion";
+import { colors, fonts, radius, spacing } from "@/theme";
 import type { ClothingItem } from "@/types/api";
 import { mediaUrl } from "@/api/client";
 
-export function ItemCard({ item, width = "48%" }: { item: ClothingItem; width?: number | `${number}%` }) {
+export function ItemCard({
+  item,
+  width = "48%",
+  selected,
+  selecting,
+  onPress,
+  onLongPress
+}: {
+  item: ClothingItem;
+  width?: number | `${number}%`;
+  selected?: boolean;
+  selecting?: boolean;
+  onPress?: () => void;
+  onLongPress?: () => void;
+}) {
   const imageUrl = mediaUrl(item.image_url);
   return (
-    <Link href={`/item/${item.id}`} asChild>
-      <Pressable
+    <View style={[styles.cell, { width }]}>
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={`${item.name}, ${item.category}`}
-        style={({ pressed }) => [styles.card, { width }, pressed && styles.pressed]}
+        accessibilityState={{ selected }}
+        onPress={onPress ?? (() => router.push(`/item/${item.id}`))}
+        onLongPress={onLongPress}
+        delayLongPress={280}
+        style={styles.card}
       >
-        <View style={styles.media}>
+        <View style={[styles.media, selected && styles.mediaSelected]}>
           {imageUrl ? <Photo source={imageUrl} /> : <View style={styles.placeholder} />}
-          <View style={styles.categoryPill}><AppText style={styles.category}>{item.category}</AppText></View>
+          {selecting ? (
+            <View style={[styles.tick, selected && styles.tickOn]}>
+              {selected ? <Check size={14} color={colors.onAccent} strokeWidth={3} /> : null}
+            </View>
+          ) : null}
         </View>
         <View style={styles.body}>
-          <AppText numberOfLines={2} style={styles.name}>{item.name}</AppText>
+          <AppText numberOfLines={1} style={styles.name}>{item.name}</AppText>
           <View style={styles.metaRow}>
             <View style={[styles.colorDot, { backgroundColor: colorFromName(item.colors[0]) }]} />
-            <AppText numberOfLines={1} style={styles.meta}>{item.colors.slice(0, 2).join(" + ") || "neutral"}</AppText>
+            <AppText numberOfLines={1} style={styles.meta}>{item.subcategory || item.category}</AppText>
           </View>
         </View>
-      </Pressable>
-    </Link>
+      </PressableScale>
+    </View>
   );
 }
 
 export function colorFromName(name?: string) {
   const colorMap: Record<string, string> = {
-    black: "#252329", white: "#EEE9E2", grey: "#8C8790", gray: "#8C8790", red: "#A54855", blue: "#526D91", green: "#64775C", yellow: "#C8A34A", brown: "#7A5B48", beige: "#CDBBA2", pink: "#B96A83", purple: "#745F8C", orange: "#C27445"
+    black: "#1F1D1B", white: "#F4F1EA", grey: "#8C8790", gray: "#8C8790", red: "#B23A32", blue: "#3D5F8F", navy: "#24324F",
+    green: "#55704F", yellow: "#D2A93E", brown: "#7A5B48", beige: "#D5C3A6", cream: "#EDE2CC", pink: "#D17E96", purple: "#6F5A92", orange: "#D1773D"
   };
-  return colorMap[name?.toLowerCase() ?? ""] ?? colors.rose;
+  return colorMap[name?.toLowerCase() ?? ""] ?? colors.canvasSoft;
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.canvas, overflow: "hidden", borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke },
-  pressed: { opacity: 0.8 },
-  media: { width: "100%", aspectRatio: 0.88, backgroundColor: colors.surface },
-  image: { width: "100%", height: "100%" },
-  placeholder: { flex: 1, backgroundColor: colors.surface },
-  categoryPill: { position: "absolute", top: 0, left: 0, backgroundColor: colors.strokeStrong, paddingHorizontal: 7, paddingVertical: 5 },
-  category: { color: colors.canvas, fontSize: 8, lineHeight: 10, fontFamily: fonts.bold, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.9 },
-  body: { paddingVertical: spacing.sm, paddingHorizontal: 2, gap: spacing.xs },
-  name: { fontFamily: fonts.black, fontWeight: "800", fontSize: 13, lineHeight: 16, letterSpacing: -0.2 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  colorDot: { width: 7, height: 7 },
-  meta: { flex: 1, color: colors.muted, fontSize: 10, lineHeight: 13, fontFamily: fonts.regular, textTransform: "uppercase", letterSpacing: 0.5 }
+  cell: { padding: 6 },
+  card: { gap: spacing.sm },
+  media: { width: "100%", aspectRatio: 0.8, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 2, borderColor: "transparent" },
+  mediaSelected: { borderColor: colors.accent },
+  placeholder: { flex: 1, backgroundColor: colors.canvasSoft },
+  tick: {
+    position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2, borderColor: colors.white, backgroundColor: "rgba(23,20,15,0.25)", alignItems: "center", justifyContent: "center"
+  },
+  tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  body: { paddingHorizontal: 2, gap: 2 },
+  name: { fontFamily: fonts.medium, fontWeight: "500", fontSize: 14, lineHeight: 19 },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  colorDot: { width: 8, height: 8, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.strokeStrong },
+  meta: { flex: 1, color: colors.muted, fontSize: 12, lineHeight: 16, textTransform: "capitalize" }
 });

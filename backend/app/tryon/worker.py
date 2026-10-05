@@ -34,7 +34,11 @@ async def process(row, provider):
                 await storage.remove([result_path])
         logger.info("Try-on job {} completed in {:.1f}s", row["id"], time.monotonic() - started)
     except Exception as exc:
-        logger.warning("Try-on job {} failed ({})", row["id"], type(exc).__name__)
+        detail = str(exc)
+        logger.warning("Try-on job {} failed ({}: {})", row["id"], type(exc).__name__, detail[:200])
+        quota = any(word in detail.lower() for word in ("quota", "zerogpu", "rate limit", "429"))
+        message = ("The free try-on service is at its usage limit right now. Please try again later."
+                   if quota else "Generation could not finish. Check your photo and try again.")
         if uploaded:
             # Preserve a successfully committed result after response loss.
             saved = await execute(db.get_client().table(TABLE).select("status").eq("id", row["id"]))
@@ -43,7 +47,7 @@ async def process(row, provider):
             await storage.remove([result_path])
         await execute(db.get_client().table(TABLE).update({
             "status": "failed", "updated_at": now(),
-            "error_message": "Generation could not finish. Check your photo and try again when the prototype GPU is available.",
+            "error_message": message,
             "inference_seconds": round(time.monotonic() - started, 3),
         }).eq("id", row["id"]).eq("status", "processing"))
 

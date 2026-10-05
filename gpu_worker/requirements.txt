@@ -1,5 +1,8 @@
 # Separate Python 3.11 GPU environment; never install into backend/.
 # Deliberately pinned instead of upstream's moving diffusers git dependency.
+# setuptools: uv venv doesn't bundle it, but torch.utils.cpp_extension (pulled in
+# by CatVTON's SCHP modules) imports it at module load time.
+setuptools==75.1.0
 torch==2.4.0
 torchvision==0.19.0
 accelerate==0.31.0

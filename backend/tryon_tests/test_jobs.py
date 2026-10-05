@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from PIL import Image
 from app.tryon.images import normalize_image
-from app.tryon.providers import get_provider, TryOnOptions, RemoteProvider
+from app.tryon.providers import get_provider, TryOnOptions, RemoteProvider, FashnProvider, FashnSpaceProvider
 from app.core.config import settings
 from app.services import tryon_service as service
 from app.tryon import worker, storage
@@ -151,3 +151,70 @@ async def test_provider_multipart_contract(monkeypatch):
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: original(transport=httpx.MockTransport(handle), **kw))
     provider = RemoteProvider("https://worker.example", "s" * 32, 30)
     assert Image.open(BytesIO(await provider.generate(jpeg(), jpeg(), TryOnOptions("dresses")))).size == (60,80)
+
+
+def test_fashn_needs_key_not_noncommercial_ack(monkeypatch):
+    monkeypatch.setattr(settings, "TRYON_NONCOMMERCIAL_ACK", False)
+    monkeypatch.setattr(settings, "FASHN_API_KEY", "")
+    with pytest.raises(ValueError, match="FASHN_API_KEY"): get_provider("fashn")
+    monkeypatch.setattr(settings, "FASHN_API_KEY", "key")
+    assert isinstance(get_provider("fashn"), FashnProvider)
+
+
+@pytest.mark.asyncio
+async def test_fashn_submit_poll_contract(monkeypatch):
+    import base64, json, httpx
+    original = httpx.AsyncClient
+    polls = []
+    def handle(request):
+        assert request.headers["Authorization"] == "Bearer key"
+        if request.url.path == "/v1/run":
+            body = json.loads(request.content)
+            assert body["inputs"]["category"] == "one-pieces" and body["inputs"]["return_base64"] is True
+            assert body["inputs"]["model_image"].startswith("data:image/jpeg;base64,")
+            return httpx.Response(200, json={"id": "abc", "error": None})
+        assert request.url.path == "/v1/status/abc"
+        polls.append(1)
+        if len(polls) == 1:
+            return httpx.Response(200, json={"id": "abc", "status": "processing", "error": None})
+        out = "data:image/jpeg;base64," + base64.b64encode(jpeg()).decode()
+        return httpx.Response(200, json={"id": "abc", "status": "completed", "output": [out], "error": None})
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: original(transport=httpx.MockTransport(handle), **kw))
+    monkeypatch.setattr(FashnProvider, "POLL_SECONDS", 0)
+    image = await FashnProvider("key", 30).generate(jpeg(), jpeg(), TryOnOptions("dresses"))
+    assert Image.open(BytesIO(image)).size == (60, 80) and len(polls) == 2
+
+
+@pytest.mark.asyncio
+async def test_fashn_failure_surfaces_error(monkeypatch):
+    import httpx
+    original = httpx.AsyncClient
+    def handle(request):
+        if request.url.path == "/v1/run":
+            return httpx.Response(200, json={"id": "abc", "error": None})
+        return httpx.Response(200, json={"id": "abc", "status": "failed",
+                                         "error": {"name": "PoseError", "message": "no pose"}})
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: original(transport=httpx.MockTransport(handle), **kw))
+    with pytest.raises(RuntimeError, match="PoseError"):
+        await FashnProvider("key", 30).generate(jpeg(), jpeg(), TryOnOptions("tops"))
+
+
+def test_fashn_space_is_dev_only(monkeypatch):
+    monkeypatch.setattr(settings, "ENV", "development")
+    assert isinstance(get_provider("fashn_space"), FashnSpaceProvider)
+    monkeypatch.setattr(settings, "ENV", "production")
+    with pytest.raises(ValueError, match="testing only"): get_provider("fashn_space")
+
+
+@pytest.mark.asyncio
+async def test_fashn_space_maps_category_and_normalizes(monkeypatch, tmp_path):
+    out = tmp_path / "out.jpg"; out.write_bytes(jpeg())
+    seen = {}
+    def run(self, person_path, garment_path, options):
+        seen["category"] = self.CATEGORIES[options.category]
+        return out.read_bytes()
+    monkeypatch.setattr(FashnSpaceProvider, "_run", run)
+    image = await FashnSpaceProvider("x/y", 30).generate(jpeg(), jpeg(), TryOnOptions("dresses"))
+    assert seen["category"] == "one-pieces" and Image.open(BytesIO(image)).size == (60, 80)
+    with pytest.raises(ValueError):
+        await FashnSpaceProvider("x/y", 30).generate(jpeg(), jpeg(), TryOnOptions("shoes"))

@@ -14,6 +14,7 @@ python-decouple==3.8
 
 # External APIs
 httpx>=0.24.0,<0.25.0
+gradio_client==2.7.2  # try-on via the free FASHN VTON v1.5 Hugging Face Space
 aiohttp==3.9.1
 googlemaps==4.10.0
 

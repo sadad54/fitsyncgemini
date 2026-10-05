@@ -53,10 +53,16 @@ async def tick(provider):
         "p_provider": settings.TRYON_PROVIDER, "p_model_version": settings.TRYON_MODEL_VERSION}))
     if rows.data:
         await process(rows.data[0], provider)
-    expired = await execute(db.get_client().table(TABLE).select("*").is_("purged_at", "null")
-        .neq("status", "processing").or_(f"expires_at.lt.{now()},deleted_at.not.is.null").limit(20))
-    for row in expired.data:
-        await purge(row)
+    # Two queries instead of .or_(), which the pinned postgrest client lacks.
+    def unpurged():
+        return db.get_client().table(TABLE).select("*").is_("purged_at", "null").neq("status", "processing")
+    expired = await execute(unpurged().lt("expires_at", now()).limit(20))
+    deleted = await execute(unpurged().not_.is_("deleted_at", "null").limit(20))
+    seen = set()
+    for row in expired.data + deleted.data:
+        if row["id"] not in seen:
+            seen.add(row["id"])
+            await purge(row)
     return bool(rows.data)
 
 

@@ -131,3 +131,7 @@ simple_test.dart
 /brag-output-*/
 /.claude/
 /mobile/skills/
+
+# Private try-on test photos
+gpu_worker/vton-dataset/
+gpu_worker/vton-dataset.zip

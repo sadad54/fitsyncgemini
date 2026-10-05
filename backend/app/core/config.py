@@ -86,12 +86,19 @@ class Settings(BaseSettings):
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # Explicit opt-in; never falls back to paid APIs or a pasted preview.
-    TRYON_PROVIDER: str = "disabled"  # disabled | kaggle | modal
+    TRYON_PROVIDER: str = "disabled"  # disabled | fashn | fashn_space | kaggle | modal
     TRYON_ENDPOINT: str = ""
     TRYON_SHARED_SECRET: str = ""
     TRYON_MODAL_KEY: str = ""
     TRYON_MODAL_SECRET: str = ""
     TRYON_NONCOMMERCIAL_ACK: bool = False
+    FASHN_API_KEY: str = ""
+    FASHN_MODEL_NAME: str = "tryon-v1.6"
+    FASHN_MODE: str = "balanced"  # performance | balanced | quality
+    # Free public demo of the Apache-2.0 FASHN VTON v1.5 model; shared GPU quota.
+    FASHN_SPACE_ID: str = "fashn-ai/fashn-vton-1.5"
+    FASHN_SPACE_GARMENT_PHOTO_TYPE: str = "flat-lay"  # flat-lay | model
+    HF_TOKEN: str = ""  # optional: a logged-in token gets a larger free GPU quota
     TRYON_MODEL_VERSION: str = "catvton-mix-automask-fp16-v1"
     TRYON_TIMEOUT_SECONDS: float = Field(default=240, ge=30, le=300)
     TRYON_MONTHLY_JOB_LIMIT: int = Field(default=100, ge=0, le=10000)

@@ -12,7 +12,7 @@ export default function Index() {
   if (!hydrated) {
     return (
       <Screen contentStyle={{ justifyContent: "center" }} bottomInset={false}>
-        <Eyebrow>FitSync</Eyebrow>
+        <Eyebrow>Flairwise</Eyebrow>
         <Display>Curating your closet.</Display>
         <AppText style={{ color: colors.muted }}>Restoring your private session…</AppText>
       </Screen>

@@ -187,7 +187,7 @@ class OutfitService:
         self, selected: List[Dict[str, Any]], occasion: str, weather_context: Optional[Dict[str, Any]]
     ) -> str:
         if not selected:
-            return "Add a few more pieces to your closet and FitSync can start assembling full looks."
+            return "Add a few more pieces to your closet and Flairwise can start assembling full looks."
         names = [item.get("name") or "a piece" for item in selected]
         colors = sorted({c for item in selected for c in (item.get("colors") or [])})
         pairing = ", ".join(names[:-1]) + (f" and {names[-1]}" if len(names) > 1 else names[0])

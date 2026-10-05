@@ -1,26 +1,27 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { mediaUrl } from "@/api/client";
 import { useCloset } from "@/api/queries";
-import { AppText } from "@/components/AppText";
-import { Glyph } from "@/components/Glyph";
+import { AppText, Caption, Display, Heading, Punch } from "@/components/AppText";
+import { Button } from "@/components/Button";
+import { PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
+import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
 import { SEED_AVATAR_ROW, SEED_CHALLENGES, SEED_POSTS } from "@/data/discover";
+import { Check, Heart, Sparkles } from "@/icons";
 import { useAuthStore } from "@/store/auth";
-import { colors, fonts, spacing } from "@/theme";
+import { colors, fonts, radius, spacing } from "@/theme";
 
 export default function ChallengeDetail() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const token = useAuthStore((state) => state.token);
   const closet = useCloset();
-
   const challenge = SEED_CHALLENGES.find((entry) => entry.id === id) ?? SEED_CHALLENGES[0];
   const [joined, setJoined] = useState(false);
-
   const photos = useMemo(
     () => (closet.data?.items ?? []).map((item) => mediaUrl(item.image_url)).filter(Boolean) as string[],
     [closet.data]
@@ -28,106 +29,84 @@ export default function ChallengeDetail() {
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
 
+  const footer = joined
+    ? <Button title="Style an entry from my closet" icon={Sparkles} variant="accent" onPress={() => router.push("/style")} />
+    : <Button title="Join this challenge" onPress={() => setJoined(true)} />;
+
   return (
-    <Screen scroll bottomInset={false} contentStyle={styles.screen}>
-      <View style={styles.headerWrap}>
-        <PushHeader title="Challenge" onBack={() => router.back()} />
-      </View>
-
-      <View style={styles.hero}>{photos[0] ? <Photo source={photos[0]} /> : <View style={styles.mediaPlaceholder} />}</View>
-
-      <View style={styles.body}>
-        <View style={styles.difficultyRow}>
-          <Glyph shape={challenge.shape} size={11} strokeWidth={2} color={colors.roseSoft} />
-          <AppText style={styles.difficulty}>{challenge.difficulty} · {challenge.days} days left</AppText>
+    <Screen footer={footer}>
+      <PushHeader title="Challenge" onBack={() => router.back()} />
+      <Reveal>
+        <View style={styles.hero}>
+          <View style={styles.heroTop}>
+            <Punch style={styles.heroTag}>{challenge.difficulty}</Punch>
+            <Punch style={styles.heroTag}>{challenge.days} days left</Punch>
+          </View>
+          <Display style={styles.title}>{challenge.title}</Display>
+          <AppText style={styles.description}>One tone, head to shoe, for seven days. Texture is your only contrast — post each day's version and tag it.</AppText>
+          <View style={styles.reward}><AppText style={styles.rewardText}>Reward · {challenge.reward}</AppText></View>
         </View>
-        <AppText style={styles.title}>{challenge.title}</AppText>
-        <AppText style={styles.description}>
-          One tone, head to shoe, for seven days. Texture is your only contrast — post each day's version and tag it.
-        </AppText>
-        <AppText style={styles.reward}>Reward: {challenge.reward}</AppText>
-      </View>
+      </Reveal>
+      <PreviewNote />
 
       <View style={styles.participants}>
-        <AppText style={styles.participantsCount}>{challenge.participants + (joined ? 1 : 0)} joined</AppText>
-        <View style={styles.avatarRow}>
+        <View style={styles.avatars}>
           {SEED_AVATAR_ROW.map((initial, index) => (
-            <View key={initial} style={[styles.avatar, index === 0 && styles.avatarFirst]}>
-              <AppText style={[styles.avatarText, index === 0 && styles.avatarTextFirst]}>{initial}</AppText>
+            <View key={initial} style={[styles.avatar, { marginLeft: index ? -10 : 0, zIndex: 10 - index }, index === 0 && styles.avatarFirst]}>
+              <AppText style={styles.avatarText}>{initial}</AppText>
             </View>
           ))}
         </View>
+        <Heading style={styles.flex}>{(challenge.participants + (joined ? 1 : 0)).toLocaleString()} joined</Heading>
+        {joined ? <View style={styles.joined}><Check size={14} color={colors.ink} strokeWidth={3} /><Punch style={styles.joinedText}>You're in</Punch></View> : null}
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={joined ? "Leave challenge" : "Join this challenge"}
-        onPress={() => setJoined((v) => !v)}
-        style={[styles.joinBtn, !joined && styles.joinBtnActive]}
-      >
-        <AppText style={[styles.joinLabel, !joined && styles.joinLabelActive]}>
-          {joined ? "Joined — leave challenge" : "Join this challenge"}
-        </AppText>
-      </Pressable>
-
-      <AppText style={styles.entriesLabel}>Entries</AppText>
-      {SEED_POSTS.map((post, index) => {
-        const image = photos[index % Math.max(photos.length, 1)];
-        return (
-          <View key={post.id} style={styles.entry}>
-            <View style={styles.entryHeader}>
-              <View style={styles.entryAvatar}>
-                <AppText style={styles.entryAvatarText}>{post.initial}</AppText>
-              </View>
-              <AppText style={styles.entryName}>{post.name}</AppText>
-              <AppText style={styles.entryLikes}>♥ {post.likes}</AppText>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${post.name}'s entry`}
-              onPress={() => router.push(`/community/post/${post.id}`)}
-              style={styles.entryMedia}
-            >
-              {image ? <Photo source={image} /> : <View style={styles.mediaPlaceholder} />}
-            </Pressable>
-            <AppText style={styles.entryCaption}>{post.caption}</AppText>
-          </View>
-        );
-      })}
-      <View style={{ height: 40 }} />
+      <View style={styles.entries}>
+        <Punch style={styles.label}>Entries</Punch>
+        <View style={styles.grid}>
+          {SEED_POSTS.map((post, index) => (
+            <Reveal key={post.id} index={index} style={styles.cell}>
+              <PressableScale accessibilityRole="button" accessibilityLabel={`Open ${post.name}'s entry`} onPress={() => router.push(`/community/post/${post.id}`)} style={styles.entry}>
+                <View style={[styles.entryMedia, { height: index % 3 === 0 ? 220 : 180 }]}>
+                  {photos.length ? <Photo source={photos[index % photos.length]} /> : <View style={styles.placeholder} />}
+                </View>
+                <View style={styles.entryMeta}>
+                  <AppText numberOfLines={1} style={styles.entryName}>{post.name}</AppText>
+                  <View style={styles.entryLikes}><Heart size={12} color={colors.muted} /><Caption>{post.likes}</Caption></View>
+                </View>
+              </PressableScale>
+            </Reveal>
+          ))}
+        </View>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
-  headerWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
-  hero: { height: 240, backgroundColor: colors.surface, overflow: "hidden" },
-  mediaPlaceholder: { flex: 1, backgroundColor: colors.surface },
-  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.lg, borderBottomWidth: 1, borderColor: colors.stroke },
-  difficultyRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  difficulty: { color: colors.roseSoft, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
-  title: { fontSize: 34, lineHeight: 32, fontFamily: fonts.semibold, fontWeight: "600", letterSpacing: 0, marginTop: spacing.md },
-  description: { color: colors.muted, fontSize: 13, lineHeight: 21, marginTop: 11 },
-  reward: { color: colors.ink, fontSize: 13, lineHeight: 21, marginTop: spacing.md },
-  participants: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderBottomWidth: 1, borderColor: colors.stroke },
-  participantsCount: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
-  avatarRow: { flexDirection: "row", gap: 4 },
-  avatar: { width: 26, height: 26, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  avatarFirst: { backgroundColor: colors.rose },
-  avatarText: { color: colors.ink, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 12 },
-  avatarTextFirst: { color: colors.white },
-  joinBtn: { height: 56, borderBottomWidth: 1, borderColor: colors.strokeStrong, justifyContent: "center", paddingHorizontal: spacing.xl },
-  joinBtnActive: { backgroundColor: colors.rose },
-  joinLabel: { color: colors.muted, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 13, letterSpacing: 0 },
-  joinLabelActive: { color: colors.white },
-  entriesLabel: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
-  entry: { borderTopWidth: 1, borderColor: colors.stroke },
-  entryHeader: { flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
-  entryAvatar: { width: 30, height: 30, backgroundColor: colors.rose, alignItems: "center", justifyContent: "center" },
-  entryAvatarText: { color: colors.white, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 12 },
-  entryName: { flex: 1, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 13, letterSpacing: 0 },
-  entryLikes: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
-  entryMedia: { height: 220, backgroundColor: colors.surface, overflow: "hidden" },
-  entryCaption: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.lg }
+  flex: { flex: 1 },
+  hero: { backgroundColor: colors.accent, borderRadius: radius.xl, padding: spacing.xl, gap: spacing.md, borderWidth: 1.5, borderColor: colors.ink, boxShadow: "6px 6px 0 #0D0D0F" },
+  heroTop: { flexDirection: "row", gap: spacing.xs },
+  heroTag: { fontSize: 9, lineHeight: 11, borderWidth: 1.5, borderColor: colors.ink, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
+  title: { fontSize: 44, lineHeight: 44 },
+  description: { fontSize: 15, lineHeight: 22 },
+  reward: { alignSelf: "flex-start", backgroundColor: colors.ink, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7 },
+  rewardText: { color: colors.onInk, fontSize: 13, fontFamily: fonts.medium },
+  participants: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  avatars: { flexDirection: "row" },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.canvas, alignItems: "center", justifyContent: "center" },
+  avatarFirst: { backgroundColor: colors.flare },
+  avatarText: { fontFamily: fonts.serif, fontSize: 16 },
+  joined: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 10, height: 28, borderWidth: 1, borderColor: colors.ink },
+  joinedText: { fontSize: 9, lineHeight: 11 },
+  entries: { gap: spacing.sm },
+  label: { color: colors.muted },
+  grid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -6 },
+  cell: { width: "50%", padding: 6 },
+  entry: { gap: spacing.xs },
+  entryMedia: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.canvasSoft },
+  placeholder: { flex: 1, backgroundColor: colors.canvasSoft },
+  entryMeta: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2 },
+  entryName: { flex: 1, fontSize: 13, fontFamily: fonts.medium },
+  entryLikes: { flexDirection: "row", alignItems: "center", gap: 3 }
 });

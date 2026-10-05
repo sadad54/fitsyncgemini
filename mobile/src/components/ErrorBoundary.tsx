@@ -2,6 +2,7 @@ import { Component, PropsWithChildren, ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppText, Eyebrow, Title } from "@/components/AppText";
 import { Button } from "@/components/Button";
+import { LogoMark } from "@/components/Logo";
 import { colors, spacing } from "@/theme";
 
 type Props = PropsWithChildren<{ fallback?: ReactNode }>;
@@ -25,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
       return (
         <View style={styles.container}>
-          <Eyebrow>FitSync</Eyebrow>
+          <LogoMark size={64} tone="light" />
           <Title style={styles.title}>Something went wrong</Title>
           <AppText style={styles.body}>
             {this.state.error.message || "The app hit an unexpected error."}

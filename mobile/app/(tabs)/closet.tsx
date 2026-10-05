@@ -4,9 +4,9 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
-import { Plus, Search, Shirt, Sparkles, X } from "lucide-react-native";
+import { Plus, Search, Shirt, Sparkles, X } from "@/icons";
 import { useCloset } from "@/api/queries";
-import { AppText, Caption, Display, Eyebrow } from "@/components/AppText";
+import { AppText, Caption, Display, Em, Punch } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
 import { IconButton } from "@/components/IconButton";
@@ -51,10 +51,10 @@ export default function Closet() {
               <Reveal>
                 <View style={styles.titleRow}>
                   <View style={styles.flex}>
-                    <Eyebrow>{all.data?.total ?? 0} pieces</Eyebrow>
-                    <Display>Closet</Display>
+                    <Punch style={styles.count}>{all.data?.total ?? 0} pieces</Punch>
+                    <Display>Your <Em>closet</Em></Display>
                   </View>
-                  <IconButton icon={Plus} label="Add a piece" tone="ink" size={48} onPress={() => router.push("/add-item")} />
+                  <IconButton icon={Plus} label="Add a piece" tone="accent" size={52} onPress={() => router.push("/add-item")} />
                 </View>
               </Reveal>
               <Reveal delay={60}>
@@ -92,7 +92,7 @@ export default function Closet() {
               <StatePanel
                 icon={Shirt}
                 title={search || category !== "all" ? "Nothing matches" : "Your closet is empty"}
-                message={search || category !== "all" ? "Try a broader search or another category." : "Photograph a piece you own. FitSync tags it and starts styling."}
+                message={search || category !== "all" ? "Try a broader search or another category." : "Photograph a piece you own. Flairwise tags it and starts styling."}
                 action={!search && category === "all" ? "Add a piece" : undefined}
                 onAction={() => router.push("/add-item")}
               />
@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: layout.gutter - 6, paddingBottom: 140 },
   header: { paddingHorizontal: 6, paddingTop: spacing.md, gap: spacing.lg, marginBottom: spacing.sm },
   titleRow: { flexDirection: "row", alignItems: "flex-end", gap: spacing.md },
+  count: { color: colors.muted, marginBottom: spacing.xs },
   search: { flexDirection: "row", alignItems: "center", gap: spacing.sm, height: 50, paddingLeft: spacing.lg, paddingRight: spacing.xs, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.stroke },
   input: { flex: 1, color: colors.ink, fontSize: 16, fontFamily: fonts.regular, height: "100%" },
   chipScroll: { marginHorizontal: -layout.gutter },
@@ -136,5 +137,5 @@ const styles = StyleSheet.create({
   },
   selectCancel: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
   selectTitle: { color: colors.onInk, fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600" },
-  selectNote: { color: "rgba(250,248,244,0.65)", fontSize: 12 }
+  selectNote: { color: colors.onStageMuted, fontSize: 12 }
 });

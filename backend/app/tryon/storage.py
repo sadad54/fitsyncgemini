@@ -33,7 +33,7 @@ async def garment_bytes(url: str, user_id: str) -> bytes:
     parsed, origin = urlparse(url), urlparse(settings.SUPABASE_URL)
     prefix = "/storage/v1/object/public/clothing-items/"
     if parsed.scheme != "https" or parsed.netloc != origin.netloc or not parsed.path.startswith(prefix):
-        raise ValueError("Garment must be an image uploaded to your FitSync closet")
+        raise ValueError("Garment must be an image uploaded to your Flairwise closet")
     path = unquote(parsed.path[len(prefix):])
     if not path.startswith(f"{user_id}/") or ".." in path.split("/"):
         raise ValueError("Garment image does not belong to your closet")

@@ -6,7 +6,7 @@
 
 web
 
-Note: FitSync ships as a native mobile app (Expo/React Native, targeting iOS and Android via Expo Go and eventually native builds) — not a website. It is recorded as `web` here because the product deliberately runs one unified custom design system on both iOS and Android rather than adapting to native platform conventions (see Brand Commitments); native HIG/Material guidance should not be loaded or applied to this project.
+Note: Flairwise ships as a native mobile app (Expo/React Native, targeting iOS and Android via Expo Go and eventually native builds) — not a website. It is recorded as `web` here because the product deliberately runs one unified custom design system on both iOS and Android rather than adapting to native platform conventions (see Brand Commitments); native HIG/Material guidance should not be loaded or applied to this project.
 
 ## Stack
 
@@ -20,11 +20,11 @@ Everyday people who want AI-assisted help deciding what to wear from clothes the
 
 ## Product Purpose
 
-FitSync turns a user's own physical wardrobe into a digital, AI-queryable closet: photograph clothing items, get them auto-categorized, generate outfit combinations from what's actually owned, see those combinations on a photo of yourself via virtual try-on, and share/discover style within a community layer. Success means users rely on it before getting dressed and keep their digital closet current because doing so pays off in better suggestions.
+Flairwise turns a user's own physical wardrobe into a digital, AI-queryable closet: photograph clothing items, get them auto-categorized, generate outfit combinations from what's actually owned, see those combinations on a photo of yourself via virtual try-on, and share/discover style within a community layer. Success means users rely on it before getting dressed and keep their digital closet current because doing so pays off in better suggestions.
 
 ## Positioning
 
-The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfully copy: FitSync's AI outfit generation and virtual try-on operate on photos of clothes the user actually owns, not a product catalog — the recommendation is "wear item X with item Y from your own closet," not "buy this." That's paired with a technical commitment (see Constraints) to keep the core AI loop independent of metered third-party AI APIs, while GPU hosting remains subject to available free compute and conservative prototype limits.
+The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfully copy: Flairwise's AI outfit generation and virtual try-on operate on photos of clothes the user actually owns, not a product catalog — the recommendation is "wear item X with item Y from your own closet," not "buy this." That's paired with a technical commitment (see Constraints) to keep the core AI loop independent of metered third-party AI APIs, while GPU hosting remains subject to available free compute and conservative prototype limits.
 
 ## Operating Context
 
@@ -46,7 +46,7 @@ The mechanism a catalog/shopping app (Pinterest, Stitch Fix, ASOS) can't truthfu
 
 ## Brand Commitments
 
-- Name: FitSync.
+- Name: Flairwise (renamed from FitSync in Oct 2026 — "FitSync" is a registered trademark of FitSync Corporation).
 - Visual identity ("Modernist" system, already implemented): Archivo typeface across all weights; dark palette — ink (`#131211`) ground, bone (`#f3f2f2`) text, signal red (`#ec3013`) accent; zero border radius everywhere; "bands not cards" — full-bleed sections divided by hairline rules instead of floating shadowed cards; a custom geometric icon language (per-corner radius glyphs) instead of a standard icon library; diamond (rotated-square) ratings instead of stars; custom `Toggle`/`ConfirmDialog` components instead of native platform equivalents.
 - This system is a deliberate, confirmed brand decision to run identically on iOS and Android rather than adapt to each platform's native conventions (see Platform note above) — not an unfinished default.
 - The stale root `README.md` (Flutter/cyan-magenta-violet/Space Grotesk era) does not reflect current brand truth and should not be treated as authoritative; the Modernist system described here is current.

@@ -17,7 +17,7 @@ export function Photo({
 }) {
   return (
     <Image
-      accessible={false}
+      aria-hidden
       source={source}
       style={[styles.fill, style]}
       contentFit={contentFit}

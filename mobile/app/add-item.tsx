@@ -4,12 +4,13 @@ import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Redirect, router } from "expo-router";
 import Animated, { FadeIn, FadeInDown, ZoomIn } from "react-native-reanimated";
-import { Camera, Check, Images, Shirt, Sparkles } from "lucide-react-native";
+import { Camera, Check, Images, Shirt, Sparkles } from "@/icons";
 import { useAddClosetItem, useDetectClosetItemCategory } from "@/api/queries";
-import { AppText, Caption, Display, Heading } from "@/components/AppText";
+import { AppText, Caption, Display, Em, Heading } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
-import { Breathe, Reveal, SETTLE } from "@/components/motion";
+import { PulseDot, Reveal, SETTLE } from "@/components/motion";
+import { ScanBeam } from "@/components/ScanBeam";
 import { Photo } from "@/components/Photo";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
@@ -86,8 +87,8 @@ export default function AddItem() {
       {!imageUri ? (
         <Reveal>
           <View style={styles.intro}>
-            <Display>Snap a piece you own.</Display>
-            <AppText style={styles.note}>Lay it flat or hang it up, in good light. FitSync tags the type and colour for you.</AppText>
+            <Display>Snap a piece <Em>you own.</Em></Display>
+            <AppText style={styles.note}>Lay it flat or hang it up, in good light. Flairwise tags the type and colour for you.</AppText>
           </View>
         </Reveal>
       ) : null}
@@ -95,19 +96,19 @@ export default function AddItem() {
       <Reveal delay={60}>
         <View style={styles.photo}>
           {imageUri ? (
-            <Animated.View entering={ZoomIn.duration(420).easing(SETTLE)} style={StyleSheet.absoluteFill}><Photo source={imageUri} /></Animated.View>
+            <Animated.View entering={ZoomIn.duration(420).easing(SETTLE)} style={StyleSheet.absoluteFill}><Photo source={imageUri} />{detect.isPending ? <ScanBeam duration={1200} /> : null}</Animated.View>
           ) : (
             <View style={styles.empty}>
-              <View style={styles.emptyIcon}><Shirt size={30} color={colors.ink} strokeWidth={1.5} /></View>
+              <View style={styles.emptyIcon}><Shirt size={30} color={colors.accent} strokeWidth={1.6} /></View>
               <View style={styles.sourceRow}>
-                <Button title="Camera" icon={Camera} compact stretch={false} onPress={() => pick("camera")} />
+                <Button title="Camera" icon={Camera} compact stretch={false} variant="accent" onPress={() => pick("camera")} />
                 <Button title="Library" icon={Images} compact stretch={false} variant="secondary" onPress={() => pick("library")} />
               </View>
             </View>
           )}
           {detect.isPending ? (
             <Animated.View entering={FadeIn} style={styles.detecting}>
-              <Breathe><Sparkles size={14} color={colors.accent} /></Breathe>
+              <PulseDot size={7} />
               <AppText style={styles.detectingText}>Recognising…</AppText>
             </Animated.View>
           ) : detectedVision && category ? (
@@ -165,16 +166,16 @@ const styles = StyleSheet.create({
   note: { color: colors.inkSoft, fontSize: 16, lineHeight: 23 },
   photo: { width: "100%", aspectRatio: 4 / 5, borderRadius: radius.xl, overflow: "hidden", backgroundColor: colors.surface },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.xl, borderRadius: radius.xl, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.strokeStrong },
-  emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.canvas, alignItems: "center", justifyContent: "center" },
+  emptyIcon: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },
   sourceRow: { flexDirection: "row", gap: spacing.sm },
   sourceRowInline: { flexDirection: "row", gap: spacing.xs },
-  detecting: { position: "absolute", left: spacing.md, bottom: spacing.md, flexDirection: "row", alignItems: "center", gap: 6, height: 34, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.94)" },
-  detectingText: { fontSize: 13, fontFamily: fonts.medium, textTransform: "capitalize" },
+  detecting: { position: "absolute", left: spacing.md, bottom: spacing.md, flexDirection: "row", alignItems: "center", gap: 6, height: 34, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: "rgba(13,13,15,0.86)" },
+  detectingText: { fontSize: 13, fontFamily: fonts.medium, textTransform: "capitalize", color: colors.onStage },
   form: { gap: spacing.lg },
   field: { gap: spacing.sm },
   input: { height: 50, borderRadius: radius.md, backgroundColor: colors.surface, paddingHorizontal: spacing.lg, fontSize: 16, color: colors.ink, fontFamily: fonts.regular, borderWidth: 1, borderColor: colors.stroke },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  tips: { gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg },
+  tips: { gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.stroke },
   tip: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   tipText: { fontSize: 15, color: colors.inkSoft },
   footerRow: { flexDirection: "row", gap: spacing.sm },

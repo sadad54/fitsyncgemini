@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
+// Storage keys keep the pre-rename "fitsync" prefix so existing sessions survive the rename to Flairwise.
 const ACCESS_TOKEN_KEY = "fitsync.session.access-token";
 const REFRESH_TOKEN_KEY = "fitsync.session.refresh-token";
 const ONBOARDING_KEY = "fitsync.session.onboarding-complete";

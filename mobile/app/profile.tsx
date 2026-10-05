@@ -3,10 +3,10 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Check, Images, LogOut, Trash2, UserRound } from "lucide-react-native";
+import { Camera, Check, Images, LogOut, Trash2, UserRound } from "@/icons";
 import { api } from "@/api/client";
 import { keys, useClosetStats, useProfile, useSavedOutfits, useTryOns, useUpdateProfile } from "@/api/queries";
-import { AppText, Caption, Heading, Title } from "@/components/AppText";
+import { AppText, Caption, Heading, Punch, Title } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -69,7 +69,7 @@ export default function Profile() {
     router.replace("/(auth)/sign-in");
   }
 
-  const displayName = profile.data?.display_name || "FitSync member";
+  const displayName = profile.data?.display_name || "Flairwise member";
   const online = ["ok", "healthy"].includes(health.data?.status ?? "");
 
   return (
@@ -79,6 +79,7 @@ export default function Profile() {
         <View style={styles.identity}>
           <View style={styles.avatar}><AppText style={styles.avatarText}>{displayName.slice(0, 1).toUpperCase()}</AppText></View>
           <Title style={styles.name}>{displayName}</Title>
+          <Punch style={styles.member}>Flairwise member</Punch>
           <View style={styles.stats}>
             <Stat value={stats.data?.total_items ?? 0} label="Pieces" />
             <View style={styles.statRule} />
@@ -129,7 +130,7 @@ export default function Profile() {
                 return (
                   <PressableScale key={color.name} accessibilityRole="checkbox" accessibilityLabel={color.name} accessibilityState={{ checked: active }} scaleTo={0.88}
                     onPress={() => toggle(color.name, colorsSelected, setColorsSelected)} style={[styles.swatchRing, active && styles.swatchRingOn]}>
-                    <View style={[styles.swatch, { backgroundColor: color.value }]}>{active ? <Check size={16} color={colors.white} strokeWidth={3} /> : null}</View>
+                    <View style={[styles.swatch, { backgroundColor: color.value }]}>{active ? <Check size={16} color={color.name === "cream" ? colors.ink : colors.white} strokeWidth={3} /> : null}</View>
                   </PressableScale>
                 );
               })}
@@ -170,22 +171,24 @@ function Stat({ value, label }: { value: number; label: string }) {
   return (
     <View style={styles.stat}>
       <AppText style={styles.statValue}>{value}</AppText>
-      <Caption>{label}</Caption>
+      <Punch style={styles.statLabel}>{label}</Punch>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  identity: { alignItems: "center", gap: spacing.sm },
-  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: colors.onInk, fontFamily: fonts.serif, fontSize: 40, lineHeight: 46 },
-  name: { textAlign: "center" },
-  stats: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.md, marginTop: spacing.sm, alignSelf: "stretch" },
-  stat: { flex: 1, alignItems: "center" },
-  statValue: { fontFamily: fonts.serif, fontSize: 30, lineHeight: 34 },
-  statRule: { width: 1, height: 32, backgroundColor: colors.stroke },
-  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.lg },
+  identity: { alignItems: "center", gap: spacing.sm, backgroundColor: colors.stage, borderRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.md },
+  avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: colors.stageRaised, boxShadow: "0 0 0 1.5px #D4FF3A" },
+  avatarText: { color: colors.ink, fontFamily: fonts.serif, fontSize: 44, lineHeight: 50 },
+  name: { textAlign: "center", color: colors.onStage, fontSize: 32, lineHeight: 36 },
+  member: { color: colors.onStageMuted, fontSize: 10 },
+  stats: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderColor: colors.stageLine, paddingTop: spacing.md, marginTop: spacing.md, alignSelf: "stretch" },
+  stat: { flex: 1, alignItems: "center", gap: 2 },
+  statValue: { fontFamily: fonts.serif, fontSize: 34, lineHeight: 38, color: colors.onStage },
+  statLabel: { fontSize: 9, color: colors.onStageMuted },
+  statRule: { width: 1, height: 32, backgroundColor: colors.stageLine },
+  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.stroke },
   cardHead: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   fitRow: { flexDirection: "row", gap: spacing.lg },
   fitThumb: { width: 110, aspectRatio: 3 / 4, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.canvas, alignItems: "center", justifyContent: "center" },

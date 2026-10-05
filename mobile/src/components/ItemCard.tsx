@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
-import { Check } from "lucide-react-native";
+import { Check } from "@/icons";
 import { AppText } from "@/components/AppText";
 import { Photo } from "@/components/Photo";
 import { PressableScale } from "@/components/motion";
@@ -39,7 +39,7 @@ export function ItemCard({
           {imageUrl ? <Photo source={imageUrl} /> : <View style={styles.placeholder} />}
           {selecting ? (
             <View style={[styles.tick, selected && styles.tickOn]}>
-              {selected ? <Check size={14} color={colors.onAccent} strokeWidth={3} /> : null}
+              {selected ? <Check size={14} color={colors.ink} strokeWidth={3} /> : null}
             </View>
           ) : null}
         </View>
@@ -66,14 +66,14 @@ export function colorFromName(name?: string) {
 const styles = StyleSheet.create({
   cell: { padding: 6 },
   card: { gap: spacing.sm },
-  media: { width: "100%", aspectRatio: 0.8, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 2, borderColor: "transparent" },
-  mediaSelected: { borderColor: colors.accent },
+  media: { width: "100%", aspectRatio: 0.8, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 2.5, borderColor: "transparent" },
+  mediaSelected: { borderColor: colors.ink },
   placeholder: { flex: 1, backgroundColor: colors.canvasSoft },
   tick: {
     position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: 12,
-    borderWidth: 2, borderColor: colors.white, backgroundColor: "rgba(23,20,15,0.25)", alignItems: "center", justifyContent: "center"
+    borderWidth: 2, borderColor: colors.white, backgroundColor: "rgba(13,13,15,0.3)", alignItems: "center", justifyContent: "center"
   },
-  tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  tickOn: { backgroundColor: colors.accent, borderColor: colors.ink },
   body: { paddingHorizontal: 2, gap: 2 },
   name: { fontFamily: fonts.medium, fontWeight: "500", fontSize: 14, lineHeight: 19 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },

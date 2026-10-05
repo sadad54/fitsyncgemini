@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxxl, gap: spacing.sm
   },
   grabber: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: colors.strokeStrong, marginBottom: spacing.md },
-  title: { fontSize: 26, lineHeight: 30 },
+  title: { fontSize: 30, lineHeight: 34 },
   body: { color: colors.inkSoft, fontSize: 15, lineHeight: 22 },
   actions: { marginTop: spacing.lg, gap: spacing.xs }
 });

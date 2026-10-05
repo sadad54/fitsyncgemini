@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
-import { Heart, Images, Sparkles } from "lucide-react-native";
+import { Heart, Images, Sparkles } from "@/icons";
 import { useCloset, useSavedOutfits, useTryOns } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
-import { AppText, Caption, Display, Eyebrow } from "@/components/AppText";
-import { Breathe, PressableScale, Reveal, Skeleton } from "@/components/motion";
+import { AppText, Caption, Display, Em, Punch } from "@/components/AppText";
+import { PressableScale, PulseDot, Reveal, Skeleton } from "@/components/motion";
 import { OutfitCollage } from "@/components/outfit-rail";
 import { Photo } from "@/components/Photo";
 import { Screen } from "@/components/Screen";
@@ -41,8 +41,8 @@ export default function Looks() {
     <Screen tabbed refreshing={saved.isRefetching || tryons.isRefetching} onRefresh={() => { saved.refetch(); tryons.refetch(); closet.refetch(); }}>
       <Reveal>
         <View style={styles.header}>
-          <Eyebrow>{(saved.data?.total ?? 0) + (tryons.data?.total ?? 0)} saved</Eyebrow>
-          <Display>Looks</Display>
+          <Punch style={styles.count}>{(saved.data?.total ?? 0) + (tryons.data?.total ?? 0)} saved</Punch>
+          <Display>Your <Em>looks</Em></Display>
         </View>
       </Reveal>
       <Reveal delay={60}>
@@ -54,10 +54,10 @@ export default function Looks() {
       {fitting.map((entry) => entry.kind === "tryon" ? (
         <Animated.View key={entry.job.id} entering={FadeIn} layout={LinearTransition}>
           <PressableScale accessibilityRole="button" accessibilityLabel="Try-on in progress" onPress={() => router.push(`/tryon?job=${entry.job.id}`)} style={styles.fitting}>
-            <Breathe><Sparkles size={18} color={colors.accent} /></Breathe>
+            <PulseDot size={10} />
             <View style={styles.flex}>
               <AppText style={styles.fittingTitle}>Fitting a look on you…</AppText>
-              <Caption>Usually under a minute. Tap to watch.</Caption>
+              <Caption style={styles.fittingNote}>Usually under a minute. Tap to watch.</Caption>
             </View>
           </PressableScale>
         </Animated.View>
@@ -103,7 +103,7 @@ function LookCard({ outfit, items }: { outfit: Outfit; items: ClothingItem[] }) 
         <AppText numberOfLines={2} style={styles.cardTitle}>{outfit.name}</AppText>
         <View style={styles.cardMeta}>
           <Caption style={styles.capitalize}>{outfit.occasion}</Caption>
-          {outfit.favorited ? <Heart size={13} color={colors.danger} fill={colors.danger} /> : null}
+          {outfit.favorited ? <Heart size={13} color={colors.flare} fill={colors.flare} /> : null}
         </View>
       </View>
     </PressableScale>
@@ -119,7 +119,7 @@ function TryOnCard({ job }: { job: TryOnResult }) {
         {image ? <Photo source={image} /> : null}
         <View style={[styles.onYou, failed && styles.onYouFailed]}>
           {failed ? null : <Sparkles size={11} color={colors.onAccent} strokeWidth={2.4} />}
-          <AppText style={styles.onYouText}>{failed ? "Didn't finish" : "On you"}</AppText>
+          <Punch style={[styles.onYouText, failed && styles.onYouTextFailed]}>{failed ? "Didn't finish" : "On you"}</Punch>
         </View>
       </View>
       <View style={styles.cardBody}>
@@ -131,17 +131,20 @@ function TryOnCard({ job }: { job: TryOnResult }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: { paddingTop: spacing.md, gap: 2 },
-  fitting: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.accentWash },
-  fittingTitle: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", color: colors.ink },
+  header: { paddingTop: spacing.md, gap: spacing.xs },
+  count: { color: colors.muted },
+  fitting: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.stage },
+  fittingTitle: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", color: colors.onStage },
+  fittingNote: { color: colors.onStageMuted },
   grid: { flexDirection: "row", gap: spacing.md, marginTop: -spacing.sm },
   column: { flex: 1, gap: spacing.md },
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: "hidden" },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: "hidden", borderWidth: 1, borderColor: colors.stroke },
   collage: { padding: 6 },
   tryon: { width: "100%", aspectRatio: 3 / 4, backgroundColor: colors.canvasSoft },
-  onYou: { position: "absolute", left: 8, top: 8, flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.accent },
+  onYou: { position: "absolute", left: 8, top: 8, flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: 8, borderRadius: 6, backgroundColor: colors.accent, borderWidth: 1.5, borderColor: colors.ink },
   onYouFailed: { backgroundColor: colors.danger },
-  onYouText: { color: colors.onAccent, fontSize: 11, fontFamily: fonts.semibold, fontWeight: "600" },
+  onYouText: { color: colors.onAccent, fontSize: 9, lineHeight: 11 },
+  onYouTextFailed: { color: colors.white },
   cardBody: { paddingHorizontal: spacing.md, paddingTop: spacing.xs, paddingBottom: spacing.md, gap: 2 },
   cardTitle: { fontSize: 15, lineHeight: 20, fontFamily: fonts.semibold, fontWeight: "600" },
   cardMeta: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

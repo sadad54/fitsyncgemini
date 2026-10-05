@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
-import { Shirt } from "lucide-react-native";
+import { Shirt } from "@/icons";
+import { Punch } from "@/components/AppText";
 import { mediaUrl } from "@/api/client";
 import { Photo } from "@/components/Photo";
 import { SETTLE } from "@/components/motion";
@@ -38,10 +39,11 @@ function Tile({ item, index, style }: { item: ClothingItem; index: number; style
   const url = mediaUrl(item.image_url);
   return (
     <Animated.View
-      entering={process.env.EXPO_OS === "web" ? FadeIn : ZoomIn.delay(index * 90).duration(480).easing(SETTLE).withInitialValues({ transform: [{ scale: 0.86 }] })}
+      entering={process.env.EXPO_OS === "web" ? FadeIn : ZoomIn.delay(index * 110).duration(560).easing(SETTLE).withInitialValues({ transform: [{ scale: 0.86 }] })}
       style={[styles.tile, style]}
     >
       {url ? <Photo source={url} contentFit="cover" /> : <View style={styles.placeholder} />}
+      <View style={styles.index}><Punch style={styles.indexText}>{String(index + 1).padStart(2, "0")}</Punch></View>
     </Animated.View>
   );
 }
@@ -71,6 +73,8 @@ const styles = StyleSheet.create({
   stack: { flex: 1, gap: spacing.sm },
   stackTile: { flex: 1 },
   placeholder: { flex: 1, backgroundColor: colors.canvasSoft },
+  index: { position: "absolute", left: 8, bottom: 8, paddingHorizontal: 6, height: 20, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.92)", justifyContent: "center" },
+  indexText: { fontSize: 9, lineHeight: 11, letterSpacing: 1 },
   empty: { borderRadius: radius.lg, borderWidth: 1, borderStyle: "dashed", borderColor: colors.strokeStrong, alignItems: "center", justifyContent: "center" },
   rail: { flexDirection: "row" },
   railTile: { borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.canvas }

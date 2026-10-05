@@ -1,3 +1,4 @@
+import { File as ExpoFile } from "expo-file-system";
 import type { ClosetStats, ClothingCategory, ClothingItem, Outfit, Profile, TryOnResult } from "@/types/api";
 import { useAuthStore } from "@/store/auth";
 
@@ -52,7 +53,10 @@ async function imagePart(uri: string, name: string) {
     return new File([blob], name, { type: blob.type || "image/jpeg" });
   }
 
-  return { uri, name, type: "image/jpeg" } as unknown as Blob;
+  // SDK 57's global fetch (expo/fetch) only accepts Blob-like parts — the old
+  // React Native `{ uri, name, type }` object throws "Unsupported FormDataPart".
+  // expo-file-system's File implements Blob and streams the bytes from disk.
+  return new ExpoFile(uri) as unknown as Blob;
 }
 
 async function request<T>(path: string, options: RequestInit = {}, timeoutMs = 15000): Promise<T> {
@@ -79,7 +83,7 @@ async function request<T>(path: string, options: RequestInit = {}, timeoutMs = 1
     if (error instanceof ApiError) throw error;
     if (error instanceof Error && error.name === "AbortError") throw new ApiError("The request timed out. Check your connection and try again.", 0, "TIMEOUT");
     if (__DEV__) console.warn(`[api] ${options.method ?? "GET"} ${path} failed:`, error);
-    throw new ApiError("FitSync could not reach the backend. Check the API address and your connection.", 0, "NETWORK_ERROR");
+    throw new ApiError("Flairwise could not reach the backend. Check the API address and your connection.", 0, "NETWORK_ERROR");
   } finally {
     clearTimeout(timeout);
   }

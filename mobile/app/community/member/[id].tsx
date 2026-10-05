@@ -1,17 +1,21 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { mediaUrl } from "@/api/client";
 import { useCloset } from "@/api/queries";
-import { AppText, Eyebrow, Title } from "@/components/AppText";
+import { AppText, Punch, Title } from "@/components/AppText";
+import { Button } from "@/components/Button";
+import { PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
+import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
 import { SEED_MEMBER, SEED_POSTS } from "@/data/discover";
+import { Check, Plus } from "@/icons";
 import { useAuthStore } from "@/store/auth";
-import { colors, fonts, spacing } from "@/theme";
+import { colors, fonts, radius, spacing } from "@/theme";
 
-const GRID_HEIGHTS = [232, 206, 198, 228];
+const GRID_HEIGHTS = [232, 196, 198, 236];
 
 export default function MemberProfile() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -21,10 +25,7 @@ export default function MemberProfile() {
   const [following, setFollowing] = useState(false);
 
   const post = SEED_POSTS.find((entry) => entry.id === id);
-  const member = post
-    ? { ...SEED_MEMBER, initial: post.initial, handle: post.handle, name: post.name }
-    : SEED_MEMBER;
-
+  const member = post ? { ...SEED_MEMBER, initial: post.initial, handle: post.handle, name: post.name } : SEED_MEMBER;
   const photos = useMemo(
     () => (closet.data?.items ?? []).map((item) => mediaUrl(item.image_url)).filter(Boolean) as string[],
     [closet.data]
@@ -33,92 +34,74 @@ export default function MemberProfile() {
   if (!token) return <Redirect href="/(auth)/sign-in" />;
 
   return (
-    <Screen scroll bottomInset={false} contentStyle={styles.screen}>
-      <View style={styles.headerWrap}>
-        <PushHeader title="Member" onBack={() => router.back()} />
-      </View>
-
-      <View style={styles.identity}>
-        <View style={styles.avatar}>
-          <AppText style={styles.avatarText}>{member.initial}</AppText>
-        </View>
-        <View style={styles.identityCopy}>
-          <Eyebrow style={styles.handle}>{member.handle}</Eyebrow>
+    <Screen>
+      <PushHeader title="Member" onBack={() => router.back()} />
+      <Reveal>
+        <View style={styles.card}>
+          <View style={styles.avatar}><AppText style={styles.avatarText}>{member.initial}</AppText></View>
+          <Punch style={styles.handle}>{member.handle}</Punch>
           <Title style={styles.name}>{member.name}</Title>
           <AppText style={styles.bio}>{member.bio}</AppText>
+          <View style={styles.metrics}>
+            <Metric value={String(member.posts)} label="Posts" />
+            <View style={styles.rule} />
+            <Metric value={member.followers} label="Followers" />
+            <View style={styles.rule} />
+            <Metric value={String(member.challenges)} label="Challenges" />
+          </View>
+          <Button title={following ? "Following" : `Follow ${member.name.split(" ")[0]}`} icon={following ? Check : Plus}
+            variant={following ? "stage" : "accent"} onPress={() => setFollowing((v) => !v)} />
+        </View>
+      </Reveal>
+      <PreviewNote />
+
+      <View style={styles.posts}>
+        <Punch style={styles.label}>Their posts</Punch>
+        <View style={styles.grid}>
+          {[0, 1].map((col) => (
+            <View key={col} style={styles.column}>
+              {GRID_HEIGHTS.filter((_, i) => i % 2 === col).map((height, i) => {
+                const index = i * 2 + col;
+                return (
+                  <PressableScale key={index} accessibilityRole="button" accessibilityLabel="Open post"
+                    onPress={() => router.push(`/community/post/${SEED_POSTS[index % SEED_POSTS.length].id}`)} style={[styles.tile, { height }]}>
+                    {photos.length ? <Photo source={photos[index % photos.length]} /> : <View style={styles.placeholder} />}
+                  </PressableScale>
+                );
+              })}
+            </View>
+          ))}
         </View>
       </View>
-
-      <View style={styles.metrics}>
-        <Metric value={String(member.posts)} label="posts" />
-        <Metric value={member.followers} label="followers" />
-        <Metric value={String(member.challenges)} label="challenges" last />
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={following ? "Unfollow" : "Follow"}
-        onPress={() => setFollowing((v) => !v)}
-        style={[styles.followBtn, following ? styles.followBtnOn : styles.followBtnOff]}
-      >
-        <AppText style={[styles.followLabel, !following && styles.followLabelActive]}>
-          {following ? `Following — tap to unfollow` : `Follow ${member.name.split(" ")[0]}`}
-        </AppText>
-      </Pressable>
-
-      <AppText style={styles.postsLabel}>Their posts</AppText>
-      <View style={styles.grid}>
-        {GRID_HEIGHTS.map((height, index) => {
-          const image = photos[index % Math.max(photos.length, 1)];
-          return (
-            <Pressable
-              key={index}
-              accessibilityRole="button"
-              accessibilityLabel="Open post"
-              onPress={() => router.push(`/community/post/${SEED_POSTS[index % SEED_POSTS.length].id}`)}
-              style={[styles.gridTile, { height }]}
-            >
-              {image ? <Photo source={image} /> : <View style={styles.mediaPlaceholder} />}
-            </Pressable>
-          );
-        })}
-      </View>
-      <View style={{ height: 40 }} />
     </Screen>
   );
 }
 
-function Metric({ value, label, last }: { value: string; label: string; last?: boolean }) {
+function Metric({ value, label }: { value: string; label: string }) {
   return (
-    <View style={[styles.metric, last && styles.metricLast]}>
-      <AppText selectable style={styles.metricValue}>{value}</AppText>
-      <AppText style={styles.metricLabel}>{label}</AppText>
+    <View style={styles.metric}>
+      <AppText style={styles.metricValue}>{value}</AppText>
+      <Punch style={styles.metricLabel}>{label}</Punch>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
-  headerWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
-  identity: { flexDirection: "row", alignItems: "center", gap: spacing.lg, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.lg, borderBottomWidth: 1, borderColor: colors.stroke },
-  avatar: { width: 66, height: 66, backgroundColor: colors.rose, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: colors.white, fontSize: 26, fontFamily: fonts.semibold, fontWeight: "600" },
-  identityCopy: { flex: 1, gap: spacing.xs },
-  handle: { color: colors.muted },
-  name: { fontSize: 30, lineHeight: 28 },
-  bio: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: spacing.xs },
-  metrics: { flexDirection: "row", borderBottomWidth: 1, borderColor: colors.stroke },
-  metric: { flex: 1, paddingVertical: spacing.lg, paddingHorizontal: spacing.lg, borderRightWidth: 1, borderColor: colors.stroke },
-  metricLast: { borderRightWidth: 0 },
-  metricValue: { fontSize: 32, lineHeight: 32, fontFamily: fonts.semibold, fontWeight: "600", letterSpacing: 0, fontVariant: ["tabular-nums"] },
-  metricLabel: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0, marginTop: 7 },
-  followBtn: { height: 56, justifyContent: "center", paddingHorizontal: spacing.xl },
-  followBtnOff: { backgroundColor: colors.rose },
-  followBtnOn: { backgroundColor: "transparent", borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.strokeStrong },
-  followLabel: { color: colors.ink, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 13, letterSpacing: 0 },
-  followLabelActive: { color: colors.white },
-  postsLabel: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
-  gridTile: { width: "50%", backgroundColor: colors.surface, borderRightWidth: 1, borderBottomWidth: 1, borderColor: colors.stroke, overflow: "hidden" },
-  mediaPlaceholder: { flex: 1, backgroundColor: colors.surface }
+  card: { backgroundColor: colors.stage, borderRadius: radius.xl, padding: spacing.xl, gap: spacing.sm, alignItems: "center" },
+  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.flare, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: colors.stageRaised },
+  avatarText: { fontFamily: fonts.serif, fontSize: 42, lineHeight: 48 },
+  handle: { color: colors.onStageMuted, fontSize: 10, marginTop: spacing.xs },
+  name: { color: colors.onStage, fontSize: 34, lineHeight: 36, textAlign: "center" },
+  bio: { color: colors.onStageMuted, fontSize: 14, lineHeight: 20, textAlign: "center" },
+  metrics: { flexDirection: "row", alignItems: "center", alignSelf: "stretch", borderTopWidth: 1, borderColor: colors.stageLine, paddingTop: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
+  metric: { flex: 1, alignItems: "center", gap: 2 },
+  metricValue: { color: colors.onStage, fontFamily: fonts.serif, fontSize: 30, lineHeight: 34 },
+  metricLabel: { color: colors.onStageMuted, fontSize: 9 },
+  rule: { width: 1, height: 30, backgroundColor: colors.stageLine },
+  posts: { gap: spacing.sm },
+  label: { color: colors.muted },
+  grid: { flexDirection: "row", gap: spacing.md },
+  column: { flex: 1, gap: spacing.md },
+  tile: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.canvasSoft },
+  placeholder: { flex: 1, backgroundColor: colors.canvasSoft }
 });

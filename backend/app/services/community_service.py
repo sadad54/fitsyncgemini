@@ -25,7 +25,7 @@ def _to_post(row: Dict[str, Any], authors: Dict[str, Dict[str, Any]], liked_ids:
     return {
         "id": row["id"],
         "user_id": row["user_id"],
-        "author_name": author.get("display_name") or "FitSync member",
+        "author_name": author.get("display_name") or "Flairwise member",
         "content": row.get("caption") or "",
         "image_url": row.get("image_url"),
         "tags": row.get("tags") or [],
@@ -123,7 +123,7 @@ class CommunityService:
                 "id": c["id"],
                 "post_id": c["post_id"],
                 "user_id": c["user_id"],
-                "author_name": authors.get(c["user_id"], {}).get("display_name") or "FitSync member",
+                "author_name": authors.get(c["user_id"], {}).get("display_name") or "Flairwise member",
                 "content": c.get("content") or "",
                 "created_at": c["created_at"],
             }
@@ -149,7 +149,7 @@ class CommunityService:
             "id": row["id"],
             "post_id": row["post_id"],
             "user_id": row["user_id"],
-            "author_name": authors.get(user_id, {}).get("display_name") or "FitSync member",
+            "author_name": authors.get(user_id, {}).get("display_name") or "Flairwise member",
             "content": row["content"],
             "created_at": row["created_at"],
         }

@@ -16,20 +16,20 @@ from app.ml.clothing_classifier import clothing_classifier
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting FitSync Backend...")
+    logger.info("Starting Flairwise Backend...")
     await init_db()
     await init_cache()
     # The local ML model takes ~15s to load its weights on first use — do
     # that now instead of on a user's first "add item" request, where it
     # risks exceeding the mobile client's request timeout.
     asyncio.create_task(clothing_classifier.warmup())
-    logger.info("FitSync Backend started successfully!")
+    logger.info("Flairwise Backend started successfully!")
     yield
-    logger.info("Shutting down FitSync Backend...")
+    logger.info("Shutting down Flairwise Backend...")
 
 
 app = FastAPI(
-    title="FitSync API",
+    title="Flairwise API",
     description="AI-powered fashion recommendation and virtual try-on platform",
     version="1.0.0",
     lifespan=lifespan
@@ -62,7 +62,7 @@ app.include_router(locations.router, prefix=f"{settings.API_V1_STR}/locations", 
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to FitSync API", "version": "1.0.0"}
+    return {"message": "Welcome to Flairwise API", "version": "1.0.0"}
 
 
 @app.get("/health")

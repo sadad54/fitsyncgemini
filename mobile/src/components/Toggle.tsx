@@ -1,13 +1,16 @@
 import { Pressable, StyleSheet } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useDerivedValue, withSpring } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { SPRING } from "@/components/motion";
+import { SPRING, haptic } from "@/components/motion";
 import { colors } from "@/theme";
 
+/** Ink track when on, with a volt knob — readable at a glance without relying on colour alone (knob position). */
 export function Toggle({ value, onValueChange, accessibilityLabel }: { value: boolean; onValueChange: (next: boolean) => void; accessibilityLabel?: string }) {
   const progress = useDerivedValue(() => withSpring(value ? 1 : 0, SPRING), [value]);
   const track = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(progress.value, [0, 1], [colors.canvasSoft, colors.ink]) }));
-  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: progress.value * 20 }] }));
+  const knob = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], [colors.white, colors.accent]),
+    transform: [{ translateX: progress.value * 22 }]
+  }));
 
   return (
     <Pressable
@@ -16,7 +19,7 @@ export function Toggle({ value, onValueChange, accessibilityLabel }: { value: bo
       accessibilityState={{ checked: value }}
       hitSlop={8}
       onPress={() => {
-        if (process.env.EXPO_OS !== "web") Haptics.selectionAsync();
+        haptic.tick();
         onValueChange(!value);
       }}
     >
@@ -28,6 +31,6 @@ export function Toggle({ value, onValueChange, accessibilityLabel }: { value: bo
 }
 
 const styles = StyleSheet.create({
-  track: { width: 50, height: 30, borderRadius: 15, padding: 3, justifyContent: "center" },
-  knob: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.white, boxShadow: "0 1px 3px rgba(23,20,15,0.25)" }
+  track: { width: 54, height: 32, borderRadius: 16, padding: 3, justifyContent: "center", borderWidth: 1, borderColor: colors.strokeStrong },
+  knob: { width: 24, height: 24, borderRadius: 12, boxShadow: "0 1px 3px rgba(13,13,15,0.3)" }
 });

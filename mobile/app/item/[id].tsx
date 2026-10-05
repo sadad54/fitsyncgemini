@@ -3,10 +3,10 @@ import { ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { ChevronLeft, Sparkles, Trash2 } from "lucide-react-native";
+import { ChevronLeft, Sparkles, Trash2 } from "@/icons";
 import { useClosetItem, useDeleteClosetItem, useOutfits, useUpdateClosetItem, useCloset } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
-import { AppText, Caption, Heading, Title } from "@/components/AppText";
+import { AppText, Caption, Heading, Punch, Title } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -72,6 +72,7 @@ export default function ItemDetail() {
         <View style={styles.body}>
           <Reveal>
             <View style={styles.head}>
+              <Punch style={styles.kicker}>{item.data.subcategory || item.data.category}{item.data.brand ? ` · ${item.data.brand}` : ""}</Punch>
               <Title style={styles.title}>{item.data.name}</Title>
               <View style={styles.tags}>
                 {item.data.colors.map((color) => (
@@ -142,15 +143,16 @@ const styles = StyleSheet.create({
   heroBar: { position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: layout.gutter, paddingTop: spacing.sm },
   body: { paddingHorizontal: layout.gutter, paddingTop: spacing.xl, gap: spacing.xl },
   head: { gap: spacing.md },
-  title: { fontSize: 34, lineHeight: 38 },
+  title: { fontSize: 40, lineHeight: 42 },
+  kicker: { color: colors.muted, marginBottom: -4 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  tag: { flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surface },
+  tag: { flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.stroke },
   dot: { width: 10, height: 10, borderRadius: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.strokeStrong },
   tagText: { fontSize: 13, color: colors.inkSoft, fontFamily: fonts.medium, textTransform: "capitalize" },
   section: { gap: spacing.sm },
-  lookRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.sm },
+  lookRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.sm, borderWidth: 1, borderColor: colors.stroke },
   lookName: { flex: 1, fontSize: 15, fontFamily: fonts.medium },
-  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.lg },
+  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.stroke },
   field: { gap: spacing.sm },
   input: { minHeight: 50, borderRadius: radius.md, backgroundColor: colors.canvas, paddingHorizontal: spacing.lg, fontSize: 16, color: colors.ink, fontFamily: fonts.regular },
   notes: { minHeight: 96, paddingTop: spacing.md, textAlignVertical: "top" },

@@ -151,7 +151,7 @@ export const SEED_COMMENTS: Comment[] = [
 export const SEED_CHALLENGES: Challenge[] = [
   { id: "ch1", title: "Monochrome week", difficulty: "Medium", shape: "square", reward: "Featured slot on Discover for the top entry.", participants: 412, days: 5 },
   { id: "ch2", title: "Second-hand only", difficulty: "Easy", shape: "circle", reward: "A resale credit for three qualifying posts.", participants: 1180, days: 12 },
-  { id: "ch3", title: "Five pieces, seven days", difficulty: "Hard", shape: "moonDown", reward: "Wardrobe audit with a FitSync stylist.", participants: 206, days: 2 }
+  { id: "ch3", title: "Five pieces, seven days", difficulty: "Hard", shape: "moonDown", reward: "Wardrobe audit with a Flairwise stylist.", participants: 206, days: 2 }
 ];
 
 export const SEED_TRENDS: Trend[] = [

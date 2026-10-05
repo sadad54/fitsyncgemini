@@ -2,7 +2,7 @@
 > The Flutter instructions below are historical. For the new asynchronous virtual try-on prototype,
 > follow [docs/VIRTUAL_TRYON.md](docs/VIRTUAL_TRYON.md).
 
-# FitSync - AI-Powered Fashion Community App
+# Flairwise - AI-Powered Fashion Community App
 
 A modern, user-centric fashion application that combines AI-powered outfit suggestions, virtual try-on capabilities, and a vibrant community platform. Built with Flutter and designed for the future of fashion technology.
 
@@ -77,7 +77,7 @@ lib/
 
 ## 🎨 Design System
 
-FitSync uses a modern, futuristic design system with:
+Flairwise uses a modern, futuristic design system with:
 - **Primary Colors**: Electric cyan (#00E5FF), Magenta (#FF2D95), Violet (#8A63FF)
 - **Typography**: Space Grotesk for headings, Inter for body text
 - **Components**: Consistent button styles, cards, and navigation elements
@@ -91,7 +91,7 @@ FitSync uses a modern, futuristic design system with:
 3. Update Firebase configuration if needed
 
 ### Backend Integration
-The app is designed to work with the FitSync backend API. See `BACKEND_INTEGRATION_README.md` for detailed setup instructions.
+The app is designed to work with the Flairwise backend API. See `BACKEND_INTEGRATION_README.md` for detailed setup instructions.
 
 ## 📊 Community Features
 
@@ -138,5 +138,5 @@ For support, email support@fitsync.com or join our Discord community.
 
 ---
 
-**FitSync** - Where AI meets fashion, and community inspires style. ✨
+**Flairwise** - Where AI meets fashion, and community inspires style. ✨
 

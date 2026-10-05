@@ -1,6 +1,6 @@
-# FitSync Mobile
+# Flairwise Mobile
 
-The production-direction Expo app for FitSync's wardrobe and AI styling loop.
+The production-direction Expo app for Flairwise's wardrobe and AI styling loop.
 
 ## What works
 

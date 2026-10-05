@@ -1,4 +1,4 @@
-# FitSync — Flow Overhaul Plan
+# Flairwise — Flow Overhaul Plan
 
 Status: proposal, pre-implementation. Scope: navigation, screen responsibilities and
 feature linking. Visual design is the *next* phase; this plan deliberately says nothing
@@ -201,12 +201,12 @@ Grounded in what the app can actually deliver; numbers to be validated, not assu
 | Daily habit | Morning push: "Today's look is ready (14°, rain)" → opens Today. User picks the time. | Today hero |
 | Closet completeness | "Add 2 more tops for better looks" prompts when outfit variety is low. | Add item |
 | Weekly social | Challenge reminders, entry from Looks in two taps. | Discover |
-| Share loop | Try-on result share image with subtle FitSync mark → installs. | Try-on result |
+| Share loop | Try-on result share image with subtle Flairwise mark → installs. | Try-on result |
 
 **Monetisation (recommended):** Freemium where the *metered cost* sits behind the paywall.
 - Free: unlimited closet, unlimited outfit generation, a small number of try-ons per week
   (backend already enforces `TRYON_DAILY_USER_LIMIT`).
-- FitSync Pro (monthly/annual): more try-ons, try-on history kept longer, multi-item outfits on you.
+- Flairwise Pro (monthly/annual): more try-ons, try-on history kept longer, multi-item outfits on you.
 - Paywall moment: *after* the first successful try-on, when the user hits the free limit —
   never before they have seen value.
 - Implementation: Google Play Billing / StoreKit through RevenueCat (works with Expo).

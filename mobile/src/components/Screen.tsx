@@ -12,7 +12,8 @@ export function Screen({
   footer,
   refreshing,
   onRefresh,
-  tabbed = false
+  tabbed = false,
+  tone = "light"
 }: PropsWithChildren<{
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
@@ -23,26 +24,29 @@ export function Screen({
   onRefresh?: () => void;
   /** Leaves room for the floating tab bar. */
   tabbed?: boolean;
+  /** "stage" = the dark hero surface (fitting room, boot, sign-in). */
+  tone?: "light" | "stage";
 }>) {
+  const stage = tone === "stage";
   const content = (
     <View style={[styles.content, bottomInset && styles.bottomInset, tabbed && styles.tabbed, contentStyle]}>{children}</View>
   );
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
+    <View style={[styles.root, stage && styles.rootStage]}>
+      <StatusBar style={stage ? "light" : "dark"} />
       <SafeAreaView style={styles.safe} edges={footer ? ["top", "left", "right", "bottom"] : ["top", "left", "right"]}>
         {scroll ? (
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scroll}
-            refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.muted} /> : undefined}
+            refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={stage ? colors.onStageMuted : colors.muted} /> : undefined}
           >
             {content}
           </ScrollView>
         ) : content}
-        {footer ? <View style={styles.footer}>{footer}</View> : null}
+        {footer ? <View style={[styles.footer, stage && styles.footerStage]}>{footer}</View> : null}
       </SafeAreaView>
     </View>
   );
@@ -50,10 +54,12 @@ export function Screen({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.canvas },
+  rootStage: { backgroundColor: colors.stage },
   safe: { flex: 1 },
   scroll: { flexGrow: 1 },
   content: { flex: 1, paddingHorizontal: layout.gutter, paddingTop: spacing.sm, gap: spacing.xxl },
   bottomInset: { paddingBottom: spacing.xxxl },
-  tabbed: { paddingBottom: 120 },
-  footer: { paddingHorizontal: layout.gutter, paddingTop: spacing.md, paddingBottom: spacing.sm, gap: spacing.sm, backgroundColor: colors.canvas, borderTopWidth: 1, borderColor: colors.stroke }
+  tabbed: { paddingBottom: 132 },
+  footer: { paddingHorizontal: layout.gutter, paddingTop: spacing.md, paddingBottom: spacing.sm, gap: spacing.sm, backgroundColor: colors.canvas, borderTopWidth: 1, borderColor: colors.stroke },
+  footerStage: { backgroundColor: colors.stage, borderColor: colors.stageLine }
 });

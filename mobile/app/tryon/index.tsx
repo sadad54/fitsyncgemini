@@ -3,10 +3,10 @@ import { ScrollView, Share, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
-import { Camera, Check, ImagePlus, Images, Plus, Share2, Trash2, UserRound, X } from "lucide-react-native";
+import { Camera, Check, ImagePlus, Images, Plus, Share2, Trash2, UserRound, X } from "@/icons";
 import { useCloset, useCreateTryOn, useDeleteTryOn, useTryOn } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
-import { AppText, Caption, Heading, Title } from "@/components/AppText";
+import { AppText, Caption, Em, Heading, Punch, Title } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FittingRoom } from "@/components/FittingRoom";
@@ -101,18 +101,18 @@ export default function TryOn() {
 
   const footer = completed ? (
     <View style={styles.footerRow}>
-      <IconButton icon={Share2} label="Share" tone="solid" size={54} onPress={() => resultUri && Share.share({ url: resultUri, message: "Styled with FitSync" })} />
-      <View style={styles.flex}><Button title="Done" icon={Check} onPress={() => router.navigate("/looks")} /></View>
+      <IconButton icon={Share2} label="Share" tone="stage" size={56} onPress={() => resultUri && Share.share({ url: resultUri, message: "Styled with Flairwise" })} />
+      <View style={styles.flex}><Button title="Done" icon={Check} variant="stage" onPress={() => router.navigate("/looks")} /></View>
     </View>
   ) : working ? (
-    <Button title="Keep browsing — we'll keep fitting" variant="secondary" onPress={() => router.navigate("/today")} />
+    <Button title="Keep browsing — we'll keep fitting" variant="stage" onPress={() => router.navigate("/today")} />
   ) : (
     <Button title="Try it on" icon={ImagePlus} variant="accent" disabled={!photo || !validPicks} onPress={() => start()} />
   );
 
   return (
-    <Screen footer={footer} contentStyle={styles.content}>
-      <PushHeader title={completed ? "On you" : working ? "Fitting" : "Try on"} onBack={() => router.back()}
+    <Screen tone="stage" footer={footer} contentStyle={styles.content}>
+      <PushHeader tone="stage" title={completed ? "On you" : working ? "Fitting room" : "Try on"} onBack={() => router.back()}
         actionIcon={result && !working ? Trash2 : undefined} actionLabel="Delete this try-on" onAction={() => setDeleteOpen(true)} />
 
       <Reveal>
@@ -141,17 +141,17 @@ export default function TryOn() {
           {photo ? (
             <View style={styles.photoRow}>
               <View style={styles.flex}>
-                <Heading>{personUri && personUri !== fitPhoto.uri ? "Using this photo" : "Your fit photo"}</Heading>
-                <Caption>Full body, facing the camera, plain background.</Caption>
+                <Heading style={styles.onStage}>{personUri && personUri !== fitPhoto.uri ? "Using this photo" : "Your fit photo"}</Heading>
+                <Caption style={styles.onStageMuted}>Full body, facing the camera, plain background.</Caption>
               </View>
-              <IconButton icon={Camera} label="Take a new photo" tone="solid" onPress={() => pick("camera")} />
-              <IconButton icon={Images} label="Choose from library" tone="solid" onPress={() => pick("library")} />
+              <IconButton icon={Camera} label="Take a new photo" tone="stage" onPress={() => pick("camera")} />
+              <IconButton icon={Images} label="Choose from library" tone="stage" onPress={() => pick("library")} />
             </View>
           ) : null}
 
           <View style={styles.garmentsHead}>
-            <Heading>Trying on</Heading>
-            <Caption>{validPicks ? `${picks.length} ${picks.length === 1 ? "piece" : "pieces"}` : "Pick a dress, or a top and bottom"}</Caption>
+            <Punch style={styles.onStage}>Trying on</Punch>
+            <Caption style={styles.onStageMuted}>{validPicks ? `${picks.length} ${picks.length === 1 ? "piece" : "pieces"}` : "Pick a dress, or a top and bottom"}</Caption>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.garments}>
             {picks.map((item) => (
@@ -163,19 +163,22 @@ export default function TryOn() {
               </Animated.View>
             ))}
             <PressableScale accessibilityRole="button" accessibilityLabel="Choose pieces from your closet" onPress={() => router.navigate("/closet")} style={[styles.garment, styles.garmentAdd]}>
-              <Plus size={22} color={colors.inkSoft} />
+              <Plus size={22} color={colors.accent} />
               <AppText style={styles.garmentAddText}>Closet</AppText>
             </PressableScale>
           </ScrollView>
-          <Caption>Your photo is sent securely to generate the image and kept for up to 7 days. Results are a visual preview, not a size guide.</Caption>
+          <Caption style={styles.onStageMuted}>Your photo is sent securely to generate the image and kept for up to 7 days. Results are a visual preview, not a size guide.</Caption>
         </Animated.View>
       ) : null}
 
       {completed ? (
         <Reveal delay={900}>
           <View style={styles.doneRow}>
-            <Title style={styles.flex}>Saved to Looks</Title>
-            <Button title="Try another" variant="secondary" compact stretch={false} onPress={again} />
+            <View style={styles.flex}>
+              <Punch style={styles.doneKicker}>Saved to Looks</Punch>
+              <Title style={styles.doneTitle}>Looking <Em style={styles.doneEm}>good.</Em></Title>
+            </View>
+            <Button title="Try another" variant="stage" compact stretch={false} onPress={again} />
           </View>
         </Reveal>
       ) : null}
@@ -183,7 +186,7 @@ export default function TryOn() {
       {job.error ? (
         <View style={styles.failed}>
           <AppText style={styles.failedNote}>{job.error.message}</AppText>
-          <Button title="Reconnect" compact stretch={false} variant="secondary" onPress={() => job.refetch()} />
+          <Button title="Reconnect" compact stretch={false} variant="primary" onPress={() => job.refetch()} />
         </View>
       ) : null}
       {[pickerError, closet.error?.message, create.error?.message, remove.error?.message].filter(Boolean).map((message, i) =>
@@ -198,12 +201,12 @@ export default function TryOn() {
 function PhotoPrompt({ onCamera, onLibrary }: { onCamera: () => void; onLibrary: () => void }) {
   return (
     <View style={styles.prompt}>
-      <View style={styles.promptIcon}><UserRound size={30} color={colors.ink} strokeWidth={1.5} /></View>
+      <View style={styles.promptIcon}><UserRound size={30} color={colors.ink} strokeWidth={1.6} /></View>
       <Title style={styles.promptTitle}>Add your fit photo</Title>
       <AppText style={styles.promptNote}>One full-body photo, saved on this phone and reused for every try-on.</AppText>
       <View style={styles.promptActions}>
-        <Button title="Camera" icon={Camera} compact stretch={false} onPress={onCamera} />
-        <Button title="Library" icon={Images} compact stretch={false} variant="secondary" onPress={onLibrary} />
+        <Button title="Camera" icon={Camera} compact stretch={false} variant="accent" onPress={onCamera} />
+        <Button title="Library" icon={Images} compact stretch={false} variant="stage" onPress={onLibrary} />
       </View>
     </View>
   );
@@ -217,17 +220,22 @@ const styles = StyleSheet.create({
   garmentsHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginTop: spacing.sm },
   garments: { gap: spacing.sm },
   garment: { width: 96, height: 120, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.surface },
+  onStage: { color: colors.onStage },
+  onStageMuted: { color: colors.onStageMuted },
+  doneKicker: { color: colors.accent, fontSize: 10 },
+  doneTitle: { color: colors.onStage, fontSize: 36, lineHeight: 38, marginTop: 4 },
+  doneEm: { color: colors.accent },
   garmentDrop: { position: "absolute", top: 4, right: 4 },
-  garmentAdd: { alignItems: "center", justifyContent: "center", gap: 4, borderWidth: 1, borderStyle: "dashed", borderColor: colors.strokeStrong, backgroundColor: "transparent" },
-  garmentAddText: { fontSize: 13, color: colors.inkSoft, fontFamily: fonts.medium },
+  garmentAdd: { alignItems: "center", justifyContent: "center", gap: 4, borderWidth: 1, borderStyle: "dashed", borderColor: "rgba(212,255,58,0.5)", backgroundColor: "transparent" },
+  garmentAddText: { fontSize: 13, color: colors.onStage, fontFamily: fonts.medium },
   failed: { gap: spacing.sm, backgroundColor: colors.dangerWash, borderRadius: radius.lg, padding: spacing.lg, alignItems: "flex-start" },
   failedNote: { color: colors.inkSoft, fontSize: 15, lineHeight: 22 },
   doneRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   footerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  error: { color: colors.danger, fontSize: 14 },
+  error: { color: "#FF8A73", fontSize: 14 },
   prompt: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, gap: spacing.md },
-  promptIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  promptTitle: { textAlign: "center" },
-  promptNote: { textAlign: "center", color: colors.inkSoft, fontSize: 15, lineHeight: 22, maxWidth: 260 },
+  promptIcon: { width: 68, height: 68, borderRadius: 34, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  promptTitle: { textAlign: "center", color: colors.onStage, fontSize: 32, lineHeight: 36 },
+  promptNote: { textAlign: "center", color: colors.onStageMuted, fontSize: 15, lineHeight: 22, maxWidth: 260 },
   promptActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }
 });

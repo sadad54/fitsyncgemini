@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
-import { ArrowRight, Check, CloudSun, Heart, ImagePlus, Shirt, Shuffle, Sparkles, UserRound } from "lucide-react-native";
+import { ArrowRight, Check, CloudSun, Heart, ImagePlus, Shirt, Shuffle, Sparkles, UserRound } from "@/icons";
 import { useCloset, useOutfits, useProfile, useSaveOutfit, useTryOns } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
-import { AppText, Caption, Display, Eyebrow, Heading, Title } from "@/components/AppText";
+import { AppText, Caption, Display, Em, Heading, Punch, Title } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { Photo } from "@/components/Photo";
-import { PressableScale, Reveal, SETTLE, Skeleton } from "@/components/motion";
+import { PressableScale, PulseDot, Reveal, SETTLE, Skeleton } from "@/components/motion";
 import { OutfitCollage } from "@/components/outfit-rail";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/section-header";
@@ -70,8 +70,8 @@ export default function Today() {
       <Reveal>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Eyebrow>{dateLine}</Eyebrow>
-            <Display style={styles.hello}>{greeting()}{firstName ? `,\n${firstName}` : ""}</Display>
+            <Punch style={styles.date}>{dateLine}</Punch>
+            <Display style={styles.hello}>{greeting()}{firstName ? <>,{"\n"}<Em>{firstName}.</Em></> : "."}</Display>
           </View>
           <IconButton icon={UserRound} label="Profile and settings" tone="solid" onPress={() => router.push("/profile")} />
         </View>
@@ -79,14 +79,14 @@ export default function Today() {
 
       <Reveal delay={80}>
         {closet.isLoading || outfits.isLoading ? (
-          <View style={styles.card}><Skeleton style={{ height: 320, borderRadius: radius.lg }} /><Skeleton style={{ height: 22, width: "60%" }} /></View>
+          <View style={styles.card}><Skeleton tone="stage" style={{ height: 330, borderRadius: radius.lg }} /><Skeleton tone="stage" style={{ height: 26, width: "60%" }} /></View>
         ) : items.length < 2 ? (
           <EmptyCloset count={items.length} />
         ) : (
           <View style={styles.card}>
             <View style={styles.cardTop}>
-              <View style={styles.badge}><Sparkles size={13} color={colors.accent} strokeWidth={2.2} /><AppText style={styles.badgeText}>Today's look</AppText></View>
-              {weather ? <View style={styles.weather}><CloudSun size={14} color={colors.inkSoft} /><AppText style={styles.weatherText}>{weather}</AppText></View> : null}
+              <View style={styles.badge}><PulseDot size={7} /><Punch style={styles.badgeText}>Today's look</Punch></View>
+              {weather ? <View style={styles.weather}><CloudSun size={14} color={colors.onStage} /><AppText style={styles.weatherText}>{weather}</AppText></View> : null}
             </View>
             {todays && !generate.isPending ? (
               <>
@@ -100,22 +100,22 @@ export default function Today() {
                     <Button title="Try it on" icon={Sparkles} variant="accent" disabled={!canTry}
                       onPress={() => router.push(tryOnHref(lookItems, "&auto=1"))} />
                   </View>
-                  <IconButton icon={Shuffle} label="Style a different look" tone="solid" size={54}
+                  <IconButton icon={Shuffle} label="Style a different look" tone="stage" size={56}
                     onPress={() => style({ occasion: todays.occasion || "casual", weather: true, askForLocation: false }).catch(() => {})} />
-                  <IconButton icon={Heart} label={isSaved ? "Saved to Looks" : "Save to Looks"} tone="solid" size={54}
-                    color={isSaved ? colors.danger : colors.ink} filled={isSaved}
+                  <IconButton icon={Heart} label={isSaved ? "Saved to Looks" : "Save to Looks"} tone="stage" size={56}
+                    color={isSaved ? colors.flare : colors.onStage} filled={isSaved}
                     onPress={() => !isSaved && save.mutate(todays.id)} />
                 </View>
-                {!canTry ? <Caption>Try-on works with tops, bottoms and dresses — this look has none.</Caption> : null}
+                {!canTry ? <Caption style={styles.onStageMuted}>Try-on works with tops, bottoms and dresses — this look has none.</Caption> : null}
               </>
             ) : (
               <View style={styles.styling}>
-                <Skeleton style={{ height: 330, borderRadius: radius.lg }} />
+                <Skeleton tone="stage" style={{ height: 330, borderRadius: radius.lg }} />
                 <View style={styles.stylingRow}>
-                  <Sparkles size={16} color={colors.accent} />
+                  <PulseDot />
                   <AppText style={styles.stylingText}>{generate.isPending ? "Styling today's look from your closet…" : "Your look for today isn't styled yet."}</AppText>
                 </View>
-                {!generate.isPending ? <Button title="Style today's look" icon={Sparkles} onPress={() => style({ occasion: "casual", weather: true, askForLocation: true }).catch(() => {})} /> : null}
+                {!generate.isPending ? <Button title="Style today's look" icon={Sparkles} variant="accent" onPress={() => style({ occasion: "casual", weather: true, askForLocation: true }).catch(() => {})} /> : null}
               </View>
             )}
             {generate.error ? <AppText selectable style={styles.error}>{generate.error.message}</AppText> : null}
@@ -148,11 +148,11 @@ export default function Today() {
       <Reveal delay={240}>
         <PressableScale accessibilityRole="button" accessibilityLabel="Open Discover" onPress={() => router.navigate("/discover")} style={styles.discover}>
           <View style={styles.flex}>
-            <Eyebrow style={styles.discoverEyebrow}>This week</Eyebrow>
-            <Title style={styles.discoverTitle}>Monochrome week</Title>
+            <Punch style={styles.discoverEyebrow}>This week's challenge</Punch>
+            <Title style={styles.discoverTitle}>Monochrome <Em>week</Em></Title>
             <AppText style={styles.discoverNote}>Style one colour head to toe — from what you already own.</AppText>
           </View>
-          <View style={styles.discoverArrow}><ArrowRight size={20} color={colors.ink} /></View>
+          <View style={styles.discoverArrow}><ArrowRight size={20} color={colors.onInk} /></View>
         </PressableScale>
       </Reveal>
     </Screen>
@@ -163,12 +163,12 @@ function EmptyCloset({ count }: { count: number }) {
   return (
     <View style={[styles.card, styles.emptyCard]}>
       <View style={styles.emptyArt}>
-        <View style={[styles.emptyTile, { transform: [{ rotate: "-8deg" }] }]}><Shirt size={30} color={colors.inkSoft} strokeWidth={1.4} /></View>
-        <View style={[styles.emptyTile, styles.emptyTileFront, { transform: [{ rotate: "6deg" }] }]}><ImagePlus size={30} color={colors.accent} strokeWidth={1.4} /></View>
+        <View style={[styles.emptyTile, { transform: [{ rotate: "-8deg" }] }]}><Shirt size={30} color={colors.onStage} strokeWidth={1.4} /></View>
+        <View style={[styles.emptyTile, styles.emptyTileFront, { transform: [{ rotate: "6deg" }] }]}><ImagePlus size={30} color={colors.ink} strokeWidth={1.6} /></View>
       </View>
       <Title style={styles.emptyTitle}>{count ? "One more piece and we can style you" : "Start with three pieces"}</Title>
-      <AppText style={styles.emptyNote}>Photograph clothes you already own. FitSync styles outfits from them and shows them on you.</AppText>
-      <Button title={count ? "Add another piece" : "Add your first piece"} icon={ImagePlus} onPress={() => router.push("/add-item")} />
+      <AppText style={styles.emptyNote}>Photograph clothes you already own. Flairwise styles outfits from them and shows them on you.</AppText>
+      <Button title={count ? "Add another piece" : "Add your first piece"} icon={ImagePlus} variant="accent" onPress={() => router.push("/add-item")} />
     </View>
   );
 }
@@ -187,7 +187,7 @@ function Checklist({ steps }: { steps: { done: boolean; label: string; action: (
       {steps.map((step) => (
         <PressableScale key={step.label} accessibilityRole="button" accessibilityLabel={step.label} accessibilityState={{ checked: step.done }}
           disabled={step.done} onPress={step.action} style={styles.checkRow}>
-          <View style={[styles.checkDot, step.done && styles.checkDotDone]}>{step.done ? <Check size={13} color={colors.onInk} strokeWidth={3} /> : null}</View>
+          <View style={[styles.checkDot, step.done && styles.checkDotDone]}>{step.done ? <Check size={14} color={colors.ink} strokeWidth={3} /> : null}</View>
           <AppText style={[styles.checkLabel, step.done && styles.checkLabelDone]}>{step.label}</AppText>
           {!step.done ? <ArrowRight size={16} color={colors.muted} /> : null}
         </PressableScale>
@@ -198,45 +198,47 @@ function Checklist({ steps }: { steps: { done: boolean; label: string; action: (
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  onStageMuted: { color: colors.onStageMuted },
   header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md, paddingTop: spacing.md },
-  headerCopy: { flex: 1, gap: spacing.xs },
-  hello: { fontSize: 42, lineHeight: 44 },
-  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.md, gap: spacing.lg, boxShadow: "0 1px 2px rgba(23,20,15,0.04), 0 12px 32px rgba(23,20,15,0.07)" },
+  headerCopy: { flex: 1, gap: spacing.sm },
+  date: { color: colors.muted },
+  hello: { fontSize: 46, lineHeight: 46 },
+  card: { backgroundColor: colors.stage, borderRadius: radius.xl, padding: spacing.md, gap: spacing.lg, boxShadow: "0 24px 48px rgba(13,13,15,0.28)" },
   cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.xs, paddingTop: spacing.xs },
-  badge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.accentWash, paddingHorizontal: spacing.md, height: 30, borderRadius: radius.pill },
-  badgeText: { color: colors.accent, fontSize: 13, fontFamily: fonts.semibold, fontWeight: "600" },
-  weather: { flexDirection: "row", alignItems: "center", gap: 6 },
-  weatherText: { color: colors.inkSoft, fontSize: 13, fontFamily: fonts.medium, textTransform: "capitalize" },
-  copy: { gap: spacing.xs, paddingHorizontal: spacing.xs },
-  lookName: { fontSize: 30, lineHeight: 34 },
-  explain: { color: colors.inkSoft, fontSize: 15, lineHeight: 22 },
+  badge: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: spacing.md, height: 30, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.stageLine },
+  badgeText: { color: colors.onStage, fontSize: 10, lineHeight: 12 },
+  weather: { flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.stageRaised },
+  weatherText: { color: colors.onStage, fontSize: 13, fontFamily: fonts.medium, textTransform: "capitalize" },
+  copy: { gap: spacing.sm, paddingHorizontal: spacing.xs },
+  lookName: { fontSize: 34, lineHeight: 36, color: colors.onStage },
+  explain: { color: colors.onStageMuted, fontSize: 15, lineHeight: 22 },
   actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   styling: { gap: spacing.lg },
   stylingRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.xs },
-  stylingText: { flex: 1, color: colors.inkSoft, fontSize: 15, fontFamily: fonts.medium },
-  error: { color: colors.danger, fontSize: 14, paddingHorizontal: spacing.xs },
+  stylingText: { flex: 1, color: colors.onStage, fontSize: 15, fontFamily: fonts.medium },
+  error: { color: "#FF8A73", fontSize: 14, paddingHorizontal: spacing.xs },
   emptyCard: { padding: spacing.xl, alignItems: "center" },
   emptyArt: { height: 130, width: 180, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
-  emptyTile: { position: "absolute", width: 92, height: 116, borderRadius: radius.lg, backgroundColor: colors.canvas, alignItems: "center", justifyContent: "center", left: 22, borderWidth: 1, borderColor: colors.stroke },
-  emptyTileFront: { left: 70, top: 18, backgroundColor: colors.accentWash, borderColor: "transparent" },
-  emptyTitle: { textAlign: "center", fontSize: 28, lineHeight: 32 },
-  emptyNote: { textAlign: "center", color: colors.inkSoft, fontSize: 15, lineHeight: 22, marginBottom: spacing.sm },
-  checklist: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },
+  emptyTile: { position: "absolute", width: 92, height: 116, borderRadius: radius.lg, backgroundColor: colors.stageRaised, alignItems: "center", justifyContent: "center", left: 22, borderWidth: 1, borderColor: colors.stageLine },
+  emptyTileFront: { left: 70, top: 18, backgroundColor: colors.accent, borderColor: "transparent" },
+  emptyTitle: { textAlign: "center", fontSize: 30, lineHeight: 34, color: colors.onStage },
+  emptyNote: { textAlign: "center", color: colors.onStageMuted, fontSize: 15, lineHeight: 22, marginBottom: spacing.sm },
+  checklist: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: colors.stroke },
   checkHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  checkCount: { color: colors.muted, fontSize: 14, fontFamily: fonts.medium, fontVariant: ["tabular-nums"] },
-  track: { height: 6, borderRadius: 3, backgroundColor: colors.canvasSoft, overflow: "hidden", marginBottom: spacing.xs },
-  trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
+  checkCount: { color: colors.ink, fontSize: 14, fontFamily: fonts.semibold, fontVariant: ["tabular-nums"] },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.canvasSoft, overflow: "hidden", marginBottom: spacing.xs },
+  trackFill: { height: 8, borderRadius: 4, backgroundColor: colors.ink, borderRightWidth: 8, borderColor: colors.accent },
   checkRow: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: spacing.md },
-  checkDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.strokeStrong, alignItems: "center", justifyContent: "center" },
-  checkDotDone: { backgroundColor: colors.ink, borderColor: colors.ink },
+  checkDot: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: colors.strokeStrong, alignItems: "center", justifyContent: "center" },
+  checkDotDone: { backgroundColor: colors.accent, borderColor: colors.ink },
   checkLabel: { flex: 1, fontSize: 15, fontFamily: fonts.medium },
   checkLabelDone: { color: colors.muted, textDecorationLine: "line-through" },
   section: { gap: spacing.md },
-  continueRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.sm, paddingRight: spacing.lg },
+  continueRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.sm, paddingRight: spacing.lg, borderWidth: 1, borderColor: colors.stroke },
   continueThumb: { width: 64, height: 80, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.canvasSoft },
-  discover: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.ink, borderRadius: radius.xl, padding: spacing.xl },
-  discoverEyebrow: { color: "rgba(250,248,244,0.6)" },
-  discoverTitle: { color: colors.onInk, fontSize: 30, lineHeight: 34, marginTop: 2 },
-  discoverNote: { color: "rgba(250,248,244,0.75)", fontSize: 15, lineHeight: 21, marginTop: spacing.xs },
-  discoverArrow: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.onInk, alignItems: "center", justifyContent: "center" }
+  discover: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.flare, borderRadius: radius.xl, padding: spacing.xl, overflow: "hidden" },
+  discoverEyebrow: { color: colors.ink, fontSize: 10, opacity: 0.75 },
+  discoverTitle: { color: colors.ink, fontSize: 34, lineHeight: 36, marginTop: 4 },
+  discoverNote: { color: colors.ink, fontSize: 15, lineHeight: 21, marginTop: spacing.xs, opacity: 0.85 },
+  discoverArrow: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" }
 });

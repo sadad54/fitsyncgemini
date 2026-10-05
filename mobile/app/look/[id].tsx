@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronRight, CloudSun, Heart, Sparkles } from "lucide-react-native";
+import { ChevronRight, CloudSun, Heart, Sparkles } from "@/icons";
 import { useCloset, useFavoriteOutfit, useOutfitFeedback, useOutfits } from "@/api/queries";
 import { mediaUrl } from "@/api/client";
 import { AppText, Caption, Heading, Title } from "@/components/AppText";
@@ -48,7 +48,7 @@ export default function LookDetail() {
           <View style={styles.tags}>
             <View style={styles.tag}><AppText style={styles.tagText}>{outfit.occasion}</AppText></View>
             {weatherLabel(outfit.weather_context) ? <View style={styles.tag}><CloudSun size={13} color={colors.inkSoft} /><AppText style={styles.tagText}>{weatherLabel(outfit.weather_context)}</AppText></View> : null}
-            {isFavorite ? <View style={styles.tag}><Heart size={12} color={colors.danger} fill={colors.danger} /><AppText style={styles.tagText}>Favourite</AppText></View> : null}
+            {isFavorite ? <View style={styles.tag}><Heart size={12} color={colors.flare} fill={colors.flare} /><AppText style={styles.tagText}>Favourite</AppText></View> : null}
           </View>
           <Title style={styles.name}>{outfit.name}</Title>
           <AppText style={styles.explain}>{outfit.explanation}</AppText>
@@ -79,12 +79,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   meta: { gap: spacing.md },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  tag: { flexDirection: "row", alignItems: "center", gap: 5, height: 28, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surface },
+  tag: { flexDirection: "row", alignItems: "center", gap: 5, height: 30, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.stroke },
   tagText: { fontSize: 13, color: colors.inkSoft, fontFamily: fonts.medium, textTransform: "capitalize" },
-  name: { fontSize: 34, lineHeight: 38 },
+  name: { fontSize: 40, lineHeight: 42 },
   explain: { color: colors.inkSoft, fontSize: 16, lineHeight: 24 },
   pieces: { gap: spacing.sm },
-  piece: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.sm, paddingRight: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg },
+  piece: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.sm, paddingRight: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.stroke },
   thumb: { width: 56, height: 70, borderRadius: radius.sm, overflow: "hidden", backgroundColor: colors.canvasSoft },
   pieceName: { fontSize: 15, fontFamily: fonts.medium },
   capitalize: { textTransform: "capitalize" }

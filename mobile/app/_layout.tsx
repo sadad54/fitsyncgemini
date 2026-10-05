@@ -1,11 +1,18 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold } from "@expo-google-fonts/geist";
-import { InstrumentSerif_400Regular } from "@expo-google-fonts/instrument-serif";
+// Per-weight imports: the package roots pull every weight's .ttf into the bundle.
+import { Geist_400Regular } from "@expo-google-fonts/geist/400Regular";
+import { Geist_500Medium } from "@expo-google-fonts/geist/500Medium";
+import { Geist_600SemiBold } from "@expo-google-fonts/geist/600SemiBold";
+import { Geist_700Bold } from "@expo-google-fonts/geist/700Bold";
+import { InstrumentSerif_400Regular } from "@expo-google-fonts/instrument-serif/400Regular";
+import { InstrumentSerif_400Regular_Italic } from "@expo-google-fonts/instrument-serif/400Regular_Italic";
+import { Archivo_800ExtraBold } from "@expo-google-fonts/archivo/800ExtraBold";
+import { BootBlank, BootSplash } from "@/components/BootSplash";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/auth";
 import { colors } from "@/theme";
@@ -42,24 +49,22 @@ export default function RootLayout() {
     Geist_500Medium,
     Geist_600SemiBold,
     Geist_700Bold,
-    InstrumentSerif_400Regular
+    InstrumentSerif_400Regular,
+    InstrumentSerif_400Regular_Italic,
+    Archivo_800ExtraBold
   });
+  const [splashDone, setSplashDone] = useState(false);
+  const finishSplash = useCallback(() => setSplashDone(true), []);
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
-  if (!hydrated || !fontsLoaded) {
-    return (
-      <View style={styles.boot}>
-        <StatusBar style="dark" />
-        <ActivityIndicator color={colors.ink} />
-      </View>
-    );
-  }
+  if (!fontsLoaded) return <BootBlank />;
 
   return (
-    <ErrorBoundary>
+    <View style={styles.boot}>
+    {hydrated ? <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" />
         <Stack
@@ -91,10 +96,12 @@ export default function RootLayout() {
           <Stack.Screen name="stores/[id]" options={{ animation: "slide_from_right" }} />
         </Stack>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </ErrorBoundary> : null}
+    {splashDone ? null : <BootSplash ready={hydrated} onDone={finishSplash} />}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  boot: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.canvas }
+  boot: { flex: 1, backgroundColor: colors.canvas }
 });

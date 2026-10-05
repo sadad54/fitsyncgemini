@@ -1,17 +1,23 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { mediaUrl } from "@/api/client";
 import { useCloset } from "@/api/queries";
-import { AppText, Eyebrow, Title } from "@/components/AppText";
-import { Glyph } from "@/components/Glyph";
+import { AppText, Caption, Display, Em, Punch } from "@/components/AppText";
+import { Button } from "@/components/Button";
+import { IconButton } from "@/components/IconButton";
+import { POP, PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
+import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
+import { Segmented } from "@/components/Segmented";
 import { StatePanel } from "@/components/state-panel";
-import { SEED_CHALLENGES, SEED_POSTS, type FeedTab } from "@/data/discover";
+import { SEED_CHALLENGES, SEED_POSTS, type FeedTab, type Post } from "@/data/discover";
+import { Heart, MessageCircle, Plus, Users } from "@/icons";
 import { useAuthStore } from "@/store/auth";
-import { colors, fonts, spacing } from "@/theme";
+import { colors, fonts, radius, spacing } from "@/theme";
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
 
 const TABS: FeedTab[] = ["Following", "Discover", "Challenges"];
 
@@ -28,208 +34,131 @@ export default function CommunityFeed() {
     () => (closet.data?.items ?? []).map((item) => mediaUrl(item.image_url)).filter(Boolean) as string[],
     [closet.data]
   );
-
-  const posts = useMemo(
-    () => SEED_POSTS.filter((post) => tab === "Discover" || post.following),
-    [tab]
-  );
+  const posts = useMemo(() => SEED_POSTS.filter((post) => tab === "Discover" || post.following), [tab]);
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
 
   return (
-    <Screen scroll bottomInset={false} contentStyle={styles.screen}>
-      <View style={styles.headerWrap}>
-        <PushHeader title="Community" onBack={() => router.back()} rule="none" />
-      </View>
-
-      <View style={styles.hero}>
-        <View style={styles.heroCopy}>
-          <Eyebrow>Community</Eyebrow>
-          <Title style={styles.heroTitle}>What people are actually wearing</Title>
+    <Screen>
+      <PushHeader title="Community" onBack={() => router.back()} />
+      <Reveal>
+        <View style={styles.hero}>
+          <View style={styles.flex}>
+            <Punch style={styles.kicker}>Real closets, real outfits</Punch>
+            <Display style={styles.heroTitle}>What people <Em>actually</Em> wear</Display>
+          </View>
+          <IconButton icon={Plus} label="Share a look" tone="accent" size={52} onPress={() => router.push("/community/create")} />
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Share a look" onPress={() => router.push("/community/create")} style={styles.addButton}>
-          <AppText style={styles.addGlyph}>+</AppText>
-        </Pressable>
-      </View>
-
-      <View style={styles.tabs}>
-        {TABS.map((item) => {
-          const active = tab === item;
-          return (
-            <Pressable
-              key={item}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              onPress={() => setTab(item)}
-              style={[styles.tab, active && styles.tabActive]}
-            >
-              <AppText style={[styles.tabLabel, active && styles.tabLabelActive]}>{item}</AppText>
-            </Pressable>
-          );
-        })}
-      </View>
+      </Reveal>
+      <PreviewNote>Sample members and posts. Photos are from your own closet as stand-ins.</PreviewNote>
+      <Segmented<FeedTab> value={tab} onChange={setTab} options={TABS.map((t) => ({ value: t, label: t }))} />
 
       {tab === "Challenges" ? (
-        SEED_CHALLENGES.map((challenge, index) => {
-          const isJoined = Boolean(joined[challenge.id]);
-          return (
-            <View key={challenge.id} style={styles.challenge}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={challenge.title}
-                onPress={() => router.push(`/community/challenge/${challenge.id}`)}
-                style={styles.challengeRow}
-              >
-                <View style={styles.challengeMedia}>
-                  {photos[index % Math.max(photos.length, 1)] ? (
-                    <Photo source={photos[index % photos.length]} />
-                  ) : (
-                    <View style={styles.mediaPlaceholder} />
-                  )}
+        <View style={styles.list}>
+          {SEED_CHALLENGES.map((challenge, index) => {
+            const isJoined = Boolean(joined[challenge.id]);
+            return (
+              <Reveal key={challenge.id} index={index}>
+                <View style={styles.challenge}>
+                  <PressableScale accessibilityRole="button" accessibilityLabel={challenge.title}
+                    onPress={() => router.push(`/community/challenge/${challenge.id}`)} style={styles.challengeRow}>
+                    <View style={styles.challengeMedia}>
+                      {photos.length ? <Photo source={photos[index % photos.length]} /> : <View style={styles.placeholder} />}
+                    </View>
+                    <View style={styles.challengeCopy}>
+                      <Punch style={styles.difficulty}>{challenge.difficulty} · {challenge.days} days left</Punch>
+                      <AppText style={styles.challengeTitle}>{challenge.title}</AppText>
+                      <Caption>{challenge.reward}</Caption>
+                      <View style={styles.metaRow}>
+                        <Users size={14} color={colors.muted} />
+                        <Caption>{(challenge.participants + (isJoined ? 1 : 0)).toLocaleString()} joined</Caption>
+                      </View>
+                    </View>
+                  </PressableScale>
+                  <Button title={isJoined ? "Joined · tap to leave" : "Join challenge"} compact variant={isJoined ? "secondary" : "primary"}
+                    onPress={() => setJoined((current) => ({ ...current, [challenge.id]: !current[challenge.id] }))} />
                 </View>
-                <View style={styles.challengeCopy}>
-                  <View style={styles.difficultyRow}>
-                    <Glyph shape={challenge.shape} size={11} strokeWidth={2} color={colors.roseSoft} />
-                    <AppText style={styles.difficulty}>{challenge.difficulty}</AppText>
-                  </View>
-                  <AppText style={styles.challengeTitle}>{challenge.title}</AppText>
-                  <AppText style={styles.challengeReward}>{challenge.reward}</AppText>
-                  <AppText style={styles.challengeMeta}>
-                    {challenge.participants + (isJoined ? 1 : 0)} joined · {challenge.days} days left
-                  </AppText>
-                </View>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={isJoined ? "Leave challenge" : "Join challenge"}
-                onPress={() => setJoined((current) => ({ ...current, [challenge.id]: !current[challenge.id] }))}
-                style={[styles.joinBtn, !isJoined && styles.joinBtnActive]}
-              >
-                <AppText style={[styles.joinLabel, !isJoined && styles.joinLabelActive]}>
-                  {isJoined ? "Joined — leave challenge" : "Join challenge"}
-                </AppText>
-              </Pressable>
-            </View>
-          );
-        })
-      ) : posts.length === 0 ? (
-        <View style={styles.padded}>
-          <StatePanel
-            title="You follow nobody yet"
-            message="Discover has the whole community. Follow a few people and this becomes your own feed."
-            action="Open discover"
-            onAction={() => setTab("Discover")}
-          />
+              </Reveal>
+            );
+          })}
         </View>
+      ) : posts.length === 0 ? (
+        <StatePanel icon={Users} title="You follow nobody yet" message="Discover has the whole community. Follow a few people and this becomes your own feed."
+          action="Open Discover" onAction={() => setTab("Discover")} />
       ) : (
-        posts.map((post, index) => {
-          const liked = Boolean(likes[post.id]);
-          const image = photos[index % Math.max(photos.length, 1)];
-          return (
-            <View key={post.id} style={styles.post}>
-              <View style={styles.postHeader}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={post.name}
-                  onPress={() => router.push(`/community/member/${post.id}`)}
-                  style={styles.avatar}
-                >
-                  <AppText style={styles.avatarText}>{post.initial}</AppText>
-                </Pressable>
-                <Pressable style={styles.postAuthor} onPress={() => router.push(`/community/member/${post.id}`)}>
-                  <AppText style={styles.postName}>{post.name}</AppText>
-                  <AppText style={styles.postHandle}>{post.handle} · {post.ago} ago</AppText>
-                </Pressable>
-                {post.tag ? (
-                  <View style={styles.tagPill}>
-                    <AppText style={styles.tagPillText}>{post.tag}</AppText>
-                  </View>
-                ) : null}
-              </View>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Open post"
-                onPress={() => router.push(`/community/post/${post.id}`)}
-                style={styles.postMedia}
-              >
-                {image ? <Photo source={image} /> : <View style={styles.mediaPlaceholder} />}
-              </Pressable>
-
-              <AppText style={styles.caption}>{post.caption}</AppText>
-
-              <View style={styles.postActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={liked ? "Unlike" : "Like"}
-                  onPress={() => setLikes((current) => ({ ...current, [post.id]: !current[post.id] }))}
-                  style={[styles.likeBtn, liked && styles.likeBtnActive]}
-                >
-                  <AppText style={[styles.likeLabel, liked && styles.likeLabelActive]}>♥ {post.likes + (liked ? 1 : 0)}</AppText>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Open comments"
-                  onPress={() => router.push(`/community/post/${post.id}`)}
-                  style={styles.commentBtn}
-                >
-                  <Glyph shape="moonDown" size={11} strokeWidth={2} color={colors.muted} />
-                  <AppText style={styles.commentLabel}>{post.comments} comments</AppText>
-                </Pressable>
-              </View>
-            </View>
-          );
-        })
+        <View style={styles.list}>
+          {posts.map((post, index) => (
+            <Reveal key={post.id} index={index}>
+              <PostCard post={post} image={photos.length ? photos[index % photos.length] : undefined}
+                liked={Boolean(likes[post.id])} onLike={() => setLikes((current) => ({ ...current, [post.id]: !current[post.id] }))} />
+            </Reveal>
+          ))}
+        </View>
       )}
-      <View style={{ height: 40 }} />
     </Screen>
   );
 }
 
+function PostCard({ post, image, liked, onLike }: { post: Post; image?: string; liked: boolean; onLike: () => void }) {
+  const pop = useSharedValue(1);
+  const heart = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  return (
+    <View style={styles.post}>
+      <View style={styles.postHeader}>
+        <PressableScale accessibilityRole="button" accessibilityLabel={`${post.name}'s profile`} onPress={() => router.push(`/community/member/${post.id}`)} style={styles.author}>
+          <View style={styles.avatar}><AppText style={styles.avatarText}>{post.initial}</AppText></View>
+          <View style={styles.flex}>
+            <AppText style={styles.postName}>{post.name}</AppText>
+            <Caption>{post.handle} · {post.ago} ago</Caption>
+          </View>
+        </PressableScale>
+        {post.tag ? <View style={styles.tagPill}><AppText style={styles.tagText}>{post.tag}</AppText></View> : null}
+      </View>
+      <PressableScale accessibilityRole="button" accessibilityLabel="Open post" scaleTo={0.985} onPress={() => router.push(`/community/post/${post.id}`)} style={styles.postMedia}>
+        {image ? <Photo source={image} /> : <View style={styles.placeholder} />}
+      </PressableScale>
+      <AppText style={styles.caption}>{post.caption}</AppText>
+      <View style={styles.actions}>
+        <PressableScale accessibilityRole="button" accessibilityLabel={liked ? "Unlike" : "Like"} accessibilityState={{ selected: liked }}
+          onPress={() => { pop.value = withSequence(withSpring(1.35, POP), withSpring(1, POP)); onLike(); }} style={[styles.action, liked && styles.actionLiked]}>
+          <Animated.View style={heart}><Heart size={17} color={liked ? colors.ink : colors.inkSoft} fill={liked ? colors.flare : "transparent"} /></Animated.View>
+          <AppText style={styles.actionText}>{post.likes + (liked ? 1 : 0)}</AppText>
+        </PressableScale>
+        <PressableScale accessibilityRole="button" accessibilityLabel={`${post.comments} comments`} onPress={() => router.push(`/community/post/${post.id}`)} style={styles.action}>
+          <MessageCircle size={17} color={colors.inkSoft} />
+          <AppText style={styles.actionText}>{post.comments}</AppText>
+        </PressableScale>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
-  headerWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
-  hero: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: spacing.lg, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, borderBottomWidth: 1, borderColor: colors.strokeStrong },
-  heroCopy: { flex: 1, gap: spacing.xs },
-  heroTitle: { fontSize: 40, lineHeight: 37 },
-  addButton: { width: 48, height: 48, backgroundColor: colors.rose, alignItems: "center", justifyContent: "center" },
-  addGlyph: { color: colors.white, fontSize: 26, lineHeight: 26 },
-  tabs: { flexDirection: "row", borderBottomWidth: 1, borderColor: colors.stroke },
-  tab: { flex: 1, paddingVertical: spacing.md, paddingHorizontal: spacing.md, borderRightWidth: 1, borderColor: colors.stroke, alignItems: "flex-start" },
-  tabActive: { backgroundColor: colors.rose, borderColor: colors.rose },
-  tabLabel: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
-  tabLabelActive: { color: colors.white },
-  padded: { paddingHorizontal: spacing.xl },
-  challenge: { borderBottomWidth: 1, borderColor: colors.stroke },
-  challengeRow: { flexDirection: "row" },
-  challengeMedia: { width: 112, backgroundColor: colors.surface, overflow: "hidden" },
-  mediaPlaceholder: { flex: 1, backgroundColor: colors.surface },
-  challengeCopy: { flex: 1, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
-  difficultyRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  difficulty: { color: colors.roseSoft, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
-  challengeTitle: { fontSize: 21, lineHeight: 21, fontFamily: fonts.semibold, fontWeight: "600", letterSpacing: 0, marginTop: 9 },
-  challengeReward: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: spacing.sm },
-  challengeMeta: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0, marginTop: 9 },
-  joinBtn: { height: 50, borderTopWidth: 1, borderColor: colors.stroke, justifyContent: "center", paddingHorizontal: spacing.lg },
-  joinBtnActive: { backgroundColor: colors.rose },
-  joinLabel: { color: colors.muted, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 12, letterSpacing: 0 },
-  joinLabelActive: { color: colors.white },
-  post: { borderBottomWidth: 1, borderColor: colors.stroke },
-  postHeader: { flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: spacing.xl, paddingVertical: 13 },
-  avatar: { width: 34, height: 34, backgroundColor: colors.rose, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: colors.white, fontFamily: fonts.semibold, fontWeight: "600", fontSize: 14 },
-  postAuthor: { flex: 1 },
-  postName: { fontFamily: fonts.semibold, fontWeight: "600", fontSize: 13, letterSpacing: 0 },
-  postHandle: { color: colors.muted, fontSize: 12, letterSpacing: 0, marginTop: 5 },
-  tagPill: { borderWidth: 1, borderColor: colors.rose, paddingHorizontal: 9, paddingVertical: 8 },
-  tagPillText: { color: colors.roseSoft, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
-  postMedia: { height: 300, backgroundColor: colors.surface, overflow: "hidden" },
-  caption: { color: colors.ink, fontSize: 13, lineHeight: 20, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
-  postActions: { flexDirection: "row", borderTopWidth: 1, borderColor: colors.stroke },
-  likeBtn: { height: 50, paddingHorizontal: spacing.lg, borderRightWidth: 1, borderColor: colors.stroke, justifyContent: "center" },
-  likeBtnActive: { backgroundColor: colors.rose },
-  likeLabel: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 },
-  likeLabelActive: { color: colors.white },
-  commentBtn: { flex: 1, flexDirection: "row", alignItems: "center", gap: 9, height: 50, paddingHorizontal: spacing.lg },
-  commentLabel: { color: colors.muted, fontSize: 12, fontFamily: fonts.medium, fontWeight: "500", letterSpacing: 0 }
+  flex: { flex: 1 },
+  hero: { flexDirection: "row", alignItems: "flex-end", gap: spacing.md },
+  kicker: { color: colors.muted, marginBottom: spacing.xs },
+  heroTitle: { fontSize: 42, lineHeight: 42 },
+  list: { gap: spacing.lg },
+  challenge: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.sm, gap: spacing.sm, borderWidth: 1, borderColor: colors.stroke },
+  challengeRow: { flexDirection: "row", gap: spacing.md },
+  challengeMedia: { width: 104, height: 128, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.canvasSoft },
+  placeholder: { flex: 1, backgroundColor: colors.canvasSoft },
+  challengeCopy: { flex: 1, gap: 6, paddingVertical: spacing.xs },
+  difficulty: { color: colors.muted, fontSize: 9, lineHeight: 11 },
+  challengeTitle: { fontFamily: fonts.serif, fontSize: 24, lineHeight: 26 },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  post: { backgroundColor: colors.surface, borderRadius: radius.xl, overflow: "hidden", borderWidth: 1, borderColor: colors.stroke },
+  postHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md },
+  author: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.ink },
+  avatarText: { fontFamily: fonts.serif, fontSize: 20, lineHeight: 24 },
+  postName: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600" },
+  tagPill: { marginLeft: "auto", backgroundColor: colors.canvas, borderRadius: radius.pill, paddingHorizontal: spacing.md, height: 28, justifyContent: "center" },
+  tagText: { fontSize: 12, color: colors.inkSoft, fontFamily: fonts.medium },
+  postMedia: { height: 320, backgroundColor: colors.canvasSoft, marginHorizontal: spacing.sm, borderRadius: radius.lg, overflow: "hidden" },
+  caption: { fontSize: 15, lineHeight: 22, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  actions: { flexDirection: "row", gap: spacing.sm, padding: spacing.md },
+  action: { flexDirection: "row", alignItems: "center", gap: 6, height: 44, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.canvas },
+  actionLiked: { backgroundColor: colors.flareWash },
+  actionText: { fontSize: 14, fontFamily: fonts.semibold, fontVariant: ["tabular-nums"] }
 });

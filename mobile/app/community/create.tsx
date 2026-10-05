@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   pick: { width: 112, borderRightWidth: 1, borderColor: colors.stroke },
   pickMedia: { height: 132, backgroundColor: colors.surface, overflow: "hidden" },
   mediaPlaceholder: { flex: 1, backgroundColor: colors.surface },
-  pickRing: { ...StyleSheet.absoluteFillObject, borderWidth: 3, borderColor: colors.rose },
+  pickRing: { ...StyleSheet.absoluteFill, borderWidth: 3, borderColor: colors.rose },
   pickName: { color: colors.muted, fontSize: 9, lineHeight: 12, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", paddingHorizontal: 11, paddingTop: 10, paddingBottom: spacing.md },
   pickNameActive: { color: colors.ink },
   pickEmpty: { paddingHorizontal: spacing.xl, paddingVertical: spacing.xl },

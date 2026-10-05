@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   weatherNote: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 2 },
   warning: { color: colors.roseSoft, fontSize: 13, lineHeight: 19 },
   loadingCard: { borderWidth: 2, borderColor: colors.strokeStrong, padding: spacing.xl, gap: spacing.md, overflow: "hidden" },
-  wipeMask: { ...StyleSheet.absoluteFillObject, overflow: "hidden" },
+  wipeMask: { ...StyleSheet.absoluteFill, overflow: "hidden" },
   wipeBar: { position: "absolute", top: 0, bottom: 0, width: 130, backgroundColor: "rgba(236, 48, 19, 0.14)" },
   loadingRail: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-end", height: 90 },
   loadingBlock: { width: 40, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.stroke },

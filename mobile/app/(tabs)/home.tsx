@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   railSection: { borderBottomWidth: 1, borderColor: colors.stroke },
   rail: { flexGrow: 0 },
   railItem: { width: 126, height: 168, borderRightWidth: 1, borderColor: colors.stroke, backgroundColor: colors.surface, justifyContent: "flex-end" },
-  railPlaceholder: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.surface },
+  railPlaceholder: { ...StyleSheet.absoluteFill, backgroundColor: colors.surface },
   railLabel: { position: "absolute", left: spacing.sm, bottom: spacing.sm, color: colors.white, fontSize: 9, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
   railEmpty: { width: "100%", height: 168, alignItems: "center", justifyContent: "center" },
   railEmptyText: { color: colors.roseSoft, fontSize: 13, fontFamily: fonts.bold, fontWeight: "700" },

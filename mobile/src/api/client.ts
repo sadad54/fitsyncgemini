@@ -78,6 +78,7 @@ async function request<T>(path: string, options: RequestInit = {}, timeoutMs = 1
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (error instanceof Error && error.name === "AbortError") throw new ApiError("The request timed out. Check your connection and try again.", 0, "TIMEOUT");
+    if (__DEV__) console.warn(`[api] ${options.method ?? "GET"} ${path} failed:`, error);
     throw new ApiError("FitSync could not reach the backend. Check the API address and your connection.", 0, "NETWORK_ERROR");
   } finally {
     clearTimeout(timeout);

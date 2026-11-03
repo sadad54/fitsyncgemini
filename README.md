@@ -29,11 +29,12 @@ The design principle: **every suggestion traces back to an item you photographed
 
 | | |
 |---|---|
-| **Scope** | 28 mobile screens (Expo, TypeScript) · 42 REST endpoints (FastAPI) · 3 services: API, try-on queue consumer, GPU worker |
+| **Scope** | 28 mobile screens (Expo, TypeScript), none left on sample data · 47 REST endpoints (FastAPI) · 3 services: API, try-on queue consumer, GPU worker |
 | **Vision tagging** | Zero-shot FashionCLIP over **7 categories → 35 subcategories**, each label scored as an ensemble of **3 prompts**, plus nearest-neighbour mapping to a **17-colour** palette. Runs locally, so tagging costs **$0 per call**. |
 | **Try-on reliability** | Durable Postgres job queue (`FOR UPDATE SKIP LOCKED`), request deduplication, per-user quota (**5/day**) and global cap (**100/month**), 240 s provider timeout, and explicit failure of stale jobs (30 min queued / 15 min processing) instead of replaying GPU work. |
 | **Provider flexibility** | 1 `TryOnProvider` interface, **3 interchangeable backends** (Kaggle T4 tunnel, Modal serverless T4 that scales to zero, FASHN API), selected by config. |
-| **Testing** | **61 pytest tests** across the API, classifier, outfit service, try-on queue and GPU worker contract, plus SQL tests that run the real migration in PGlite. |
+| **Social layer** | Feed (Discover / Following), posts, comments, likes, follows and style challenges, with optimistic UI updates that roll back on failure. Likes, follows and joins are unique per user in Postgres, and counters are recounted rather than incremented, so double taps and retries can't drift them. |
+| **Testing** | **131 automated tests on every pull request**: 94 pytest tests (API, community, stores, classifier, outfits, try-on queue, GPU worker contract), 37 Jest tests (API client, optimistic cache updates, view mappers, auth), and 2 PGlite suites that run the real SQL migrations, including upgrading an older schema. |
 | **Delivery** | 70+ commits over 14 months (Aug 2025 – Oct 2026). |
 
 ## Features
@@ -46,7 +47,9 @@ The design principle: **every suggestion traces back to an item you photographed
 | **Virtual try-on** | Asynchronous, durable GPU job pipeline (details below) with history you can reopen after navigating away or restarting the app. |
 | **Saved looks & feedback** | Save and favourite outfits; rate recommendations 1–5. |
 | **Profile & onboarding** | Supabase Auth email/password sign-in, style anchors and favourite colours. |
-| **Discover** | Community, trends and nearby fashion stores (Google Places). Backend endpoints are built; the mobile screens currently show seed content (see *Status*). |
+| **Community** | Discover and Following feeds, post detail with comments, likes, member profiles with follow, and style challenges you can join and post entries to. |
+| **Trends** | Trend insights from Postgres with category filters, palettes, and the pieces in your own closet that already match a trend's colours. |
+| **Nearby stores** | Fashion stores from Google Places, sorted by straight-line distance from your location, with opening hours, phone, website and directions. The Places API key stays on the server. |
 | **Design system** | Custom brand system shared across iOS and Android, with reduced-motion-aware motion. |
 
 ## Architecture
@@ -110,7 +113,11 @@ docs/          Try-on design + runbook, app-flow plan, phase specs
 - **Backend (pytest):** auth, closet CRUD and route ordering, clothing classifier, outfit service and routes, try-on routes and compositor. Run from `backend/` with `python -m pytest tests -q`.
 - **Try-on queue and GPU contract:** `python -m pytest backend/tryon_tests gpu_worker/tests --confcutdir=backend/tryon_tests -q`.
 - **SQL behaviour:** `backend/tryon_tests/queue.mjs` runs the real migration twice in PGlite. It checks deduplication, quotas, owner scoping, job claims, stale-job failure and service-role restrictions.
-- **Mobile:** `npm run typecheck` and Jest tests (auth store sign-in success and failure).
+- **Community and stores (pytest):** feeds, follow filtering, idempotent likes with counters that match the rows, comments, challenges, member profiles, distance sorting, and a check that store details never contain the Places API key. These run against an in-memory Supabase fake (`backend/tests/fake_supabase.py`), so the service logic is exercised end to end without a network.
+- **Community migration:** `backend/tryon_tests/community.mjs` upgrades an older schema in PGlite (missing columns, duplicate likes, missing foreign keys), then checks uniqueness, cascades, the backfilled counters and that client roles have no direct access.
+- **Mobile:** `pnpm run typecheck` and Jest: API client (auth header, path encoding, error and timeout mapping), optimistic like and join updates with rollback, and the view-model mappers.
+- **CI:** `.github/workflows/ci.yml` runs all of the above on every pull request.
+- **Model evaluation:** `backend/eval/classifier_eval.py` measures top-1 accuracy, per-class recall and CPU latency of the closet tagger on public product photos or your own labelled folder. It also runs ablations without background removal and with a single prompt per label. Trigger it from the *Model evaluation* workflow; results are uploaded as an artifact.
 
 ## Getting started
 
@@ -133,14 +140,14 @@ pnpm install
 EXPO_PUBLIC_API_BASE_URL=http://<your-LAN-IP>:8000 pnpm start
 ```
 
-Apply `backend/migrations/` in the Supabase SQL editor before using try-on. Keep the Supabase service-role key on the backend only, never in the Expo app or the GPU worker.
+Apply `backend/migrations/` in the Supabase SQL editor (try-on queue, then community) before using those features. Keep the Supabase service-role key on the backend only, never in the Expo app or the GPU worker.
 
 ## Status
 
 Flairwise is a **pre-launch prototype**, run today on a physical phone through Expo Go against a local backend.
 
-- **Working:** sign-in, onboarding, closet intake with local AI tagging, outfit generation (with weather), saved looks and ratings, and the asynchronous try-on job flow.
-- **In progress:** wiring the Community, Trends and Stores screens to their backend endpoints (they render seed data today); a published quality benchmark for try-on; and store builds (EAS).
+- **Working:** sign-in, onboarding, closet intake with local AI tagging, outfit generation (with weather), saved looks and ratings, the asynchronous try-on job flow, and the community, trends and nearby-stores screens on live data.
+- **In progress:** published accuracy numbers for the closet tagger (the evaluation harness is in place), a quality benchmark for try-on, photo uploads on community posts, and store builds (EAS).
 - **Licensing:** CatVTON and IDM-VTON weights are CC BY-NC-SA 4.0, so try-on is non-commercial until it is replaced or licensed.
 
 ## Author

@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dummy values so settings load; tests never reach Supabase.
+  SUPABASE_URL: https://example.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.dGVzdA
+  SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.dGVzdA
+  SECRET_KEY: ci-only
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install (CPU-only PyTorch)
+        run: pip install -r backend/requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+      - name: API, services and ML unit tests
+        working-directory: backend
+        run: python -m pytest tests -q
+      - name: Try-on queue and GPU worker contract
+        run: python -m pytest backend/tryon_tests gpu_worker/tests --confcutdir=backend/tryon_tests -q
+
+  sql:
+    name: SQL migrations (PGlite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --prefix /tmp/pglite @electric-sql/pglite
+      - name: Try-on queue migration
+        run: node backend/tryon_tests/queue.mjs
+        env:
+          PGLITE_MODULE: /tmp/pglite/node_modules/@electric-sql/pglite/dist/index.js
+      - name: Community migration
+        run: node backend/tryon_tests/community.mjs
+        env:
+          PGLITE_MODULE: /tmp/pglite/node_modules/@electric-sql/pglite/dist/index.js
+
+  mobile:
+    name: Mobile (typecheck + Jest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # mobile/.npmrc keeps the pnpm store inside mobile/, which setup-node's
+      # built-in pnpm cache can't find, so cache that folder directly.
+      - uses: actions/cache@v4
+        with:
+          path: mobile/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('mobile/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm exec jest --ci

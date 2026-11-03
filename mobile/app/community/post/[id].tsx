@@ -1,17 +1,17 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { KeyboardAvoidingView, StyleSheet, TextInput, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { mediaUrl } from "@/api/client";
-import { useCloset } from "@/api/queries";
+import { useAddComment, useComments, usePost, useToggleLike } from "@/api/discover-queries";
 import { AppText, Caption, Punch } from "@/components/AppText";
 import { IconButton } from "@/components/IconButton";
 import { PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
-import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
-import { SEED_COMMENTS, SEED_POSTS } from "@/data/discover";
-import { Heart, Send } from "@/icons";
+import { StatePanel } from "@/components/state-panel";
+import { toComment, toPost } from "@/data/discover";
+import { CloudOff, Heart, Send } from "@/icons";
 import { useAuthStore } from "@/store/auth";
 import { colors, fonts, radius, spacing } from "@/theme";
 
@@ -19,25 +19,20 @@ export default function PostDetail() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const token = useAuthStore((state) => state.token);
-  const closet = useCloset();
-
-  const post = SEED_POSTS.find((entry) => entry.id === id) ?? SEED_POSTS[0];
-  const photos = useMemo(
-    () => (closet.data?.items ?? []).map((item) => mediaUrl(item.image_url)).filter(Boolean) as string[],
-    [closet.data]
-  );
-  const image = photos.length ? photos[SEED_POSTS.indexOf(post) % photos.length] : undefined;
-
-  const [liked, setLiked] = useState(false);
+  const postQuery = usePost(id);
+  const commentsQuery = useComments(id);
+  const toggleLike = useToggleLike();
+  const addComment = useAddComment(id ?? "");
   const [draft, setDraft] = useState("");
-  const [extra, setExtra] = useState<typeof SEED_COMMENTS>([]);
-  const [commentLikes, setCommentLikes] = useState<Record<string, boolean>>({});
-  const comments = [...SEED_COMMENTS, ...extra];
 
-  function addComment() {
-    if (!draft.trim()) return;
-    setExtra((current) => [...current, { id: `me-${current.length}`, name: "You", initial: "Y", ago: "now", text: draft.trim(), likes: 0 }]);
-    setDraft("");
+  const post = postQuery.data ? toPost(postQuery.data) : null;
+  const comments = (commentsQuery.data ?? []).map((comment) => toComment(comment));
+  const image = mediaUrl(post?.imageUrl);
+
+  function submitComment() {
+    const text = draft.trim();
+    if (!text || addComment.isPending) return;
+    addComment.mutate(text, { onSuccess: () => setDraft("") });
   }
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
@@ -45,19 +40,30 @@ export default function PostDetail() {
   const composer = (
     <View style={styles.composer}>
       <TextInput accessibilityLabel="Add a comment" value={draft} onChangeText={setDraft} placeholder="Add a comment" placeholderTextColor={colors.faint}
-        onSubmitEditing={addComment} returnKeyType="send" style={styles.input} />
-      <IconButton icon={Send} label="Send comment" tone="ink" size={48} onPress={addComment} />
+        onSubmitEditing={submitComment} returnKeyType="send" editable={!addComment.isPending} maxLength={1000} style={styles.input} />
+      <IconButton icon={Send} label="Send comment" tone="ink" size={48} onPress={submitComment} />
     </View>
   );
+
+  if (!post) {
+    return (
+      <Screen>
+        <PushHeader title="Post" onBack={() => router.back()} />
+        {postQuery.isError
+          ? <StatePanel icon={CloudOff} title="Couldn't open this post" message={postQuery.error instanceof Error ? postQuery.error.message : "It may have been deleted."}
+              action="Try again" onAction={() => postQuery.refetch()} />
+          : <StatePanel title="Loading…" message="Opening the post." />}
+      </Screen>
+    );
+  }
 
   return (
     <KeyboardAvoidingView behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined} style={styles.flex}>
       <Screen footer={composer}>
         <PushHeader title="Post" onBack={() => router.back()} />
-        <PreviewNote />
         <Reveal>
           <View style={styles.card}>
-            <PressableScale accessibilityRole="button" accessibilityLabel={`${post.name}'s profile`} onPress={() => router.push(`/community/member/${post.id}`)} style={styles.author}>
+            <PressableScale accessibilityRole="button" accessibilityLabel={`${post.name}'s profile`} onPress={() => router.push(`/community/member/${post.authorId}`)} style={styles.author}>
               <View style={styles.avatar}><AppText style={styles.avatarText}>{post.initial}</AppText></View>
               <View style={styles.flex}>
                 <AppText style={styles.name}>{post.name}</AppText>
@@ -65,37 +71,32 @@ export default function PostDetail() {
               </View>
               {post.tag ? <View style={styles.tagPill}><AppText style={styles.tagText}>{post.tag}</AppText></View> : null}
             </PressableScale>
-            <View style={styles.media}>{image ? <Photo source={image} /> : <View style={styles.placeholder} />}</View>
+            {image ? <View style={styles.media}><Photo source={image} /></View> : null}
             <AppText style={styles.caption}>{post.caption}</AppText>
             <View style={styles.metrics}>
-              <PressableScale accessibilityRole="button" accessibilityLabel={liked ? "Unlike" : "Like"} accessibilityState={{ selected: liked }}
-                onPress={() => setLiked((v) => !v)} style={[styles.like, liked && styles.likeOn]}>
-                <Heart size={17} color={colors.ink} fill={liked ? colors.flare : "transparent"} />
-                <AppText style={styles.likeText}>{post.likes + (liked ? 1 : 0)}</AppText>
+              <PressableScale accessibilityRole="button" accessibilityLabel={post.liked ? "Unlike" : "Like"} accessibilityState={{ selected: post.liked }}
+                onPress={() => toggleLike.mutate({ postId: post.id, liked: !post.liked })} style={[styles.like, post.liked && styles.likeOn]}>
+                <Heart size={17} color={colors.ink} fill={post.liked ? colors.flare : "transparent"} />
+                <AppText style={styles.likeText}>{post.likes}</AppText>
               </PressableScale>
-              <Punch style={styles.count}>{comments.length} comments</Punch>
+              <Punch style={styles.count}>{post.comments} {post.comments === 1 ? "comment" : "comments"}</Punch>
             </View>
           </View>
         </Reveal>
 
         <View style={styles.comments}>
-          {comments.map((comment) => {
-            const on = Boolean(commentLikes[comment.id]);
-            return (
-              <View key={comment.id} style={styles.comment}>
-                <View style={styles.commentAvatar}><AppText style={styles.commentInitial}>{comment.initial}</AppText></View>
-                <View style={styles.flex}>
-                  <AppText style={styles.commentName}>{comment.name} <AppText style={styles.commentAgo}>{comment.ago}</AppText></AppText>
-                  <AppText style={styles.commentText}>{comment.text}</AppText>
-                </View>
-                <PressableScale accessibilityRole="button" accessibilityLabel="Like comment" accessibilityState={{ selected: on }}
-                  onPress={() => setCommentLikes((c) => ({ ...c, [comment.id]: !c[comment.id] }))} style={styles.commentLike}>
-                  <Heart size={14} color={on ? colors.flare : colors.muted} fill={on ? colors.flare : "transparent"} />
-                  <Caption>{comment.likes + (on ? 1 : 0)}</Caption>
-                </PressableScale>
+          {commentsQuery.isLoading ? <Caption>Loading comments…</Caption> : null}
+          {commentsQuery.isSuccess && comments.length === 0 ? <Caption>No comments yet. Start the conversation.</Caption> : null}
+          {addComment.isError ? <Caption style={styles.error}>Couldn't post that comment. Try again.</Caption> : null}
+          {comments.map((comment) => (
+            <View key={comment.id} style={styles.comment}>
+              <View style={styles.commentAvatar}><AppText style={styles.commentInitial}>{comment.initial}</AppText></View>
+              <View style={styles.flex}>
+                <AppText style={styles.commentName}>{comment.name} <AppText style={styles.commentAgo}>{comment.ago}</AppText></AppText>
+                <AppText style={styles.commentText}>{comment.text}</AppText>
               </View>
-            );
-          })}
+            </View>
+          ))}
         </View>
       </Screen>
     </KeyboardAvoidingView>
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   commentName: { fontSize: 14, fontFamily: fonts.semibold, fontWeight: "600" },
   commentAgo: { fontSize: 13, color: colors.muted, fontFamily: fonts.regular, fontWeight: "400" },
   commentText: { fontSize: 15, lineHeight: 21, color: colors.inkSoft, marginTop: 2 },
-  commentLike: { alignItems: "center", justifyContent: "center", gap: 2, minWidth: 44, minHeight: 44 },
+  error: { color: colors.flare },
   composer: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   input: { flex: 1, height: 48, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.stroke, paddingHorizontal: spacing.lg, fontSize: 15, color: colors.ink, fontFamily: fonts.regular }
 });

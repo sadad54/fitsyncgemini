@@ -5,7 +5,7 @@ import { useGenerateOutfit } from "@/api/queries";
 
 // expo-location can hang (notably on web) instead of resolving. Weather is a
 // nice-to-have, so it never blocks generating a look.
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("timeout")), ms);
     promise.then(

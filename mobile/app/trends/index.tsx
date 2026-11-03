@@ -2,28 +2,27 @@ import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { mediaUrl } from "@/api/client";
-import { useCloset } from "@/api/queries";
+import { useTrends } from "@/api/discover-queries";
 import { AppText, Caption, Display, Em, Punch, Title } from "@/components/AppText";
 import { Chip } from "@/components/Chip";
 import { PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
-import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
-import { SEED_INSIGHTS, SEED_TRENDS, TREND_CATEGORIES } from "@/data/discover";
-import { ArrowUpRight, Flame, MapPin } from "@/icons";
+import { StatePanel } from "@/components/state-panel";
+import { toInsight, toTrend, trendCategories } from "@/data/discover";
+import { ArrowUpRight, CloudOff, Flame, MapPin, TrendingUp } from "@/icons";
 import { useAuthStore } from "@/store/auth";
 import { colors, fonts, layout, radius, spacing } from "@/theme";
 
 export default function TrendsFeed() {
   const token = useAuthStore((state) => state.token);
-  const closet = useCloset();
+  const query = useTrends();
   const [category, setCategory] = useState("All");
-  const photos = useMemo(
-    () => (closet.data?.items ?? []).map((item) => mediaUrl(item.image_url)).filter(Boolean) as string[],
-    [closet.data]
-  );
-  const trends = useMemo(() => SEED_TRENDS.filter((trend) => category === "All" || trend.category === category), [category]);
+  const all = useMemo(() => (query.data ?? []).map(toTrend), [query.data]);
+  const categories = useMemo(() => trendCategories(all), [all]);
+  const trends = all.filter((trend) => category === "All" || trend.category === category);
+  const insights = useMemo(() => (query.data ?? []).filter((t) => t.description).slice(0, 2), [query.data]);
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
 
@@ -36,9 +35,15 @@ export default function TrendsFeed() {
           <Display style={styles.heroTitle}>What's <Em>moving</Em></Display>
         </View>
       </Reveal>
-      <PreviewNote />
+      {query.isError ? (
+        <StatePanel icon={CloudOff} title="Couldn't load trends" message={query.error instanceof Error ? query.error.message : "Try again in a moment."}
+          action="Try again" onAction={() => query.refetch()} />
+      ) : null}
+      {query.isSuccess && all.length === 0 ? (
+        <StatePanel icon={TrendingUp} title="No trends yet" message="Trend insights appear here once they're published." />
+      ) : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.chips}>
-        {TREND_CATEGORIES.map((label) => <Chip key={label} active={category === label} onPress={() => setCategory(label)}>{label}</Chip>)}
+        {categories.map((label) => <Chip key={label} active={category === label} onPress={() => setCategory(label)}>{label}</Chip>)}
       </ScrollView>
 
       <View style={styles.list}>
@@ -59,15 +64,21 @@ export default function TrendsFeed() {
         ))}
       </View>
 
-      {SEED_INSIGHTS.map((insight, index) => (
+      {insights.map((trend, index) => {
+        const insight = toInsight(trend);
+        const image = mediaUrl(trend.image_url);
+        return (
         <Reveal key={insight.id} index={index}>
           <PressableScale accessibilityRole="button" accessibilityLabel={insight.title} scaleTo={0.985} onPress={() => router.push(`/trends/${insight.id}`)} style={styles.insight}>
-            <View style={styles.insightMedia}>
-              {photos.length ? <Photo source={photos[index % photos.length]} /> : <View style={styles.placeholder} />}
-              <View style={styles.score}><Punch style={styles.scoreText}>Trend score {insight.score}</Punch></View>
-              <View style={styles.open}><ArrowUpRight size={18} color={colors.ink} /></View>
-            </View>
+            {image ? (
+              <View style={styles.insightMedia}>
+                <Photo source={image} />
+                <View style={styles.score}><Punch style={styles.scoreText}>Trend score {insight.score}</Punch></View>
+                <View style={styles.open}><ArrowUpRight size={18} color={colors.ink} /></View>
+              </View>
+            ) : null}
             <View style={styles.insightBody}>
+              {image ? null : <View style={styles.scoreInline}><Punch style={styles.scoreText}>Trend score {insight.score}</Punch></View>}
               <Title style={styles.insightTitle}>{insight.title}</Title>
               <AppText style={styles.blurb}>{insight.blurb}</AppText>
               <View style={styles.tags}>{insight.tags.map((tag) => <View key={tag} style={styles.tag}><AppText style={styles.tagText}>{tag}</AppText></View>)}</View>
@@ -78,7 +89,8 @@ export default function TrendsFeed() {
             </View>
           </PressableScale>
         </Reveal>
-      ))}
+        );
+      })}
     </Screen>
   );
 }
@@ -103,6 +115,7 @@ const styles = StyleSheet.create({
   placeholder: { flex: 1, backgroundColor: colors.canvasSoft },
   score: { position: "absolute", left: spacing.md, top: spacing.md, backgroundColor: colors.accent, borderRadius: 6, paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1.5, borderColor: colors.ink },
   scoreText: { fontSize: 9, lineHeight: 11 },
+  scoreInline: { alignSelf: "flex-start", backgroundColor: colors.accent, borderRadius: 6, paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1.5, borderColor: colors.ink },
   open: { position: "absolute", right: spacing.md, top: spacing.md, width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
   insightBody: { padding: spacing.lg, gap: spacing.sm },
   insightTitle: { fontSize: 30, lineHeight: 32 },

@@ -1,0 +1,37 @@
+name: Model evaluation
+
+# Run by hand from the Actions tab: measures the closet tagger on public
+# product photos and uploads the results as an artifact (results.json).
+on:
+  workflow_dispatch:
+    inputs:
+      per_class:
+        description: Images per category
+        default: "50"
+
+env:
+  SUPABASE_URL: https://example.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.dGVzdA
+  SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.dGVzdA
+  SECRET_KEY: ci-only
+
+jobs:
+  classifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt datasets --extra-index-url https://download.pytorch.org/whl/cpu
+      - run: python eval/classifier_eval.py --hf --per-class ${{ inputs.per_class }} --ablate --out results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: classifier-eval
+          path: backend/results.json

@@ -34,3 +34,6 @@ class LocationService:
 
         await self.cache.set(cache_key, json.dumps(places_data), settings.CACHE_TTL_PLACES)
         return places_data["places"]
+
+    async def get_place_details(self, place_id: str) -> Dict[str, Any]:
+        return await self.places_client.get_place_details(place_id, user_id="api")

@@ -253,7 +253,7 @@ class GooglePlacesClient:
                     f"{self.base_url}/details/json",
                     params={
                         "place_id": place_id,
-                        "fields": "name,rating,reviews,photos,opening_hours,website,formatted_phone_number,price_level,types",
+                        "fields": "name,rating,user_ratings_total,reviews,photos,opening_hours,website,formatted_phone_number,price_level,types,vicinity,geometry",
                         "key": self.api_key
                     }
                 ) as response:
@@ -316,6 +316,8 @@ class GooglePlacesClient:
             "name": place.get("name"),
             "rating": place.get("rating"),
             "review_count": place.get("user_ratings_total", 0),
+            "address": place.get("vicinity"),
+            "location": (place.get("geometry") or {}).get("location"),
             "price_level": place.get("price_level"),
             "website": place.get("website"),
             "phone": place.get("formatted_phone_number"),
@@ -329,10 +331,8 @@ class GooglePlacesClient:
                 }
                 for review in place.get("reviews", [])[:5]
             ],
-            "photos": [
-                f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo['photo_reference']}&key={self.api_key}"
-                for photo in place.get("photos", [])[:5]
-            ]
+            # Photo URLs would have to embed the server's API key, so they are not sent to clients.
+            "photo_count": len(place.get("photos", [])),
         }
     
     def _categorize_fashion_store(self, types: List[str], place_type: str) -> str:

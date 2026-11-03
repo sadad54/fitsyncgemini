@@ -1,17 +1,16 @@
 import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { Redirect, router } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { mediaUrl } from "@/api/client";
+import { useChallenges, useCreatePost } from "@/api/discover-queries";
 import { useCloset, useSavedOutfits } from "@/api/queries";
 import { AppText, Caption, Display, Em, Punch } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
 import { PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
-import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
-import { SEED_TAG_CHIPS } from "@/data/discover";
 import { ArrowRight, Check } from "@/icons";
 import { useAuthStore } from "@/store/auth";
 import { colors, fonts, layout, radius, spacing } from "@/theme";
@@ -22,7 +21,10 @@ export default function CreatePost() {
   const closet = useCloset();
   const [pick, setPick] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
-  const [tag, setTag] = useState("");
+  const params = useLocalSearchParams<{ challenge?: string }>();
+  const [challengeId, setChallengeId] = useState<string | null>(typeof params.challenge === "string" ? params.challenge : null);
+  const challenges = useChallenges();
+  const createPost = useCreatePost();
   const [focused, setFocused] = useState(false);
 
   const photos = useMemo(
@@ -31,11 +33,24 @@ export default function CreatePost() {
   );
   const outfits = saved.data?.outfits ?? [];
   const activePick = pick ?? outfits[0]?.id ?? null;
+  // Joined challenges first: those are the ones a member is most likely posting for.
+  const challengeOptions = [...(challenges.data ?? [])].sort((a, b) => Number(b.joined) - Number(a.joined)).slice(0, 6);
+  const chosenChallenge = challengeOptions.find((c) => c.id === challengeId) ?? null;
+
+  function submit() {
+    const look = outfits.find((o) => o.id === activePick);
+    const tags = [chosenChallenge?.title, look ? `Look: ${look.name}` : undefined].filter((t): t is string => Boolean(t));
+    createPost.mutate(
+      { content: caption.trim(), tags, challenge_id: chosenChallenge?.id ?? null },
+      { onSuccess: (post) => router.replace(`/community/post/${post.id}`) }
+    );
+  }
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
 
   return (
-    <Screen footer={<Button title="Post to community" icon={ArrowRight} disabled={!caption.trim()} onPress={() => router.replace("/community")} />}>
+    <Screen footer={<Button title={createPost.isPending ? "Posting…" : "Post to community"} icon={ArrowRight}
+      disabled={!caption.trim() || createPost.isPending} onPress={submit} />}>
       <PushHeader title="Share a look" onBack={() => router.back()} backGlyph="✕" />
       <Reveal>
         <View style={styles.hero}>
@@ -43,7 +58,7 @@ export default function CreatePost() {
           <AppText style={styles.note}>Pick a saved look. Captions do better when they name the pieces.</AppText>
         </View>
       </Reveal>
-      <PreviewNote>Posting isn't live yet — nothing you write here is shared.</PreviewNote>
+      {createPost.isError ? <Caption style={styles.error}>{createPost.error instanceof Error ? createPost.error.message : "Couldn't post. Try again."}</Caption> : null}
 
       <View style={styles.section}>
         <Punch style={styles.label}>Choose a saved look</Punch>
@@ -69,13 +84,16 @@ export default function CreatePost() {
         <Punch style={styles.label}>Caption</Punch>
         <TextInput accessibilityLabel="Caption" value={caption} onChangeText={setCaption} placeholder="Name the pieces and the plan…"
           placeholderTextColor={colors.faint} multiline onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          style={[styles.input, focused && styles.inputFocus]} />
+          maxLength={2000} style={[styles.input, focused && styles.inputFocus]} />
       </View>
 
       <View style={styles.section}>
         <Punch style={styles.label}>Tag a challenge · optional</Punch>
         <View style={styles.chips}>
-          {SEED_TAG_CHIPS.map((label) => <Chip key={label} active={tag === label} onPress={() => setTag(tag === label ? "" : label)}>{label}</Chip>)}
+          {challengeOptions.length === 0 ? <Caption>{challenges.isLoading ? "Loading challenges…" : "No open challenges right now."}</Caption> : null}
+          {challengeOptions.map((c) => (
+            <Chip key={c.id} active={challengeId === c.id} onPress={() => setChallengeId(challengeId === c.id ? null : c.id)}>{c.title}</Chip>
+          ))}
         </View>
       </View>
     </Screen>
@@ -103,5 +121,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg, fontSize: 16, lineHeight: 22, color: colors.ink, fontFamily: fonts.regular, textAlignVertical: "top"
   },
   inputFocus: { borderColor: colors.ink },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  error: { color: colors.flare }
 });

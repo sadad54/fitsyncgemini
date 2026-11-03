@@ -1,17 +1,16 @@
-import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { mediaUrl } from "@/api/client";
-import { useCloset } from "@/api/queries";
+import { useChallenge, useToggleJoin } from "@/api/discover-queries";
 import { AppText, Caption, Display, Heading, Punch } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
-import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
-import { SEED_AVATAR_ROW, SEED_CHALLENGES, SEED_POSTS } from "@/data/discover";
-import { Check, Heart, Sparkles } from "@/icons";
+import { StatePanel } from "@/components/state-panel";
+import { daysLeftLabel, initialOf, toChallenge, toPost } from "@/data/discover";
+import { Check, CloudOff, Heart, PenLine, Sparkles } from "@/icons";
 import { useAuthStore } from "@/store/auth";
 import { colors, fonts, radius, spacing } from "@/theme";
 
@@ -19,19 +18,33 @@ export default function ChallengeDetail() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const token = useAuthStore((state) => state.token);
-  const closet = useCloset();
-  const challenge = SEED_CHALLENGES.find((entry) => entry.id === id) ?? SEED_CHALLENGES[0];
-  const [joined, setJoined] = useState(false);
-  const photos = useMemo(
-    () => (closet.data?.items ?? []).map((item) => mediaUrl(item.image_url)).filter(Boolean) as string[],
-    [closet.data]
-  );
+  const query = useChallenge(id);
+  const toggleJoin = useToggleJoin();
+  const challenge = query.data ? toChallenge(query.data) : null;
+  const entries = (query.data?.entries ?? []).map((post) => toPost(post));
+  const avatars = query.data?.recent_participants ?? [];
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
 
-  const footer = joined
-    ? <Button title="Style an entry from my closet" icon={Sparkles} variant="accent" onPress={() => router.push("/style")} />
-    : <Button title="Join this challenge" onPress={() => setJoined(true)} />;
+  if (!challenge) {
+    return (
+      <Screen>
+        <PushHeader title="Challenge" onBack={() => router.back()} />
+        {query.isError
+          ? <StatePanel icon={CloudOff} title="Couldn't open this challenge" message={query.error instanceof Error ? query.error.message : "Try again in a moment."}
+              action="Try again" onAction={() => query.refetch()} />
+          : <StatePanel title="Loading…" message="Opening the challenge." />}
+      </Screen>
+    );
+  }
+
+  const joined = challenge.joined;
+  const footer = joined ? (
+    <View style={styles.footer}>
+      <Button title="Post an entry" icon={PenLine} variant="accent" onPress={() => router.push({ pathname: "/community/create", params: { challenge: challenge.id } })} />
+      <Button title="Style a look first" icon={Sparkles} variant="secondary" onPress={() => router.push("/style")} />
+    </View>
+  ) : <Button title="Join this challenge" onPress={() => toggleJoin.mutate({ challengeId: challenge.id, joined: true })} />;
 
   return (
     <Screen footer={footer}>
@@ -40,35 +53,35 @@ export default function ChallengeDetail() {
         <View style={styles.hero}>
           <View style={styles.heroTop}>
             <Punch style={styles.heroTag}>{challenge.difficulty}</Punch>
-            <Punch style={styles.heroTag}>{challenge.days} days left</Punch>
+            <Punch style={styles.heroTag}>{daysLeftLabel(challenge.days)}</Punch>
           </View>
           <Display style={styles.title}>{challenge.title}</Display>
-          <AppText style={styles.description}>One tone, head to shoe, for seven days. Texture is your only contrast — post each day's version and tag it.</AppText>
-          <View style={styles.reward}><AppText style={styles.rewardText}>Reward · {challenge.reward}</AppText></View>
+          {challenge.description ? <AppText style={styles.description}>{challenge.description}</AppText> : null}
+          {challenge.reward ? <View style={styles.reward}><AppText style={styles.rewardText}>Reward · {challenge.reward}</AppText></View> : null}
         </View>
       </Reveal>
-      <PreviewNote />
 
       <View style={styles.participants}>
         <View style={styles.avatars}>
-          {SEED_AVATAR_ROW.map((initial, index) => (
-            <View key={initial} style={[styles.avatar, { marginLeft: index ? -10 : 0, zIndex: 10 - index }, index === 0 && styles.avatarFirst]}>
-              <AppText style={styles.avatarText}>{initial}</AppText>
+          {avatars.map((name, index) => (
+            <View key={`${name}-${index}`} style={[styles.avatar, { marginLeft: index ? -10 : 0, zIndex: 10 - index }, index === 0 && styles.avatarFirst]}>
+              <AppText style={styles.avatarText}>{initialOf(name)}</AppText>
             </View>
           ))}
         </View>
-        <Heading style={styles.flex}>{(challenge.participants + (joined ? 1 : 0)).toLocaleString()} joined</Heading>
+        <Heading style={styles.flex}>{challenge.participants.toLocaleString()} joined</Heading>
         {joined ? <View style={styles.joined}><Check size={14} color={colors.ink} strokeWidth={3} /><Punch style={styles.joinedText}>You're in</Punch></View> : null}
       </View>
 
       <View style={styles.entries}>
         <Punch style={styles.label}>Entries</Punch>
+        {entries.length === 0 ? <AppText style={styles.empty}>No entries yet. Join and post the first one.</AppText> : null}
         <View style={styles.grid}>
-          {SEED_POSTS.map((post, index) => (
+          {entries.map((post, index) => (
             <Reveal key={post.id} index={index} style={styles.cell}>
               <PressableScale accessibilityRole="button" accessibilityLabel={`Open ${post.name}'s entry`} onPress={() => router.push(`/community/post/${post.id}`)} style={styles.entry}>
                 <View style={[styles.entryMedia, { height: index % 3 === 0 ? 220 : 180 }]}>
-                  {photos.length ? <Photo source={photos[index % photos.length]} /> : <View style={styles.placeholder} />}
+                  {post.imageUrl ? <Photo source={mediaUrl(post.imageUrl)!} /> : <View style={styles.textTile}><AppText numberOfLines={7} style={styles.textTileCopy}>{post.caption}</AppText></View>}
                 </View>
                 <View style={styles.entryMeta}>
                   <AppText numberOfLines={1} style={styles.entryName}>{post.name}</AppText>
@@ -105,7 +118,10 @@ const styles = StyleSheet.create({
   cell: { width: "50%", padding: 6 },
   entry: { gap: spacing.xs },
   entryMedia: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.canvasSoft },
-  placeholder: { flex: 1, backgroundColor: colors.canvasSoft },
+  textTile: { flex: 1, padding: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.stroke, borderRadius: radius.lg },
+  textTileCopy: { fontSize: 14, lineHeight: 19, color: colors.inkSoft },
+  empty: { color: colors.muted },
+  footer: { gap: spacing.sm },
   entryMeta: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2 },
   entryName: { flex: 1, fontSize: 13, fontFamily: fonts.medium },
   entryLikes: { flexDirection: "row", alignItems: "center", gap: 3 }

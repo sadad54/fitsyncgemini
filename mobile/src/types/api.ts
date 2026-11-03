@@ -73,3 +73,107 @@ export type Outfit = {
   updated_at: string;
 };
 
+
+// ---- Discover: community, challenges, trends, stores ------------------------
+
+export type CommunityPost = {
+  id: string;
+  user_id: string;
+  author_name: string;
+  content: string;
+  image_url?: string | null;
+  tags: string[];
+  challenge_id?: string | null;
+  likes_count: number;
+  comments_count: number;
+  liked: boolean;
+  following: boolean;
+  created_at: string;
+};
+
+export type CommunityComment = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
+};
+
+export type CommunityMember = {
+  user_id: string;
+  name: string;
+  style_tags: string[];
+  posts_count: number;
+  followers_count: number;
+  challenges_count: number;
+  following: boolean;
+  is_self: boolean;
+  posts: CommunityPost[];
+};
+
+export type StyleChallenge = {
+  id: string;
+  title: string;
+  description: string;
+  reward: string;
+  difficulty: string;
+  category?: string | null;
+  color?: string | null;
+  image_url?: string | null;
+  participants_count: number;
+  days_left: number | null;
+  joined: boolean;
+};
+
+export type StyleChallengeDetail = StyleChallenge & {
+  entries: CommunityPost[];
+  recent_participants: string[];
+};
+
+export type FashionTrend = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  confidence_score: number;
+  popularity_percentage: number;
+  season?: string | null;
+  color_palette: string[];
+  style_tags: string[];
+  image_url?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Place = {
+  id: string;
+  name: string;
+  rating?: number | null;
+  price_level?: number | null;
+  category?: string | null;
+  address?: string | null;
+  is_open?: boolean | null;
+  location?: { lat: number; lng: number } | null;
+  distance_m?: number;
+};
+
+export type NearbyPlaces = {
+  places: Place[];
+  total_count: number;
+  error?: "provider_unavailable";
+};
+
+export type PlaceDetails = {
+  id: string;
+  name?: string | null;
+  rating?: number | null;
+  review_count?: number;
+  address?: string | null;
+  location?: { lat: number; lng: number } | null;
+  price_level?: number | null;
+  website?: string | null;
+  phone?: string | null;
+  opening_hours: string[];
+  reviews: Array<{ author?: string | null; rating?: number | null; text?: string | null; time?: string | null }>;
+};

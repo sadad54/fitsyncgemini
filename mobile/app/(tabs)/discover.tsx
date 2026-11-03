@@ -5,10 +5,11 @@ import { useEffect } from "react";
 import { ArrowUpRight, Flame, Heart, MapPin, MessageCircle, Star, Users } from "@/icons";
 import { AppText, Caption, Display, Em, Heading, Punch, Title } from "@/components/AppText";
 import { PressableScale, Reveal, SETTLE } from "@/components/motion";
-import { PreviewNote } from "@/components/PreviewNote";
 import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/section-header";
-import { SEED_CHALLENGES, SEED_POSTS, SEED_STORES, SEED_TRENDS } from "@/data/discover";
+import { useChallenges, useNearbyStores, usePosts, useTrends } from "@/api/discover-queries";
+import { daysLeftLabel, toChallenge, toPost, toStore, toTrend } from "@/data/discover";
+import { useCurrentPosition } from "@/lib/useCurrentPosition";
 import { colors, fonts, layout, radius, spacing } from "@/theme";
 
 const CHALLENGE_TONES = [
@@ -18,7 +19,17 @@ const CHALLENGE_TONES = [
 ];
 
 export default function Discover() {
-  const maxGrowth = Math.max(...SEED_TRENDS.map((t) => t.growth));
+  const challengesQuery = useChallenges();
+  const trendsQuery = useTrends();
+  const postsQuery = usePosts("discover");
+  const { position } = useCurrentPosition(false);
+  const storesQuery = useNearbyStores(position.status === "ready" ? position : null);
+
+  const challenges = (challengesQuery.data ?? []).map(toChallenge);
+  const trends = (trendsQuery.data ?? []).slice(0, 4).map(toTrend);
+  const posts = (postsQuery.data ?? []).slice(0, 3).map((post) => toPost(post));
+  const stores = (storesQuery.data?.places ?? []).slice(0, 8).map(toStore);
+  const maxGrowth = Math.max(1, ...trends.map((t) => t.growth));
   return (
     <Screen tabbed>
       <Reveal>
@@ -28,22 +39,19 @@ export default function Discover() {
         </View>
       </Reveal>
 
-      <Reveal delay={40}>
-        <PreviewNote>Community, trends and stores show sample content while they're being connected.</PreviewNote>
-      </Reveal>
-
       <Reveal delay={80}>
         <View style={styles.section}>
           <SectionHeader title="Challenges" action="All" onAction={() => router.push("/community")} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={276} decelerationRate="fast"
             style={styles.bleed} contentContainerStyle={styles.carousel}>
-            {SEED_CHALLENGES.map((challenge, i) => {
+            {challenges.length === 0 ? <SectionNote loading={challengesQuery.isLoading} error={challengesQuery.isError} empty="No open challenges right now." /> : null}
+            {challenges.map((challenge, i) => {
               const tone = CHALLENGE_TONES[i % CHALLENGE_TONES.length];
               return (
                 <PressableScale key={challenge.id} accessibilityRole="button" accessibilityLabel={challenge.title}
                   onPress={() => router.push(`/community/challenge/${challenge.id}`)} style={[styles.challenge, { backgroundColor: tone.bg }]}>
                   <View style={styles.challengeTop}>
-                    <View style={[styles.pill, { borderColor: tone.fg }]}><Punch style={[styles.pillText, { color: tone.fg }]}>{challenge.days} days left</Punch></View>
+                    <View style={[styles.pill, { borderColor: tone.fg }]}><Punch style={[styles.pillText, { color: tone.fg }]}>{daysLeftLabel(challenge.days)}</Punch></View>
                     <ArrowUpRight size={20} color={tone.fg} />
                   </View>
                   <View style={styles.flexEnd}>
@@ -64,7 +72,8 @@ export default function Discover() {
         <View style={styles.section}>
           <SectionHeader title="Rising this week" action="All trends" onAction={() => router.push("/trends")} />
           <View style={styles.list}>
-            {SEED_TRENDS.map((trend, i) => (
+            {trends.length === 0 ? <SectionNote loading={trendsQuery.isLoading} error={trendsQuery.isError} empty="No trend data yet." /> : null}
+            {trends.map((trend, i) => (
               <PressableScale key={trend.id} accessibilityRole="button" accessibilityLabel={`${trend.name}, up ${trend.growth} percent`}
                 onPress={() => router.push(`/trends/${trend.id}`)} style={[styles.trend, i > 0 && styles.rowRule]}>
                 <View style={[styles.swatch, { backgroundColor: trend.swatch }]} />
@@ -86,7 +95,8 @@ export default function Discover() {
       <Reveal delay={200}>
         <View style={styles.section}>
           <SectionHeader title="From the community" action="Feed" onAction={() => router.push("/community")} />
-          {SEED_POSTS.slice(0, 3).map((post) => (
+          {posts.length === 0 ? <SectionNote loading={postsQuery.isLoading} error={postsQuery.isError} empty="No posts yet. Be the first to share a look." /> : null}
+          {posts.map((post) => (
             <PressableScale key={post.id} accessibilityRole="button" accessibilityLabel={`Post by ${post.name}`}
               onPress={() => router.push(`/community/post/${post.id}`)} style={styles.post}>
               <View style={styles.avatar}><AppText style={styles.avatarText}>{post.initial}</AppText></View>
@@ -99,7 +109,7 @@ export default function Discover() {
                 <View style={styles.postMeta}>
                   <View style={styles.postStat}><Heart size={14} color={colors.muted} /><Caption>{post.likes}</Caption></View>
                   <View style={styles.postStat}><MessageCircle size={14} color={colors.muted} /><Caption>{post.comments}</Caption></View>
-                  <View style={styles.postTag}><AppText style={styles.postTagText}>{post.tag}</AppText></View>
+                  {post.tag ? <View style={styles.postTag}><AppText style={styles.postTagText}>{post.tag}</AppText></View> : null}
                 </View>
               </View>
             </PressableScale>
@@ -111,14 +121,18 @@ export default function Discover() {
         <View style={styles.section}>
           <SectionHeader title="Shops near you" action="Map" onAction={() => router.push("/stores")} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.carousel}>
-            {SEED_STORES.map((store) => (
+            {stores.length === 0 ? (
+              <SectionNote loading={position.status === "locating" || storesQuery.isLoading} error={storesQuery.isError || storesQuery.data?.error === "provider_unavailable"}
+                empty={position.status === "ready" ? "No fashion stores found nearby." : "Open the map to share your location and see shops nearby."} />
+            ) : null}
+            {stores.map((store) => (
               <PressableScale key={store.id} accessibilityRole="button" accessibilityLabel={store.name} onPress={() => router.push(`/stores/${store.id}`)} style={styles.store}>
                 <View style={styles.storeIcon}><MapPin size={18} color={colors.ink} /></View>
                 <Heading numberOfLines={1}>{store.name}</Heading>
                 <Caption numberOfLines={1}>{store.category}</Caption>
                 <View style={styles.storeMeta}>
                   <Star size={13} color={colors.ink} fill={colors.ink} />
-                  <AppText style={styles.storeMetaText}>{store.rating.toFixed(1)} · {store.distance}</AppText>
+                  <AppText style={styles.storeMetaText}>{[store.rating?.toFixed(1), store.distance].filter(Boolean).join(" · ") || "New"}</AppText>
                 </View>
               </PressableScale>
             ))}
@@ -127,6 +141,10 @@ export default function Discover() {
       </Reveal>
     </Screen>
   );
+}
+
+function SectionNote({ loading, error, empty }: { loading: boolean; error: boolean; empty: string }) {
+  return <Caption style={styles.note}>{loading ? "Loading…" : error ? "Couldn't load this right now." : empty}</Caption>;
 }
 
 function GrowthBar({ value, delay }: { value: number; delay: number }) {
@@ -141,8 +159,7 @@ const styles = StyleSheet.create({
   flexEnd: { gap: spacing.sm },
   header: { paddingTop: spacing.md, gap: spacing.xs },
   kicker: { color: colors.muted },
-  preview: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start", padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderStyle: "dashed", borderColor: colors.strokeStrong, marginTop: -spacing.md },
-  previewText: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.inkSoft },
+  note: { paddingVertical: spacing.md },
   section: { gap: spacing.md },
   bleed: { marginHorizontal: -layout.gutter },
   carousel: { paddingHorizontal: layout.gutter, gap: spacing.md },

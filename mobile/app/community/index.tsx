@@ -1,20 +1,19 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { mediaUrl } from "@/api/client";
-import { useCloset } from "@/api/queries";
+import { useChallenges, usePosts, useToggleJoin, useToggleLike } from "@/api/discover-queries";
 import { AppText, Caption, Display, Em, Punch } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { POP, PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
-import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
 import { Segmented } from "@/components/Segmented";
 import { StatePanel } from "@/components/state-panel";
-import { SEED_CHALLENGES, SEED_POSTS, type FeedTab, type Post } from "@/data/discover";
-import { Heart, MessageCircle, Plus, Users } from "@/icons";
+import { daysLeftLabel, toChallenge, toPost, type FeedTab, type Post } from "@/data/discover";
+import { CloudOff, Heart, MessageCircle, Plus, Users } from "@/icons";
 import { useAuthStore } from "@/store/auth";
 import { colors, fonts, radius, spacing } from "@/theme";
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
@@ -23,18 +22,16 @@ const TABS: FeedTab[] = ["Following", "Discover", "Challenges"];
 
 export default function CommunityFeed() {
   const token = useAuthStore((state) => state.token);
-  const closet = useCloset();
   const [tab, setTab] = useState<FeedTab>("Following");
-  const [likes, setLikes] = useState<Record<string, boolean>>({ p2: true });
-  const [joined, setJoined] = useState<Record<string, boolean>>({ ch2: true });
+  const feed = tab === "Following" ? "following" : "discover";
+  const postsQuery = usePosts(feed, tab !== "Challenges");
+  const challengesQuery = useChallenges();
+  const toggleLike = useToggleLike();
+  const toggleJoin = useToggleJoin();
 
-  // Community imagery stands in with the member's own closet photos until the
-  // posts service is rebuilt — see src/data/discover.ts.
-  const photos = useMemo(
-    () => (closet.data?.items ?? []).map((item) => mediaUrl(item.image_url)).filter(Boolean) as string[],
-    [closet.data]
-  );
-  const posts = useMemo(() => SEED_POSTS.filter((post) => tab === "Discover" || post.following), [tab]);
+  const posts = (postsQuery.data ?? []).map((post) => toPost(post));
+  const challenges = (challengesQuery.data ?? []).map(toChallenge);
+  const active = tab === "Challenges" ? challengesQuery : postsQuery;
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
 
@@ -50,47 +47,56 @@ export default function CommunityFeed() {
           <IconButton icon={Plus} label="Share a look" tone="accent" size={52} onPress={() => router.push("/community/create")} />
         </View>
       </Reveal>
-      <PreviewNote>Sample members and posts. Photos are from your own closet as stand-ins.</PreviewNote>
       <Segmented<FeedTab> value={tab} onChange={setTab} options={TABS.map((t) => ({ value: t, label: t }))} />
 
-      {tab === "Challenges" ? (
+      {active.isError ? (
+        <StatePanel icon={CloudOff} title="Couldn't load the community" message={active.error instanceof Error ? active.error.message : "Try again in a moment."}
+          action="Try again" onAction={() => active.refetch()} />
+      ) : active.isLoading ? (
+        <StatePanel title="Loading…" message="Fetching the latest from the community." />
+      ) : tab === "Challenges" ? (
+        challenges.length === 0 ? (
+          <StatePanel icon={Users} title="No open challenges" message="New challenges appear here when they start." />
+        ) : (
         <View style={styles.list}>
-          {SEED_CHALLENGES.map((challenge, index) => {
-            const isJoined = Boolean(joined[challenge.id]);
+          {challenges.map((challenge, index) => {
+            const isJoined = challenge.joined;
             return (
               <Reveal key={challenge.id} index={index}>
                 <View style={styles.challenge}>
                   <PressableScale accessibilityRole="button" accessibilityLabel={challenge.title}
                     onPress={() => router.push(`/community/challenge/${challenge.id}`)} style={styles.challengeRow}>
                     <View style={styles.challengeMedia}>
-                      {photos.length ? <Photo source={photos[index % photos.length]} /> : <View style={styles.placeholder} />}
+                      {challenge.imageUrl ? <Photo source={mediaUrl(challenge.imageUrl)!} /> : <View style={styles.placeholder} />}
                     </View>
                     <View style={styles.challengeCopy}>
-                      <Punch style={styles.difficulty}>{challenge.difficulty} · {challenge.days} days left</Punch>
+                      <Punch style={styles.difficulty}>{challenge.difficulty} · {daysLeftLabel(challenge.days)}</Punch>
                       <AppText style={styles.challengeTitle}>{challenge.title}</AppText>
                       <Caption>{challenge.reward}</Caption>
                       <View style={styles.metaRow}>
                         <Users size={14} color={colors.muted} />
-                        <Caption>{(challenge.participants + (isJoined ? 1 : 0)).toLocaleString()} joined</Caption>
+                        <Caption>{challenge.participants.toLocaleString()} joined</Caption>
                       </View>
                     </View>
                   </PressableScale>
                   <Button title={isJoined ? "Joined · tap to leave" : "Join challenge"} compact variant={isJoined ? "secondary" : "primary"}
-                    onPress={() => setJoined((current) => ({ ...current, [challenge.id]: !current[challenge.id] }))} />
+                    onPress={() => toggleJoin.mutate({ challengeId: challenge.id, joined: !isJoined })} />
                 </View>
               </Reveal>
             );
           })}
         </View>
-      ) : posts.length === 0 ? (
+        )
+      ) : posts.length === 0 && tab === "Following" ? (
         <StatePanel icon={Users} title="You follow nobody yet" message="Discover has the whole community. Follow a few people and this becomes your own feed."
           action="Open Discover" onAction={() => setTab("Discover")} />
+      ) : posts.length === 0 ? (
+        <StatePanel icon={Users} title="No posts yet" message="Be the first to share a look from your closet." action="Share a look" onAction={() => router.push("/community/create")} />
       ) : (
         <View style={styles.list}>
           {posts.map((post, index) => (
             <Reveal key={post.id} index={index}>
-              <PostCard post={post} image={photos.length ? photos[index % photos.length] : undefined}
-                liked={Boolean(likes[post.id])} onLike={() => setLikes((current) => ({ ...current, [post.id]: !current[post.id] }))} />
+              <PostCard post={post} onLike={() => toggleLike.mutate({ postId: post.id, liked: !post.liked })} />
             </Reveal>
           ))}
         </View>
@@ -99,13 +105,15 @@ export default function CommunityFeed() {
   );
 }
 
-function PostCard({ post, image, liked, onLike }: { post: Post; image?: string; liked: boolean; onLike: () => void }) {
+function PostCard({ post, onLike }: { post: Post; onLike: () => void }) {
+  const liked = post.liked;
+  const image = mediaUrl(post.imageUrl) ?? undefined;
   const pop = useSharedValue(1);
   const heart = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
   return (
     <View style={styles.post}>
       <View style={styles.postHeader}>
-        <PressableScale accessibilityRole="button" accessibilityLabel={`${post.name}'s profile`} onPress={() => router.push(`/community/member/${post.id}`)} style={styles.author}>
+        <PressableScale accessibilityRole="button" accessibilityLabel={`${post.name}'s profile`} onPress={() => router.push(`/community/member/${post.authorId}`)} style={styles.author}>
           <View style={styles.avatar}><AppText style={styles.avatarText}>{post.initial}</AppText></View>
           <View style={styles.flex}>
             <AppText style={styles.postName}>{post.name}</AppText>
@@ -114,15 +122,19 @@ function PostCard({ post, image, liked, onLike }: { post: Post; image?: string; 
         </PressableScale>
         {post.tag ? <View style={styles.tagPill}><AppText style={styles.tagText}>{post.tag}</AppText></View> : null}
       </View>
-      <PressableScale accessibilityRole="button" accessibilityLabel="Open post" scaleTo={0.985} onPress={() => router.push(`/community/post/${post.id}`)} style={styles.postMedia}>
-        {image ? <Photo source={image} /> : <View style={styles.placeholder} />}
+      {image ? (
+        <PressableScale accessibilityRole="button" accessibilityLabel="Open post" scaleTo={0.985} onPress={() => router.push(`/community/post/${post.id}`)} style={styles.postMedia}>
+          <Photo source={image} />
+        </PressableScale>
+      ) : null}
+      <PressableScale accessibilityRole="button" accessibilityLabel="Open post" scaleTo={0.99} onPress={() => router.push(`/community/post/${post.id}`)}>
+        <AppText style={styles.caption}>{post.caption}</AppText>
       </PressableScale>
-      <AppText style={styles.caption}>{post.caption}</AppText>
       <View style={styles.actions}>
         <PressableScale accessibilityRole="button" accessibilityLabel={liked ? "Unlike" : "Like"} accessibilityState={{ selected: liked }}
           onPress={() => { pop.value = withSequence(withSpring(1.35, POP), withSpring(1, POP)); onLike(); }} style={[styles.action, liked && styles.actionLiked]}>
           <Animated.View style={heart}><Heart size={17} color={liked ? colors.ink : colors.inkSoft} fill={liked ? colors.flare : "transparent"} /></Animated.View>
-          <AppText style={styles.actionText}>{post.likes + (liked ? 1 : 0)}</AppText>
+          <AppText style={styles.actionText}>{post.likes}</AppText>
         </PressableScale>
         <PressableScale accessibilityRole="button" accessibilityLabel={`${post.comments} comments`} onPress={() => router.push(`/community/post/${post.id}`)} style={styles.action}>
           <MessageCircle size={17} color={colors.inkSoft} />

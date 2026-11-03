@@ -1,5 +1,8 @@
 import { File as ExpoFile } from "expo-file-system";
-import type { ClosetStats, ClothingCategory, ClothingItem, Outfit, Profile, TryOnResult } from "@/types/api";
+import type {
+  ClosetStats, ClothingCategory, ClothingItem, CommunityComment, CommunityMember, CommunityPost, FashionTrend, NearbyPlaces,
+  Outfit, PlaceDetails, Profile, StyleChallenge, StyleChallengeDetail, TryOnResult
+} from "@/types/api";
 import { useAuthStore } from "@/store/auth";
 
 const isLocalWebPreview = process.env.EXPO_OS === "web" && typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -148,6 +151,29 @@ export const api = {
   },
   tryOns: () => request<{ results: TryOnResult[]; total: number }>("/tryon/"),
   tryOn: (id: string) => request<TryOnResult>(`/tryon/${id}`),
-  deleteTryOn: (id: string) => request<{ deleted: boolean }>(`/tryon/${id}`, { method: "DELETE" })
+  deleteTryOn: (id: string) => request<{ deleted: boolean }>(`/tryon/${id}`, { method: "DELETE" }),
+
+  // Discover
+  posts: (feed: "discover" | "following", limit = 20) => request<CommunityPost[]>(`/community/posts?feed=${feed}&limit=${limit}`),
+  post: (id: string) => request<CommunityPost>(`/community/posts/${encodeURIComponent(id)}`),
+  createPost: (input: { content: string; tags?: string[]; challenge_id?: string | null; image_url?: string | null }) =>
+    request<CommunityPost>("/community/posts", { method: "POST", body: JSON.stringify(input) }),
+  setLike: (id: string, liked: boolean) =>
+    request<{ liked: boolean; likes_count: number }>(`/community/posts/${encodeURIComponent(id)}/like`, { method: liked ? "POST" : "DELETE" }),
+  comments: (postId: string) => request<CommunityComment[]>(`/community/posts/${encodeURIComponent(postId)}/comments`),
+  addComment: (postId: string, content: string) =>
+    request<CommunityComment>(`/community/posts/${encodeURIComponent(postId)}/comments`, { method: "POST", body: JSON.stringify({ content }) }),
+  member: (userId: string) => request<CommunityMember>(`/community/users/${encodeURIComponent(userId)}`),
+  setFollow: (userId: string, following: boolean) =>
+    request<{ following: boolean; followers_count: number }>(`/community/users/${encodeURIComponent(userId)}/follow`, { method: following ? "POST" : "DELETE" }),
+  challenges: () => request<StyleChallenge[]>("/community/challenges"),
+  challenge: (id: string) => request<StyleChallengeDetail>(`/community/challenges/${encodeURIComponent(id)}`),
+  setJoined: (id: string, joined: boolean) =>
+    request<{ joined: boolean; participants_count: number }>(`/community/challenges/${encodeURIComponent(id)}/join`, { method: joined ? "POST" : "DELETE" }),
+  // Trailing slash avoids FastAPI's 307 redirect (see closetItems).
+  trends: () => request<FashionTrend[]>("/trends/"),
+  trend: (id: string) => request<FashionTrend>(`/trends/${encodeURIComponent(id)}`),
+  nearbyStores: (lat: number, lon: number, radius = 5000) => request<NearbyPlaces>(`/locations/nearby?lat=${lat}&lon=${lon}&radius=${radius}`, {}, 20000),
+  store: (placeId: string) => request<PlaceDetails>(`/locations/places/${encodeURIComponent(placeId)}`)
 };
 

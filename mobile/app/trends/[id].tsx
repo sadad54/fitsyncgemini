@@ -3,16 +3,17 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { mediaUrl } from "@/api/client";
+import { useTrend } from "@/api/discover-queries";
 import { useCloset } from "@/api/queries";
 import { AppText, Display, Punch } from "@/components/AppText";
 import { Button } from "@/components/Button";
 import { PressableScale, Reveal } from "@/components/motion";
 import { Photo } from "@/components/Photo";
-import { PreviewNote } from "@/components/PreviewNote";
 import { PushHeader } from "@/components/PushHeader";
 import { Screen } from "@/components/Screen";
-import { SEED_TREND_DETAIL, SEED_TRENDS } from "@/data/discover";
-import { Flame, Sparkles } from "@/icons";
+import { StatePanel } from "@/components/state-panel";
+import { capitalize } from "@/data/discover";
+import { CloudOff, Flame, Sparkles } from "@/icons";
 import { useAuthStore } from "@/store/auth";
 import { colors, fonts, layout, radius, spacing } from "@/theme";
 
@@ -22,47 +23,59 @@ export default function TrendDetail() {
   const token = useAuthStore((state) => state.token);
   const closet = useCloset();
 
-  const trend = SEED_TRENDS.find((entry) => entry.id === id);
-  const detail = trend ? { ...SEED_TREND_DETAIL, name: trend.name, category: trend.category, growth: trend.growth } : SEED_TREND_DETAIL;
+  const query = useTrend(id);
+  const trend = query.data;
+  // Palettes are stored as CSS colour names ("olive") or hex codes; React Native renders both.
+  const palette = (trend?.color_palette ?? []).slice(0, 5).map((value) => ({ name: value.toLowerCase(), value }));
   const items = closet.data?.items ?? [];
   // Match the trend's palette against the member's own pieces.
   const matches = useMemo(() => {
-    const paletteNames = detail.palette.map((entry) => entry.name.toLowerCase());
-    const matched = items.filter((item) => item.colors.some((color) => paletteNames.includes(color.toLowerCase())));
-    return (matched.length ? matched : items).slice(0, 3);
-  }, [items, detail.palette]);
-  const heroImage = mediaUrl(items[0]?.image_url);
+    const paletteNames = palette.map((entry) => entry.name);
+    return items.filter((item) => item.colors.some((color) => paletteNames.includes(color.toLowerCase()))).slice(0, 6);
+  }, [items, palette]);
+  const heroImage = mediaUrl(trend?.image_url);
 
   if (!token) return <Redirect href="/(auth)/sign-in" />;
+
+  if (!trend) {
+    return (
+      <Screen>
+        <PushHeader title="Trend" onBack={() => router.back()} />
+        {query.isError
+          ? <StatePanel icon={CloudOff} title="Couldn't open this trend" message={query.error instanceof Error ? query.error.message : "Try again in a moment."}
+              action="Try again" onAction={() => query.refetch()} />
+          : <StatePanel title="Loading…" message="Opening the trend." />}
+      </Screen>
+    );
+  }
 
   return (
     <Screen footer={<Button title="Style a look around this" icon={Sparkles} variant="accent" onPress={() => router.push("/style")} />}>
       <PushHeader title="Trend" onBack={() => router.back()} />
       <Reveal>
         <View style={styles.hero}>
-          {heroImage ? <Photo source={heroImage} /> : <View style={styles.placeholder} />}
+          {heroImage ? <Photo source={heroImage} /> : <View style={[styles.placeholder, { backgroundColor: palette[0]?.value ?? colors.stage }]} />}
           <LinearGradient colors={["rgba(13,13,15,0)", "rgba(13,13,15,0.82)"]} style={styles.fade} />
           <View style={styles.heroCopy}>
-            <View style={styles.growth}><Flame size={13} color={colors.ink} fill={colors.ink} /><Punch style={styles.growthText}>+{detail.growth}% this season</Punch></View>
-            <Punch style={styles.category}>{detail.category}</Punch>
-            <Display style={styles.title}>{detail.name}</Display>
+            <View style={styles.growth}><Flame size={13} color={colors.ink} fill={colors.ink} /><Punch style={styles.growthText}>{Math.round(trend.popularity_percentage)}% popularity</Punch></View>
+            <Punch style={styles.category}>{capitalize(trend.category)}{trend.season ? ` · ${capitalize(trend.season)}` : ""}</Punch>
+            <Display style={styles.title}>{trend.name}</Display>
           </View>
         </View>
       </Reveal>
-      <PreviewNote />
-      <AppText style={styles.description}>{detail.description}</AppText>
+      {trend.description ? <AppText style={styles.description}>{trend.description}</AppText> : null}
 
       <View style={styles.section}>
         <Punch style={styles.label}>Palette</Punch>
         <View style={styles.palette}>
-          {detail.palette.map((entry) => (
+          {palette.map((entry) => (
             <View key={entry.name} style={styles.paletteCell}>
               <View style={[styles.paletteSwatch, { backgroundColor: entry.value }]} />
               <AppText style={styles.paletteName}>{entry.name}</AppText>
             </View>
           ))}
         </View>
-        <View style={styles.tags}>{detail.tags.map((tag) => <View key={tag} style={styles.tag}><AppText style={styles.tagText}>{tag}</AppText></View>)}</View>
+        <View style={styles.tags}>{trend.style_tags.map((tag) => <View key={tag} style={styles.tag}><AppText style={styles.tagText}>{tag}</AppText></View>)}</View>
       </View>
 
       <View style={styles.section}>

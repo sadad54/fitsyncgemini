@@ -67,8 +67,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: mobile/pnpm-lock.yaml
+      # mobile/.npmrc keeps the pnpm store inside mobile/, which setup-node's
+      # built-in pnpm cache can't find, so cache that folder directly.
+      - uses: actions/cache@v4
+        with:
+          path: mobile/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('mobile/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
       - run: pnpm exec jest --ci
